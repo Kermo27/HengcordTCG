@@ -1,0 +1,111 @@
+@page "/"
+
+<PageTitle>HengcordTCG - Web Platform</PageTitle>
+
+<div class="container py-12">
+    <div class="mx-auto max-w-4xl space-y-12">
+        <!-- Hero Section -->
+        <div class="text-center space-y-6">
+            <div class="flex justify-center mb-4">
+                <Badge Variant="BadgeVariant.Secondary" class="px-4 py-1 text-sm">HengcordTCG v1.0 Alpha</Badge>
+            </div>
+            <h1 class="text-5xl font-extrabold tracking-tighter sm:text-7xl bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                Twoje Centrum TCG
+            </h1>
+            <p class="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Zarządzaj swoją kolekcją kart, handluj na rynku i sprawdzaj statystyki na żywo – wszystko w jednym, responsywnym miejscu.
+            </p>
+            <div class="flex justify-center gap-4 pt-4">
+                <Button Size="ButtonSize.Large" class="px-8" @onclick='() => Navigation.NavigateTo("collection")'>Przeglądaj Karty</Button>
+                <Button Variant="ButtonVariant.Outline" Size="ButtonSize.Large" class="px-8">Dołącz do Discorda</Button>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pt-6">
+            <Card class="hover:border-primary/50 transition-colors shadow-lg">
+                <CardHeader>
+                    <div class="p-2 w-fit rounded-lg bg-primary/10 mb-2">
+                        <LucideIcon Name="layout-grid" Size="24" class="text-primary" />
+                    </div>
+                    <CardTitle>Album Kolekcjonera</CardTitle>
+                    <CardDescription>Twoje wszystkie karty w interaktywnym widoku z filtrowaniem rzadkości.</CardDescription>
+                </CardHeader>
+            </Card>
+
+            <Card class="hover:border-primary/50 transition-colors shadow-lg">
+                <CardHeader>
+                    <div class="p-2 w-fit rounded-lg bg-primary/10 mb-2">
+                        <LucideIcon Name="shopping-cart" Size="24" class="text-primary" />
+                    </div>
+                    <CardTitle>Rynek (Marketplace)</CardTitle>
+                    <CardDescription>Wystawiaj oferty i kupuj karty od innych graczy za walutę z gry.</CardDescription>
+                </CardHeader>
+            </Card>
+
+            <Card class="hover:border-primary/50 transition-colors shadow-lg">
+                <CardHeader>
+                    <div class="p-2 w-fit rounded-lg bg-primary/10 mb-2">
+                        <LucideIcon Name="trophy" Size="24" class="text-primary" />
+                    </div>
+                    <CardTitle>Rankingi Globalne</CardTitle>
+                    <CardDescription>Sprawdź kto jest najbogatszym graczem i kto posiada najwięcej legend.</CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
+
+        <Separator />
+
+        <!-- Admin / Status Section -->
+        <div class="grid gap-8 md:grid-cols-2 items-center py-6">
+            <div class="space-y-4">
+                <h2 class="text-3xl font-bold">Panel Zarządzania</h2>
+                <p class="text-muted-foreground">
+                    Dla administratorów przygotowaliśmy zaawansowane narzędzia do edycji drop-rate'u, monitorowania błędów bota oraz tworzenia nowych kart w czasie rzeczywistym.
+                </p>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-3">
+                        <LucideIcon Name="check-circle-2" Size="18" class="text-green-500" />
+                        <span>Live Card Editor z podglądem</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <LucideIcon Name="check-circle-2" Size="18" class="text-green-500" />
+                        <span>Statystyki serwera na żywo</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <LucideIcon Name="check-circle-2" Size="18" class="text-green-500" />
+                        <span>Dystrybucja nagród eventowych</span>
+                    </div>
+                </div>
+            </div>
+            
+            <Card class="bg-muted/40 border-dashed border-2">
+                <CardHeader>
+                    <CardTitle class="flex items-center gap-2">
+                        <LucideIcon Name="info" Size="20" /> Status Bota
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Baza Kart:</span>
+                            <Badge Variant="BadgeVariant.Outline">4,500+</Badge>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Graczy Online:</span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <span class="text-sm">Aktywny</span>
+                            </div>
+                        </div>
+                        <Button Variant="ButtonVariant.Secondary" class="w-full">Panel Admina</Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}

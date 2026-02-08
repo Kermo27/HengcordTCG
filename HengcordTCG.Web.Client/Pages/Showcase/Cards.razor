@@ -1,0 +1,138 @@
+@page "/showcase/cards"
+@layout _ShowcaseLayout
+
+<PageTitle>Cards - Showcase</PageTitle>
+
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold tracking-tight">Cards</h1>
+        <p class="text-muted-foreground mt-2">
+            Displays a card with header, content, and footer.
+        </p>
+    </div>
+
+    <!-- Basic Card -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Basic Card</CardTitle>
+            <CardDescription>A simple card with all sections.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Card class="w-full max-w-sm">
+                <CardHeader>
+                    <CardTitle>Card Title</CardTitle>
+                    <CardDescription>Card description goes here.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p>This is the main content of the card. You can put any content here.</p>
+                </CardContent>
+                <CardFooter>
+                    <Button>Action</Button>
+                </CardFooter>
+            </Card>
+        </CardContent>
+    </Card>
+
+    <!-- Card Grid -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Card Grid</CardTitle>
+            <CardDescription>Cards arranged in a responsive grid layout.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                    <CardHeader class="pb-2">
+                        <LucideIcon Name="rocket" Size="24" class="text-primary mb-2" />
+                        <CardTitle class="text-lg">Fast</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p class="text-sm text-muted-foreground">
+                            Built with performance in mind. Blazor's efficient rendering keeps your app snappy.
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader class="pb-2">
+                        <LucideIcon Name="shield-check" Size="24" class="text-primary mb-2" />
+                        <CardTitle class="text-lg">Secure</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p class="text-sm text-muted-foreground">
+                            Type-safe components with full IntelliSense. Catch errors at compile time.
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader class="pb-2">
+                        <LucideIcon Name="palette" Size="24" class="text-primary mb-2" />
+                        <CardTitle class="text-lg">Beautiful</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p class="text-sm text-muted-foreground">
+                            shadcn/ui inspired design. Looks great out of the box, fully customizable.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Interactive Card -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Interactive Card</CardTitle>
+            <CardDescription>Cards with interactive elements.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <div class="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarFallback>JD</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <CardTitle class="text-base">John Doe</CardTitle>
+                                <CardDescription>Software Engineer</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <p class="text-sm text-muted-foreground">
+                            Building amazing things with Blazor and BlazorBlueprint. Love the developer experience!
+                        </p>
+                    </CardContent>
+                    <CardFooter class="gap-2">
+                        <Button Size="ButtonSize.Small">Follow</Button>
+                        <Button Size="ButtonSize.Small" Variant="ButtonVariant.Outline">Message</Button>
+                    </CardFooter>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Notifications</CardTitle>
+                        <CardDescription>Manage your notification preferences.</CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-0.5">
+                                <Label>Email notifications</Label>
+                                <p class="text-sm text-muted-foreground">Receive emails about activity.</p>
+                            </div>
+                            <Switch />
+                        </div>
+                        <Separator />
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-0.5">
+                                <Label>Push notifications</Label>
+                                <p class="text-sm text-muted-foreground">Receive push notifications.</p>
+                            </div>
+                            <Switch Checked="true" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </CardContent>
+    </Card>
+</div>
