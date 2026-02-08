@@ -1,0 +1,68 @@
+using Discord;
+using Discord.Interactions;
+using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using HengcordTCG.Bot.Handlers;
+using HengcordTCG.Shared.Data;
+
+namespace HengcordTCG.Bot.Services;
+
+public class BotService : IHostedService
+{
+    private readonly DiscordSocketClient _client;
+    private readonly InteractionService _interactions;
+    private readonly InteractionHandler _handler;
+    private readonly IConfiguration _config;
+    private readonly IServiceProvider _services;
+
+    public BotService(
+        DiscordSocketClient client,
+        InteractionService interactions,
+        InteractionHandler handler,
+        IConfiguration config,
+        IServiceProvider services)
+    {
+        _client = client;
+        _interactions = interactions;
+        _handler = handler;
+        _config = config;
+        _services = services;
+    }
+
+    public async Task StartAsync(CancellationToken ct)
+    {
+        await _handler.InitializeAsync();
+
+        _client.Log += msg => { Console.WriteLine(msg); return Task.CompletedTask; };
+        _client.Ready += async () =>
+        {
+            Console.WriteLine($"Bot connected as {_client.CurrentUser.Username}!");
+            
+            var guildId = _config.GetValue<ulong?>("Discord:GuildId");
+            if (guildId.HasValue)
+            {
+                await _interactions.RegisterCommandsToGuildAsync(guildId.Value);
+                Console.WriteLine($"✅ Registered commands to guild: {guildId.Value}");
+            }
+            else
+            {
+                await _interactions.RegisterCommandsGloballyAsync();
+                Console.WriteLine("⚠️ Registered commands globally (up to 1h delay). Set 'Discord:GuildId' in appsettings for instant update.");
+            }
+        };
+
+        var token = _config["Discord:Token"] ?? Environment.GetEnvironmentVariable("DISCORD_TOKEN")
+            ?? throw new InvalidOperationException("Discord token not configured.");
+
+        await _client.LoginAsync(TokenType.Bot, token);
+        await _client.StartAsync();
+
+        using var scope = _services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync(ct);
+    }
+
+    public Task StopAsync(CancellationToken ct) => _client.StopAsync();
+}

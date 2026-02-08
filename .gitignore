@@ -1,0 +1,25 @@
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+*.swp
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.sln.DotSettings.user
+
+# Visual Studio Code
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+
+# Data and SQLite
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Build Logs
+*.log
