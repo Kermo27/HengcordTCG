@@ -16,13 +16,7 @@ public class TradeService
         _userService = userService;
     }
 
-    // Helper class for trade items
-    public class TradeContent
-    {
-        public long Gold { get; set; }
-        public Dictionary<int, int> Cards { get; set; } = new(); // CardId -> Count
-        public Dictionary<string, int> CardNames { get; set; } = new(); // Temp for parsing: Name -> Count
-    }
+
 
     public async Task<(bool success, string message, Trade? trade, TradeContent? offerContent, TradeContent? requestContent)> CreateTradeAsync(
         ulong initiatorId, string initiatorName,

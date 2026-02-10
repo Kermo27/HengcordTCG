@@ -23,3 +23,8 @@ data/
 
 # Build Logs
 *.log
+
+# Application Settings - NEVER commit secrets!
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json

@@ -2,8 +2,7 @@ using Discord;
 using Discord.Interactions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using HengcordTCG.Shared.Data;
+using HengcordTCG.Shared.Clients;
 
 namespace HengcordTCG.Bot.Handlers;
 
@@ -15,7 +14,7 @@ public class RequireBotAdminAttribute : PreconditionAttribute
         IServiceProvider services)
     {
         var config = services.GetRequiredService<IConfiguration>();
-        var db = services.GetRequiredService<AppDbContext>();
+        var client = services.GetRequiredService<HengcordTCGClient>();
         
         var adminIds = config.GetSection("BotAdmins").Get<ulong[]>() ?? [];
         if (adminIds.Contains(context.User.Id))
@@ -23,10 +22,9 @@ public class RequireBotAdminAttribute : PreconditionAttribute
             return PreconditionResult.FromSuccess();
         }
         
-        var isDbAdmin = await db.Users
-            .AnyAsync(u => u.DiscordId == context.User.Id && u.IsBotAdmin);
+        var user = await client.GetUserAsync(context.User.Id);
 
-        if (isDbAdmin)
+        if (user != null && user.IsBotAdmin)
         {
             return PreconditionResult.FromSuccess();
         }

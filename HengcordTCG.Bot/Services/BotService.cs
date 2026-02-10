@@ -1,12 +1,10 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using HengcordTCG.Bot.Handlers;
-using HengcordTCG.Shared.Data;
 
 namespace HengcordTCG.Bot.Services;
 
@@ -59,9 +57,6 @@ public class BotService : IHostedService
 
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
-
-        using var scope = _services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync(ct);
     }
 
     public Task StopAsync(CancellationToken ct) => _client.StopAsync();

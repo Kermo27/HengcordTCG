@@ -1,17 +1,16 @@
 using Discord;
 using Discord.Interactions;
-using Microsoft.EntityFrameworkCore;
-using HengcordTCG.Shared.Data;
+using HengcordTCG.Shared.Clients;
 
 namespace HengcordTCG.Bot.Handlers;
 
 public class CardAutocompleteHandler : AutocompleteHandler
 {
-    private readonly AppDbContext _db;
+    private readonly HengcordTCGClient _client;
 
-    public CardAutocompleteHandler(AppDbContext db)
+    public CardAutocompleteHandler(HengcordTCGClient client)
     {
-        _db = db;
+        _client = client;
     }
 
     public override async Task<AutocompletionResult> GenerateSuggestionsAsync(
@@ -22,16 +21,13 @@ public class CardAutocompleteHandler : AutocompleteHandler
     {
         var userInput = (interaction.Data.Current.Value as string)?.ToLower() ?? "";
         
-        var cards = await _db.Cards
+        var cards = await _client.GetCardsAsync();
+        var suggestions = cards
             .Where(c => c.Name.ToLower().Contains(userInput))
             .OrderBy(c => c.Name)
-            .Take(25) // Discord limit is 25
-            .ToListAsync();
-        
-        var suggestions = cards
+            .Take(25)
             .Select(c => new AutocompleteResult(c.Name, c.Name))
             .ToList();
-
         return AutocompletionResult.FromSuccess(suggestions);
     }
 }

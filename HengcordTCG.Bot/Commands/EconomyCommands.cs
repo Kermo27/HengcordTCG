@@ -1,26 +1,27 @@
 using Discord;
 using Discord.Interactions;
-using HengcordTCG.Shared.Services;
+using HengcordTCG.Shared.Clients;
 
 namespace HengcordTCG.Bot.Commands;
 
 public class EconomyCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly UserService _userService;
+    private readonly HengcordTCGClient _client;
 
-    public EconomyCommands(UserService userService)
+    public EconomyCommands(HengcordTCGClient client)
     {
-        _userService = userService;
+        _client = client;
     }
 
     [SlashCommand("balance", "Sprawdź stan konta")]
     public async Task BalanceAsync()
     {
-        var user = await _userService.GetOrCreateUserAsync(Context.User.Id, Context.User.Username);
+        var user = await _client.GetUserAsync(Context.User.Id);
+        var gold = user?.Gold ?? 0;
         
         var embed = new EmbedBuilder()
             .WithTitle("💰 Stan konta")
-            .WithDescription($"**{Context.User.Username}**, posiadasz **{user.Gold}** sztuk złota.")
+            .WithDescription($"**{Context.User.Username}**, posiadasz **{gold}** sztuk złota.")
             .WithColor(Color.Gold)
             .Build();
 
@@ -30,17 +31,18 @@ public class EconomyCommands : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("daily", "Odbierz codzienną nagrodę")]
     public async Task DailyAsync()
     {
-        var result = await _userService.ClaimDailyAsync(Context.User.Id, Context.User.Username);
+        var result = await _client.ClaimDailyAsync(Context.User.Id, Context.User.Username);
 
-        if (result.success)
+        if (result.Success)
         {
-            await RespondAsync($"🌞 **{Context.User.Username}**, odebrałeś nagrodę dzienną!\nOtrzymujesz **{result.amount}** 🪙 złota!");
+            await RespondAsync($"🌞 **{Context.User.Username}**, odebrałeś nagrodę dzienną: **{result.Amount}** 🪙!");
         }
         else
         {
-            var time = result.timeRemaining!.Value;
-            var timeStr = $"{(int)time.TotalHours}h {time.Minutes}m";
-            await RespondAsync($"⏳ **{Context.User.Username}**, musisz poczekać jeszcze **{timeStr}** na kolejną nagrodę.", ephemeral: true);
+            var msg = result.TimeRemaining != null 
+                ? $"⏳ Musisz poczekać jeszcze: **{result.TimeRemaining}**." 
+                : "❌ Wystąpił błąd podczas odbierania nagrody.";
+            await RespondAsync($"**{Context.User.Username}**, {msg}", ephemeral: true);
         }
     }
 }

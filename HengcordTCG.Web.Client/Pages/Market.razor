@@ -1,0 +1,180 @@
+@page "/market"
+@using Microsoft.AspNetCore.Components.Authorization
+
+<PageTitle>Rynek - Paczki</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container py-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">Rynek</h1>
+                    <p class="text-sm text-muted-foreground">
+                        Kupuj paczki kart za zdobyte złoto.
+                    </p>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="grid gap-4 md:grid-cols-3">
+                    @for (var i = 0; i < 3; i++)
+                    {
+                        <Card class="h-48 bg-slate-900/60 animate-pulse" />
+                    }
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(error))
+            {
+                <Alert Variant="AlertVariant.Danger">
+                    <AlertTitle>Błąd</AlertTitle>
+                    <AlertDescription>@error</AlertDescription>
+                </Alert>
+            }
+            else if (packs.Count == 0)
+            {
+                <div class="text-center py-12 text-muted-foreground">
+                    Brak dostępnych paczek w sklepie.
+                </div>
+            }
+            else
+            {
+                <div class="grid gap-4 md:grid-cols-3">
+                    @foreach (var pack in packs.Where(p => p.IsActive))
+                    {
+                        <Card class="bg-slate-900/60 border-slate-800 hover:border-primary/60 transition-colors">
+                            <CardHeader>
+                                <CardTitle>@pack.Name</CardTitle>
+                                <CardDescription>
+                                    Cena: <span class="font-semibold text-yellow-400">@pack.Price</span> złota
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div class="space-y-1 text-xs text-slate-300">
+                                    <div>Common: @pack.ChanceCommon %</div>
+                                    <div>Rare: @pack.ChanceRare %</div>
+                                    <div>Legendary: @pack.ChanceLegendary %</div>
+                                </div>
+                            </CardContent>
+                            <CardFooter class="flex flex-col gap-2">
+                                <Button Disabled="@(isBuying && selectedPackName == pack.Name)" OnClick="@(() => BuyPackAsync(pack.Name))">
+                                    @(isBuying && selectedPackName == pack.Name ? "Kupuję..." : "Kup paczkę")
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    }
+                </div>
+
+                @if (lastBuyResult is not null)
+                {
+                    <div class="mt-8">
+                        <h2 class="text-xl font-semibold mb-2">Wynik ostatniego zakupu</h2>
+                        @if (lastBuyResult.Success && lastBuyResult.Cards?.Count > 0)
+                        {
+                            <div class="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+                                @foreach (var card in lastBuyResult.Cards)
+                                {
+                                    <Card class="bg-slate-900/60 border-slate-800">
+                                        <CardHeader class="pb-2">
+                                            <CardTitle class="text-sm font-semibold truncate">@card.Name</CardTitle>
+                                            <CardDescription class="text-[11px]">@card.Rarity.ToString()</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                                <span>ATK: @card.Attack</span>
+                                                <span>DEF: @card.Defense</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-muted-foreground">@lastBuyResult?.Message</p>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="container py-12 text-center space-y-4">
+            <h1 class="text-3xl font-bold">Zaloguj się, aby korzystać z rynku</h1>
+            <p class="text-muted-foreground">
+                Zakupy paczek wymagają zalogowania się przez Discord, abyśmy mogli przypisać karty do Twojego konta.
+            </p>
+            <a href="/login" class="inline-flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-indigo-600/20">
+                <LucideIcon Name="log-in" Size="18" />
+                Zaloguj przez Discord
+            </a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Inject] private HttpClient Http { get; set; } = default!;
+
+    private List<PackType> packs = new();
+    private bool isLoading = true;
+    private string? error;
+
+    private bool isBuying;
+    private string? selectedPackName;
+    private BuyPackResult? lastBuyResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            packs = await Http.GetFromJsonAsync<List<PackType>>("/shop/packs") ?? new();
+        }
+        catch
+        {
+            error = "Nie udało się załadować paczek sklepu.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task BuyPackAsync(string packName)
+    {
+        try
+        {
+            isBuying = true;
+            selectedPackName = packName;
+            lastBuyResult = null;
+
+            var response = await Http.PostAsync($"/shop/buy-pack?packName={Uri.EscapeDataString(packName)}", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                lastBuyResult = new BuyPackResult(false, "Zakup nieudany.", new List<HengcordTCG.Shared.Models.Card>());
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<BuyPackResult>();
+            if (result is not null)
+            {
+                lastBuyResult = result;
+            }
+            else
+            {
+                lastBuyResult = new BuyPackResult(false, "Błąd odpowiedzi serwera.", new List<HengcordTCG.Shared.Models.Card>());
+            }
+        }
+        catch
+        {
+            lastBuyResult = new BuyPackResult(false, "Wystąpił błąd podczas zakupu paczki.", new List<HengcordTCG.Shared.Models.Card>());
+        }
+        finally
+        {
+            isBuying = false;
+            selectedPackName = null;
+        }
+    }
+
+    private sealed record BuyPackResult(bool Success, string Message, List<HengcordTCG.Shared.Models.Card> Cards);
+}
+

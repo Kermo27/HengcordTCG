@@ -1,13 +1,12 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using HengcordTCG.Bot.Handlers;
 using HengcordTCG.Bot.Services;
-using HengcordTCG.Shared.Data;
+using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Services;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -27,14 +26,19 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()));
         services.AddSingleton<InteractionHandler>();
         
-        // Database
-        var dbPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "bot.db");
-        services.AddDbContext<AppDbContext>(opt => opt.UseSqlite($"Data Source={dbPath}"));
-        
-        // Services
-        services.AddScoped<UserService>();
-        services.AddScoped<ShopService>();
-        services.AddScoped<TradeService>();
+        // API Client
+        var serverUrl = context.Configuration["ServerUrl"] ?? "https://localhost:7193";
+        services.AddHttpClient<HengcordTCGClient>(client =>
+        {
+            client.BaseAddress = new Uri(serverUrl);
+        });
+
+        // Some services might still be needed locally if they don't use DB, 
+        // but for now we focus on the API Client.
+        // CardImageService still needs local assets or we move it to server?
+        // User requested bot to use server, so we should probably move image gen to server too later.
+        // For now, let's keep it scoped if it's used in commands.
+        services.AddScoped<CardImageService>(sp => new CardImageService(AppContext.BaseDirectory));
         
         services.AddHostedService<BotService>();
     })

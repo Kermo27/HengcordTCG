@@ -1,18 +1,17 @@
 using Discord;
 using Discord.Interactions;
-using Microsoft.EntityFrameworkCore;
-using HengcordTCG.Shared.Data;
 using HengcordTCG.Bot.Handlers;
+using HengcordTCG.Shared.Clients;
 
 namespace HengcordTCG.Bot.Commands;
 
 public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly AppDbContext _db;
+    private readonly HengcordTCGClient _client;
 
-    public InfoCommands(AppDbContext db)
+    public InfoCommands(HengcordTCGClient client)
     {
-        _db = db;
+        _client = client;
     }
 
     [SlashCommand("card", "Wyszukaj informacje o karcie")]
@@ -20,8 +19,8 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
         [Summary("nazwa", "Nazwa karty")] 
         [Autocomplete(typeof(CardAutocompleteHandler))] string cardName)
     {
-        var card = await _db.Cards
-            .FirstOrDefaultAsync(c => c.Name.ToLower() == cardName.ToLower());
+        var cards = await _client.GetCardsAsync();
+        var card = cards.FirstOrDefault(c => c.Name.ToLower() == cardName.ToLower());
 
         if (card == null)
         {
@@ -46,11 +45,9 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
 
         if (card.ExclusivePackId.HasValue)
         {
-            var pack = await _db.PackTypes.FindAsync(card.ExclusivePackId.Value);
-            if (pack != null)
-            {
-                embed.AddField("📦 Dostępność", $"Wyłącznie w pacce: **{pack.Name}**");
-            }
+            // Note: Since we don't have GetPacksAsync in client yet, 
+            // we just show that it is exclusive. 
+            embed.AddField("📦 Dostępność", "Karta ekskluzywna dla konkretnej paczki.");
         }
         else
         {

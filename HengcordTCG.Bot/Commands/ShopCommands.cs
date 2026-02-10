@@ -1,17 +1,17 @@
 using Discord;
 using Discord.Interactions;
 using HengcordTCG.Bot.Handlers;
-using HengcordTCG.Shared.Services;
+using HengcordTCG.Shared.Clients;
 
 namespace HengcordTCG.Bot.Commands;
 
 public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly ShopService _shopService;
+    private readonly HengcordTCGClient _client;
 
-    public ShopCommands(ShopService shopService)
+    public ShopCommands(HengcordTCGClient client)
     {
-        _shopService = shopService;
+        _client = client;
     }
 
     [SlashCommand("buy", "Kup paczkę kart")]
@@ -19,9 +19,9 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
         [Summary("paczka", "Nazwa paczki (domyślnie Base Set)")]
         [Autocomplete(typeof(Handlers.PackAutocompleteHandler))] string packName = "Base Set")
     {
-        var result = await _shopService.BuyPackAsync(Context.User.Id, Context.User.Username, packName);
+        var result = await _client.BuyPackAsync(Context.User.Id, Context.User.Username, packName);
 
-        if (!result.success)
+        if (!result.success || result.cards == null)
         {
             await RespondAsync($"❌ {result.message}", ephemeral: true);
             return;
@@ -60,7 +60,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 
     private async Task SendCollectionListAsync(ulong ownerId)
     {
-        var collection = await _shopService.GetUserCollectionAsync(ownerId);
+        var collection = await _client.GetCollectionAsync(ownerId);
 
         if (collection.Count == 0)
         {
@@ -121,7 +121,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
         
         long newExpiryTicks = DateTime.UtcNow.AddMinutes(2).Ticks;
 
-        var collection = await _shopService.GetUserCollectionAsync(ownerId);
+        var collection = await _client.GetCollectionAsync(ownerId);
 
         if (collection.Count == 0)
         {

@@ -1,7 +1,8 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using HengcordTCG.Shared.Services;
+using HengcordTCG.Shared.Models;
+using HengcordTCG.Shared.Clients;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,11 +10,11 @@ namespace HengcordTCG.Bot.Commands;
 
 public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly TradeService _tradeService;
+    private readonly HengcordTCGClient _client;
 
-    public TradeCommands(TradeService tradeService)
+    public TradeCommands(HengcordTCGClient client)
     {
-        _tradeService = tradeService;
+        _client = client;
     }
 
     [SlashCommand("trade", "Zaproponuj wymianę z innym graczem")]
@@ -28,21 +29,23 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var result = await _tradeService.CreateTradeAsync(Context.User.Id, Context.User.Username, target.Id, target.Username, offer, request);
+        var result = await _client.CreateTradeAsync(new HengcordTCGClient.CreateTradeRequest(
+            Context.User.Id, Context.User.Username, target.Id, target.Username, offer, request
+        ));
 
-        if (!result.success)
+        if (!result.Success || result.Trade == null)
         {
-            await RespondAsync($"❌ {result.message}", ephemeral: true);
+            await RespondAsync($"❌ {result.Message}", ephemeral: true);
             return;
         }
 
-        var trade = result.trade!;
+        var trade = result.Trade;
 
         var embed = new EmbedBuilder()
             .WithTitle("🤝 Propozycja Wymiany")
             .WithDescription($"**{Context.User.Username}** proponuje wymianę z **{target.Username}**!")
-            .AddField($"📤 {Context.User.Username} Oferuje:", FormatTradeDetails(result.offerContent!))
-            .AddField($"📥 {Context.User.Username} Oczekuje:", FormatTradeDetails(result.requestContent!))
+            .AddField($"📤 {Context.User.Username} Oferuje:", FormatTradeDetails(result.OfferContent!))
+            .AddField($"📥 {Context.User.Username} Oczekuje:", FormatTradeDetails(result.RequestContent!))
             .WithColor(Color.Orange)
             .Build();
 
@@ -56,7 +59,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
 
     // ... handler methods ...
 
-    private string FormatTradeDetails(TradeService.TradeContent content)
+    private string FormatTradeDetails(TradeContent content)
     {
         var items = new List<string>();
         if (content.Gold > 0) items.Add($"💰 **{content.Gold} Gold**");
@@ -78,11 +81,11 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
     {
         if (!int.TryParse(tradeIdStr, out int tradeId)) return;
 
-        var result = await _tradeService.AcceptTradeAsync(tradeId, Context.User.Id);
+        var result = await _client.AcceptTradeAsync(tradeId, Context.User.Id);
 
-        if (result.success)
+        if (result.Success)
         {
-            await RespondAsync($"✅ {result.message}");
+            await RespondAsync($"✅ {result.Message}");
             // Update original message to remove buttons
             if (Context.Interaction is SocketMessageComponent component)
             {
@@ -94,7 +97,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
         }
         else
         {
-            await RespondAsync($"❌ {result.message}", ephemeral: true);
+            await RespondAsync($"❌ {result.Message}", ephemeral: true);
         }
     }
 
@@ -103,11 +106,11 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
     {
         if (!int.TryParse(tradeIdStr, out int tradeId)) return;
 
-        var result = await _tradeService.RejectTradeAsync(tradeId, Context.User.Id);
+        var result = await _client.RejectTradeAsync(tradeId, Context.User.Id);
 
-        if (result.success)
+        if (result.Success)
         {
-            await RespondAsync($"⛔ {result.message}");
+            await RespondAsync($"⛔ {result.Message}");
             
             if (Context.Interaction is SocketMessageComponent component)
             {
@@ -119,7 +122,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
         }
         else
         {
-            await RespondAsync($"❌ {result.message}", ephemeral: true);
+            await RespondAsync($"❌ {result.Message}", ephemeral: true);
         }
     }
 

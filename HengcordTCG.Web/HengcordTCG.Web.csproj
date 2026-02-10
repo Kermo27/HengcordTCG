@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNet.Security.OAuth.Discord" Version="9.0.0" />
     <PackageReference Include="BlazorBlueprint.Components" Version="2.0.0" />
     <PackageReference Include="BlazorBlueprint.Primitives" Version="2.0.0" />
     <PackageReference Include="BlazorBlueprint.Icons.Lucide" Version="2.0.0" />

@@ -1,8 +1,7 @@
 using Discord;
 using Discord.Interactions;
-using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Bot.Handlers;
-using HengcordTCG.Shared.Data;
+using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Models;
 
 namespace HengcordTCG.Bot.Commands;
@@ -12,11 +11,11 @@ namespace HengcordTCG.Bot.Commands;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly AppDbContext _db;
+    private readonly HengcordTCGClient _client;
 
-    public AdminCommands(AppDbContext db)
+    public AdminCommands(HengcordTCGClient client)
     {
-        _db = db;
+        _client = client;
     }
 
     [SlashCommand("addcard", "Dodaje nową kartę do gry")]
@@ -27,13 +26,6 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
         [Summary("rzadkosc", "Rzadkość karty")] Rarity rarity = Rarity.Common,
         [Summary("obrazek", "Link do obrazka (opcjonalny)")] string? imageUrl = null)
     {
-        var existingCard = await _db.Cards.FirstOrDefaultAsync(c => c.Name == name);
-        if (existingCard != null)
-        {
-            await RespondAsync($"❌ Karta o nazwie '{name}' już istnieje!", ephemeral: true);
-            return;
-        }
-
         var card = new Card
         {
             Name = name,
@@ -44,33 +36,27 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             CreatedAt = DateTime.UtcNow
         };
 
-        _db.Cards.Add(card);
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Dodano kartę: **{name}** (ATK: {attack}, DEF: {defense}, Rarity: {rarity})");
+        var success = await _client.AddCardAsync(card);
+        if (success)
+            await RespondAsync($"✅ Dodano kartę: **{name}** (ATK: {attack}, DEF: {defense}, Rarity: {rarity})");
+        else
+            await RespondAsync($"❌ Nie udało się dodać karty '{name}'.", ephemeral: true);
     }
 
     [SlashCommand("removecard", "Usuwa kartę z gry")]
     public async Task RemoveCardAsync([Summary("nazwa", "Nazwa karty")] string name)
     {
-        var card = await _db.Cards.FirstOrDefaultAsync(c => c.Name == name);
-        
-        if (card == null)
-        {
-            await RespondAsync($"❌ Nie znaleziono karty o nazwie '{name}'", ephemeral: true);
-            return;
-        }
-
-        _db.Cards.Remove(card);
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"🗑️ Usunięto kartę: **{name}**");
+        var success = await _client.RemoveCardAsync(name);
+        if (success)
+            await RespondAsync($"🗑️ Usunięto kartę: **{name}**");
+        else
+            await RespondAsync($"❌ Nie znaleziono lub nie udało się usunąć karty '{name}'", ephemeral: true);
     }
 
     [SlashCommand("listcards", "Wyświetla listę kart")]
     public async Task ListCardsAsync()
     {
-        var cards = await _db.Cards.ToListAsync();
+        var cards = await _client.GetCardsAsync();
         
         if (cards.Count == 0)
         {
@@ -89,7 +75,7 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("reload", "Przeładowuje dane bota")]
     public async Task ReloadAsync()
     {
-        await RespondAsync("🔄 (To polecenie na razie nic nie robi, bo EF Core pobiera dane na bieżąco)");
+        await RespondAsync("🔄 Dane są pobierane z API na bieżąco.");
     }
 
     [SlashCommand("givegold", "Daje złoto użytkownikowi")]
@@ -103,23 +89,11 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == user.Id);
-        if (dbUser == null)
-        {
-            dbUser = new User
-            {
-                DiscordId = user.Id,
-                Username = user.Username,
-                CreatedAt = DateTime.UtcNow,
-                LastSeen = DateTime.UtcNow
-            };
-            _db.Users.Add(dbUser);
-        }
-
-        dbUser.Gold += amount;
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Dodano **{amount}** złota dla **{user.Username}**. Nowy balans: **{dbUser.Gold}**.");
+        var newBalance = await _client.GiveGoldAdminAsync(user.Id, amount);
+        if (newBalance != -1)
+            await RespondAsync($"✅ Dodano **{amount}** złota dla **{user.Username}**. Nowy balans: **{newBalance}**.");
+        else
+            await RespondAsync($"❌ Nie udało się dodać złota dla **{user.Username}**.", ephemeral: true);
     }
 
     [SlashCommand("setgold", "Ustawia złoto użytkownikowi")]
@@ -133,23 +107,11 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == user.Id);
-        if (dbUser == null)
-        {
-            dbUser = new User
-            {
-                DiscordId = user.Id,
-                Username = user.Username,
-                CreatedAt = DateTime.UtcNow,
-                LastSeen = DateTime.UtcNow
-            };
-            _db.Users.Add(dbUser);
-        }
-
-        dbUser.Gold = amount;
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Ustawiono balans **{user.Username}** na **{amount}** złota.");
+        var newBalance = await _client.SetGoldAdminAsync(user.Id, amount);
+        if (newBalance != -1)
+            await RespondAsync($"✅ Ustawiono balans **{user.Username}** na **{newBalance}** złota.");
+        else
+            await RespondAsync($"❌ Nie udało się ustawić złota dla **{user.Username}**.", ephemeral: true);
     }
 
     [SlashCommand("createpack", "Tworzy nowy typ paczki")]
@@ -166,32 +128,27 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var existingPack = await _db.PackTypes.FirstOrDefaultAsync(p => p.Name == name);
-        if (existingPack != null)
-        {
-            await RespondAsync($"❌ Paczka o nazwie '{name}' już istnieje!");
-            return;
-        }
-
         var pack = new PackType
         {
             Name = name,
             Price = price,
             ChanceCommon = common,
             ChanceRare = rare,
-            ChanceLegendary = legendary
+            ChanceLegendary = legendary,
+            IsActive = true
         };
 
-        _db.PackTypes.Add(pack);
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Utworzono paczkę **{name}** (Cena: {price}).\nSzans: C:{common} R:{rare} L:{legendary}");
+        var success = await _client.CreatePackAsync(pack);
+        if (success)
+            await RespondAsync($"✅ Utworzono paczkę **{name}** (Cena: {price}).\nSzans: C:{common} R:{rare} L:{legendary}");
+        else
+            await RespondAsync($"❌ Nie udało się utworzyć paczki '{name}'.", ephemeral: true);
     }
 
     [SlashCommand("listpacks", "Lista dostępnych paczek")]
     public async Task ListPacksAsync()
     {
-        var packs = await _db.PackTypes.ToListAsync();
+        var packs = await _client.GetPacksAsync();
         if (packs.Count == 0)
         {
             await RespondAsync("Brak paczek w bazie.");
@@ -214,88 +171,32 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
         [Summary("karta", "Nazwa karty")] string cardName,
         [Summary("paczka", "Nazwa paczki (wpisz 'null' aby usunąć)")] string packName)
     {
-        var card = await _db.Cards.FirstOrDefaultAsync(c => c.Name == cardName);
-        if (card == null)
-        {
-            await RespondAsync($"❌ Nie znaleziono karty '{cardName}'!", ephemeral: true);
-            return;
-        }
-
-        if (packName.ToLower() == "null" || packName.ToLower() == "default" || packName.ToLower() == "base")
-        {
-            card.ExclusivePackId = null;
-            await _db.SaveChangesAsync();
-            await RespondAsync($"✅ Karta **{card.Name}** jest teraz dostępna we wszystkich paczkach (Global Pool).");
-            return;
-        }
-
-        var pack = await _db.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-        if (pack == null)
-        {
-            await RespondAsync($"❌ Nie znaleziono paczki '{packName}'!", ephemeral: true);
-            return;
-        }
-
-        card.ExclusivePack = pack;
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Karta **{card.Name}** została przypisana ekskluzywnie do paczki **{pack.Name}**.");
+        var success = await _client.SetCardPackAsync(cardName, packName);
+        if (success)
+            await RespondAsync($"✅ Zaktualizowano przypisanie karty **{cardName}**.");
+        else
+            await RespondAsync($"❌ Nie udało się zaktualizować przypisania karty '{cardName}'.", ephemeral: true);
     }
 
     [SlashCommand("togglepack", "Włącza/wyłącza dostępność paczki")]
     public async Task TogglePackAsync(
         [Summary("paczka", "Nazwa paczki")] string packName)
     {
-        var pack = await _db.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-        if (pack == null)
-        {
+        var success = await _client.TogglePackAsync(packName);
+        if (success)
+            await RespondAsync($"✅ Zmieniono dostępność paczki **{packName}**.");
+        else
             await RespondAsync($"❌ Nie znaleziono paczki '{packName}'!", ephemeral: true);
-            return;
-        }
-
-        pack.IsActive = !pack.IsActive;
-        await _db.SaveChangesAsync();
-
-        var status = pack.IsActive ? "🟢 AKTYWNA" : "🔴 NIEAKTYWNA";
-        await RespondAsync($"✅ Paczka **{pack.Name}** jest teraz {status}.");
     }
 
     [SlashCommand("fixinventory", "Naprawia zduplikowane karty w ekwipunku")]
     public async Task FixInventoryAsync()
     {
-        var allUserCards = await _db.UserCards.ToListAsync();
-        
-        var duplicates = allUserCards
-            .GroupBy(uc => new { uc.UserId, uc.CardId })
-            .Where(g => g.Count() > 1)
-            .ToList();
-
-        if (duplicates.Count == 0)
-        {
-            await RespondAsync("✅ Nie znaleziono duplikatów.");
-            return;
-        }
-
-        int fixedCount = 0;
-
-        foreach (var group in duplicates)
-        {
-            var cards = group.OrderBy(uc => uc.ObtainedAt).ToList();
-            var primary = cards.First();
-            
-            int totalCount = cards.Sum(c => c.Count);
-            primary.Count = totalCount;
-            
-            foreach (var duplicate in cards.Skip(1))
-            {
-                _db.UserCards.Remove(duplicate);
-            }
-            
-            fixedCount++;
-        }
-
-        await _db.SaveChangesAsync();
-        await RespondAsync($"✅ Naprawiono **{fixedCount}** zduplikowanych wpisów.");
+        var success = await _client.FixInventoryAsync();
+        if (success)
+            await RespondAsync("✅ Naprawiono zduplikowane wpisy w ekwipunku.");
+        else
+            await RespondAsync("❌ Błąd podczas naprawy ekwipunku.", ephemeral: true);
     }
 
     [SlashCommand("givecard", "Daje kartę użytkownikowi")]
@@ -310,91 +211,30 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var card = await _db.Cards.FirstOrDefaultAsync(c => c.Name == cardName);
-        if (card == null)
-        {
-            await RespondAsync($"❌ Nie znaleziono karty '{cardName}'!", ephemeral: true);
-            return;
-        }
-
-        var dbUser = await _db.Users
-            .Include(u => u.UserCards)
-            .FirstOrDefaultAsync(u => u.DiscordId == user.Id);
-
-        if (dbUser == null)
-        {
-            dbUser = new User
-            {
-                DiscordId = user.Id,
-                Username = user.Username,
-                CreatedAt = DateTime.UtcNow,
-                LastSeen = DateTime.UtcNow
-            };
-            _db.Users.Add(dbUser);
-        }
-
-        var userCard = dbUser.UserCards.FirstOrDefault(uc => uc.CardId == card.Id);
-        if (userCard != null)
-        {
-            userCard.Count += amount;
-        }
+        var success = await _client.GiveCardAsync(user.Id, cardName, amount);
+        if (success)
+            await RespondAsync($"✅ Przekazano **{amount}x {cardName}** użytkownikowi **{user.Username}**.");
         else
-        {
-            dbUser.UserCards.Add(new UserCard
-            {
-                CardId = card.Id,
-                Count = amount,
-                ObtainedAt = DateTime.UtcNow,
-            });
-        }
-
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Przekazano **{amount}x {card.Name}** użytkownikowi **{user.Username}**.");
+            await RespondAsync($"❌ Nie udało się przekazać karty '{cardName}'!", ephemeral: true);
     }
 
     [SlashCommand("addadmin", "Dodaje uprawnienia admina użytkownikowi")]
     public async Task AddAdminAsync([Summary("uzytkownik", "Użytkownik")] Discord.IUser user)
     {
-        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == user.Id);
-        if (dbUser == null)
-        {
-            dbUser = new User
-            {
-                DiscordId = user.Id,
-                Username = user.Username,
-                CreatedAt = DateTime.UtcNow,
-                LastSeen = DateTime.UtcNow
-            };
-            _db.Users.Add(dbUser);
-        }
-
-        if (dbUser.IsBotAdmin)
-        {
-            await RespondAsync($"ℹ️ **{user.Username}** jest już adminem.", ephemeral: true);
-            return;
-        }
-
-        dbUser.IsBotAdmin = true;
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Nadano uprawnienia admina użytkownikowi **{user.Username}**.");
+        var success = await _client.AddAdminAsync(user.Id);
+        if (success)
+            await RespondAsync($"✅ Nadano uprawnienia admina użytkownikowi **{user.Username}**.");
+        else
+            await RespondAsync($"❌ Nie udało się nadać uprawnień admina dla **{user.Username}**.", ephemeral: true);
     }
 
     [SlashCommand("removeadmin", "Usuwa uprawnienia admina użytkownikowi")]
     public async Task RemoveAdminAsync([Summary("uzytkownik", "Użytkownik")] Discord.IUser user)
     {
-        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == user.Id);
-        
-        if (dbUser == null || !dbUser.IsBotAdmin)
-        {
-            await RespondAsync($"❌ **{user.Username}** nie jest adminem.", ephemeral: true);
-            return;
-        }
-
-        dbUser.IsBotAdmin = false;
-        await _db.SaveChangesAsync();
-
-        await RespondAsync($"✅ Usunięto uprawnienia admina użytkownikowi **{user.Username}**.");
+        var success = await _client.RemoveAdminAsync(user.Id);
+        if (success)
+            await RespondAsync($"✅ Usunięto uprawnienia admina użytkownikowi **{user.Username}**.");
+        else
+            await RespondAsync($"❌ Nie udało się usunąć uprawnień admina dla **{user.Username}**.", ephemeral: true);
     }
 }
