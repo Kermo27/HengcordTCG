@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using HengcordTCG.Bot.Handlers;
 
 namespace HengcordTCG.Bot.Services;
@@ -15,40 +16,48 @@ public class BotService : IHostedService
     private readonly InteractionHandler _handler;
     private readonly IConfiguration _config;
     private readonly IServiceProvider _services;
+    private readonly ILogger<BotService> _logger;
 
     public BotService(
         DiscordSocketClient client,
         InteractionService interactions,
         InteractionHandler handler,
         IConfiguration config,
-        IServiceProvider services)
+        IServiceProvider services,
+        ILogger<BotService> logger)
     {
         _client = client;
         _interactions = interactions;
         _handler = handler;
         _config = config;
         _services = services;
+        _logger = logger;
     }
 
     public async Task StartAsync(CancellationToken ct)
     {
         await _handler.InitializeAsync();
 
-        _client.Log += msg => { Console.WriteLine(msg); return Task.CompletedTask; };
+        _client.Log += msg => 
+        { 
+            _logger.LogInformation("Discord Log: {Message}", msg);
+            return Task.CompletedTask; 
+        };
+
         _client.Ready += async () =>
         {
-            Console.WriteLine($"Bot connected as {_client.CurrentUser.Username}!");
+            _logger.LogInformation("Bot connected as {BotUsername}", _client.CurrentUser.Username);
             
             var guildId = _config.GetValue<ulong?>("Discord:GuildId");
             if (guildId.HasValue)
             {
                 await _interactions.RegisterCommandsToGuildAsync(guildId.Value);
-                Console.WriteLine($"✅ Registered commands to guild: {guildId.Value}");
+                _logger.LogInformation("Registered commands to guild: {GuildId}", guildId.Value);
             }
             else
             {
                 await _interactions.RegisterCommandsGloballyAsync();
-                Console.WriteLine("⚠️ Registered commands globally (up to 1h delay). Set 'Discord:GuildId' in appsettings for instant update.");
+                _logger.LogWarning("Registered commands globally (up to 1h delay). Set 'Discord:GuildId' in appsettings for instant update.");
             }
         };
 

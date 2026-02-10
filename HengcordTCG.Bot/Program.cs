@@ -8,6 +8,7 @@ using HengcordTCG.Bot.Handlers;
 using HengcordTCG.Bot.Services;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Services;
+using Microsoft.Extensions.Logging;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
@@ -20,6 +21,14 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((context, services) =>
     {
+        // Logging
+        services.AddLogging(configure =>
+        {
+            configure.AddConsole();
+            configure.AddDebug();
+            configure.SetMinimumLevel(LogLevel.Information);
+        });
+
         // Discord
         services.AddSingleton(new DiscordSocketConfig
         {
@@ -38,11 +47,7 @@ var host = Host.CreateDefaultBuilder(args)
             client.DefaultRequestHeaders.Add("X-API-Key", botApiKey);
         });
 
-        // Some services might still be needed locally if they don't use DB, 
-        // but for now we focus on the API Client.
-        // CardImageService still needs local assets or we move it to server?
-        // User requested bot to use server, so we should probably move image gen to server too later.
-        // For now, let's keep it scoped if it's used in commands.
+        // CardImageService
         services.AddScoped<CardImageService>(sp => new CardImageService(AppContext.BaseDirectory));
         
         services.AddHostedService<BotService>();

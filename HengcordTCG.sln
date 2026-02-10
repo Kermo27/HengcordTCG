@@ -9,10 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HengcordTCG.Server", "Hengc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HengcordTCG.Bot", "HengcordTCG.Bot\HengcordTCG.Bot.csproj", "{8657D888-162B-4044-BF28-DA692CABAC79}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HengcordTCG.Web", "HengcordTCG.Web\HengcordTCG.Web.csproj", "{B68132B6-0488-4BAF-9E9D-C98501488B2B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HengcordTCG.Web.Client", "HengcordTCG.Web.Client\HengcordTCG.Web.Client.csproj", "{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,32 +55,11 @@ Global
 		{8657D888-162B-4044-BF28-DA692CABAC79}.Release|x64.Build.0 = Release|Any CPU
 		{8657D888-162B-4044-BF28-DA692CABAC79}.Release|x86.ActiveCfg = Release|Any CPU
 		{8657D888-162B-4044-BF28-DA692CABAC79}.Release|x86.Build.0 = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|x64.Build.0 = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Debug|x86.Build.0 = Debug|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|x64.ActiveCfg = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|x64.Build.0 = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|x86.ActiveCfg = Release|Any CPU
-		{B68132B6-0488-4BAF-9E9D-C98501488B2B}.Release|x86.Build.0 = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|x64.Build.0 = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Debug|x86.Build.0 = Debug|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|x64.ActiveCfg = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|x64.Build.0 = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|x86.ActiveCfg = Release|Any CPU
-		{E97E0CC0-48DC-4BC5-ACC3-EEE1DA043940}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3502C092-BB18-43A6-8EFE-5AE21B1B9A7D} = {72BCCAED-5D83-E819-E03E-A3DD72EEFB43}
 	EndGlobalSection
 EndGlobal

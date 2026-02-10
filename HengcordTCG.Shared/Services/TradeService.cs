@@ -57,85 +57,117 @@ public class TradeService
 
     public async Task<(bool success, string message)> AcceptTradeAsync(int tradeId, ulong userId)
     {
-        var trade = await _db.Trades
-            .Include(t => t.Initiator).ThenInclude(u => u.UserCards)
-            .Include(t => t.Target).ThenInclude(u => u.UserCards)
-            .FirstOrDefaultAsync(t => t.Id == tradeId);
-
-        if (trade == null) return (false, "Nie znaleziono oferty.");
-        if (trade.Status != TradeStatus.Pending) return (false, "Oferta nie jest już aktywna.");
-        if (trade.Target.DiscordId != userId) return (false, "To nie jest oferta dla Ciebie!");
-
-        var offerCards = JsonSerializer.Deserialize<Dictionary<int, int>>(trade.OfferCardsJson) ?? new();
-        var requestCards = JsonSerializer.Deserialize<Dictionary<int, int>>(trade.RequestCardsJson) ?? new();
-
-        // Validate Initiator assets (Gold & Cards)
-        if (trade.Initiator.Gold < trade.OfferGold) return (false, $"Inicjator nie ma wystarczająco złota ({trade.OfferGold}).");
-        
-        foreach (var kvp in offerCards)
+        using (var transaction = _db.Database.BeginTransaction())
         {
-            var userCard = trade.Initiator.UserCards.FirstOrDefault(uc => uc.CardId == kvp.Key);
-            if (userCard == null || userCard.Count < kvp.Value)
-                return (false, $"Inicjator nie ma karty ID:{kvp.Key} w ilości {kvp.Value}.");
+            try
+            {
+                var trade = await _db.Trades
+                    .Include(t => t.Initiator).ThenInclude(u => u.UserCards)
+                    .Include(t => t.Target).ThenInclude(u => u.UserCards)
+                    .FirstOrDefaultAsync(t => t.Id == tradeId);
+
+                if (trade == null)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, "Nie znaleziono oferty.");
+                }
+
+                if (trade.Status != TradeStatus.Pending)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, "Oferta nie jest już aktywna.");
+                }
+
+                if (trade.Target.DiscordId != userId)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, "To nie jest oferta dla Ciebie!");
+                }
+
+                var offerCards = JsonSerializer.Deserialize<Dictionary<int, int>>(trade.OfferCardsJson) ?? new();
+                var requestCards = JsonSerializer.Deserialize<Dictionary<int, int>>(trade.RequestCardsJson) ?? new();
+
+                // Validate Initiator assets (Gold & Cards)
+                if (trade.Initiator.Gold < trade.OfferGold)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, $"Inicjator nie ma wystarczająco złota ({trade.OfferGold}).");
+                }
+
+                foreach (var kvp in offerCards)
+                {
+                    var userCard = trade.Initiator.UserCards.FirstOrDefault(uc => uc.CardId == kvp.Key);
+                    if (userCard == null || userCard.Count < kvp.Value)
+                    {
+                        await transaction.RollbackAsync();
+                        return (false, $"Inicjator nie ma karty ID:{kvp.Key} w ilości {kvp.Value}.");
+                    }
+                }
+
+                // Validate Target assets
+                if (trade.Target.Gold < trade.RequestGold)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, $"Nie masz wystarczająco złota ({trade.RequestGold}).");
+                }
+
+                foreach (var kvp in requestCards)
+                {
+                    var userCard = trade.Target.UserCards.FirstOrDefault(uc => uc.CardId == kvp.Key);
+                    if (userCard == null || userCard.Count < kvp.Value)
+                    {
+                        await transaction.RollbackAsync();
+                        return (false, $"Nie masz karty ID:{kvp.Key} w ilości {kvp.Value}.");
+                    }
+                }
+
+                // EXECUTE TRANSFER
+
+                // 1. Move Gold
+                trade.Initiator.Gold -= trade.OfferGold;
+                trade.Target.Gold += trade.OfferGold;
+
+                trade.Target.Gold -= trade.RequestGold;
+                trade.Initiator.Gold += trade.RequestGold;
+
+                // 2. Move Cards (Initiator -> Target)
+                await TransferCardsAsync(trade.Initiator, trade.Target, offerCards);
+
+                // 3. Move Cards (Target -> Initiator)
+                await TransferCardsAsync(trade.Target, trade.Initiator, requestCards);
+
+                trade.Status = TradeStatus.Accepted;
+                await _db.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return (true, "Wymiana zakończona sukcesem!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
-        // Validate Target assets
-        if (trade.Target.Gold < trade.RequestGold) return (false, $"Nie masz wystarczająco złota ({trade.RequestGold}).");
-
-        foreach (var kvp in requestCards)
-        {
-            var userCard = trade.Target.UserCards.FirstOrDefault(uc => uc.CardId == kvp.Key);
-            if (userCard == null || userCard.Count < kvp.Value)
-                return (false, $"Nie masz karty ID:{kvp.Key} w ilości {kvp.Value}.");
-        }
-
-        // EXECUTE TRANSFER
-        
-        // 1. Move Gold
-        trade.Initiator.Gold -= trade.OfferGold;
-        trade.Target.Gold += trade.OfferGold;
-
-        trade.Target.Gold -= trade.RequestGold;
-        trade.Initiator.Gold += trade.RequestGold;
-
-        // 2. Move Cards (Initiator -> Target)
-        await TransferCardsAsync(trade.Initiator, trade.Target, offerCards);
-
-        // 3. Move Cards (Target -> Initiator)
-        await TransferCardsAsync(trade.Target, trade.Initiator, requestCards);
-
-        trade.Status = TradeStatus.Accepted;
-        await _db.SaveChangesAsync();
-
-        return (true, "Wymiana zakończona sukcesem!");
     }
 
     public async Task<(bool success, string message)> RejectTradeAsync(int tradeId, ulong userId)
     {
-        var trade = await _db.Trades.Include(t => t.Target).FirstOrDefaultAsync(t => t.Id == tradeId);
+        var trade = await _db.Trades.Include(t => t.Target).Include(t => t.Initiator).FirstOrDefaultAsync(t => t.Id == tradeId);
         if (trade == null) return (false, "Nie znaleziono oferty.");
         if (trade.Status != TradeStatus.Pending) return (false, "Oferta nie jest już aktywna.");
         
-        // Allow initiator to cancel, or target to reject
-        var isInitiator = trade.InitiatorId == (await _userService.GetOrCreateUserAsync(userId, "unknown")).Id; // slight optimization missing here but ok
-        // Actually, let's use InitiatorId from trade relation if loaded, but we need UserId not int Id.
-        // Let's rely on DiscordId check via DB query to be safe or assuming Initiator is loaded? Not loaded in simple query.
-        
-        // Better:
-        var user = await _userService.GetByDiscordIdAsync(userId);
-        if (user == null) return (false, "User not found");
-
-        if (trade.TargetId == user.Id)
-        {
-            trade.Status = TradeStatus.Rejected;
-            await _db.SaveChangesAsync();
-            return (true, "Odrzucono ofertę.");
-        }
-        else if (trade.InitiatorId == user.Id)
+        // Check if user is either initiator or target
+        if (trade.Initiator.DiscordId == userId)
         {
             trade.Status = TradeStatus.Cancelled;
             await _db.SaveChangesAsync();
             return (true, "Anulowano ofertę.");
+        }
+        else if (trade.Target.DiscordId == userId)
+        {
+            trade.Status = TradeStatus.Rejected;
+            await _db.SaveChangesAsync();
+            return (true, "Odrzucono ofertę.");
         }
 
         return (false, "Nie masz uprawnień do tej oferty.");

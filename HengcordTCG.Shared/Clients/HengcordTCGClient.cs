@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text;
 using HengcordTCG.Shared.Models;
 
 namespace HengcordTCG.Shared.Clients;
@@ -19,14 +20,19 @@ public class HengcordTCGClient
         {
             return await _http.GetFromJsonAsync<User>($"api/users/{discordId}");
         }
-        catch { return null; }
+        catch (HttpRequestException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"HTTP request failed: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<User?> GetOrCreateUserAsync(ulong discordId, string username)
     {
         try
         {
-            var response = await _http.PostAsync($"api/users/{discordId}/sync?username={Uri.EscapeDataString(username)}", null);
+            var content = new StringContent("", Encoding.UTF8, "application/json");
+            var response = await _http.PostAsync($"api/users/{discordId}/sync?username={Uri.EscapeDataString(username)}", content);
             if (!response.IsSuccessStatusCode)
             {
                 return null;
@@ -46,7 +52,8 @@ public class HengcordTCGClient
     {
         try 
         {
-            var response = await _http.PostAsync($"api/users/{discordId}/daily?username={Uri.EscapeDataString(username)}", null);
+            var content = new StringContent("", Encoding.UTF8, "application/json");
+            var response = await _http.PostAsync($"api/users/{discordId}/daily?username={Uri.EscapeDataString(username)}", content);
             return await response.Content.ReadFromJsonAsync<DailyResponse>() ?? new DailyResponse(false, 0, null);
         }
         catch { return new DailyResponse(false, 0, null); }
