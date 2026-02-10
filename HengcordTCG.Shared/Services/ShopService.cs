@@ -32,7 +32,7 @@ public class ShopService
             return (false, new List<Card>(), $"Nie znaleziono paczki o nazwie '{packName}'.");
         }
 
-        if (!pack.IsActive)
+        if (!pack.IsAvailable)
         {
             return (false, new List<Card>(), $"Paczka '{packName}' jest obecnie niedostępna w sklepie.");
         }

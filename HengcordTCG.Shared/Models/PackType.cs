@@ -10,7 +10,7 @@ public class PackType
     public string Name { get; set; } = string.Empty;
     
     public int Price { get; set; } = 100;
-    public bool IsActive { get; set; } = true;
+    public bool IsAvailable { get; set; } = true;
     
     public int ChanceCommon { get; set; } = 60;
     public int ChanceRare { get; set; } = 35;
