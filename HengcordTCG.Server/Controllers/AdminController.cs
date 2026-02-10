@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
+using HengcordTCG.Server.Extensions;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -41,12 +42,22 @@ public class AdminController : ControllerBase
     [HttpPost("give-gold")]
     public async Task<ActionResult> GiveGold([FromQuery] ulong discordId, [FromQuery] int amount)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
-        if (user == null) return NotFound();
-        
-        user.Gold += amount;
-        await _context.SaveChangesAsync();
-        return Ok(user.Gold);
+        try
+        {
+            ValidationExtensions.ValidateDiscordId(discordId);
+            ValidationExtensions.ValidateAmount(amount);
+            
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            if (user == null) return NotFound(new { message = "User not found" });
+            
+            user.Gold += amount;
+            await _context.SaveChangesAsync();
+            return Ok(new { newBalance = user.Gold });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("set-gold")]

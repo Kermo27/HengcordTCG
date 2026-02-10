@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Services;
+using HengcordTCG.Server.Extensions;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -27,13 +28,24 @@ public class ShopController : ControllerBase
     [HttpPost("buy-pack")]
     public async Task<ActionResult<List<Card>>> BuyPack([FromQuery] ulong discordId, [FromQuery] string username, [FromQuery] string packName = "Base Set")
     {
-        var result = await _shopService.BuyPackAsync(discordId, username, packName);
-        
-        if (!result.success)
+        try
         {
-            return BadRequest(result.message);
-        }
+            ValidationExtensions.ValidateDiscordId(discordId);
+            ValidationExtensions.ValidateUsername(username);
+            ValidationExtensions.ValidatePackName(packName);
+            
+            var result = await _shopService.BuyPackAsync(discordId, username, packName);
+            
+            if (!result.success)
+            {
+                return BadRequest(new { message = result.message });
+            }
 
-        return Ok(result.cards);
+            return Ok(result.cards);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
