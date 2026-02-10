@@ -1,6 +1,6 @@
 # HengcordTCG - Digital Trading Card Game Ecosystem
 
-HengcordTCG is a full-stack digital trading card game ecosystem featuring a Discord bot interface, a centralized server, a card editor, and a future web frontend.
+HengcordTCG is a full-stack digital trading card game ecosystem featuring a Discord bot interface and a centralized API server.
 
 ## Architecture Overview
 
@@ -10,8 +10,7 @@ The project is built using a decoupled, API-first architecture. All business log
 graph TD
     subgraph Clients
         Bot[HengcordTCG.Bot - Discord]
-        Web[HengcordTCG.Web.Client - Blazor]
-        Editor[HengcordTCG.Editor - Avalonia]
+        Web[HengcordTCG.Web - Blazor]
     end
 
     subgraph Server
@@ -24,9 +23,8 @@ graph TD
         Shared[HengcordTCG.Shared - Models/Client]
     end
 
-    Bot -->|HTTP| API
-    Web -->|HTTP| API
-    Editor -->|Local/HTTP| API
+    Bot -->|HTTP + API Key| API
+    Web -->|HTTP + API Key| API
     API --> DB
     API --> Assets
     Bot -.-> Shared
@@ -51,11 +49,7 @@ The primary user interface via Discord.
     - `/shop` - Buy card packs.
     - `/trade` - Interactive marketplace.
     - Autocomplete support for cards and packs.
-
-### 🎨 [HengcordTCG.Editor](file:///d:/Projects/TCGBot/HengcordTCG.Editor)
-A desktop application for game designers to create and edit card templates.
-- **Technology**: Avalonia UI
-- **Features**: Visual positioning, rarity management, art selection, and live card preview.
+- **Authentication**: Uses API Key (X-API-Key header) for secure communication with Server.
 
 ### 📦 [HengcordTCG.Shared](file:///d:/Projects/TCGBot/HengcordTCG.Shared)
 Common logic shared across all projects.
@@ -68,33 +62,37 @@ Common logic shared across all projects.
 ### Prerequisites
 - .NET 9.0 SDK
 - Discord Bot Token
+- (See [ENV_SETUP.md](ENV_SETUP.md) for configuration details)
 
 ### Running the Ecosystem
 
-1. **Start the Server**:
+1. **Start the Server** (required for all other components):
    ```bash
    cd HengcordTCG.Server
    dotnet run
    ```
-   *Note: Ensure the `Assets` folder exists in the project root.*
+   - API available at `http://localhost:5266`
+   - API Documentation (Scalar): `http://localhost:5266/scalar` (Development mode)
 
-2. **Run the Bot**:
+2. **Run the Discord Bot**:
    ```bash
    cd HengcordTCG.Bot
    dotnet run
    ```
-   *Note: Configure `Token` and `GuildId` in `appsettings.json`.*
+   - Configure Discord token and Guild ID in environment variables or `appsettings.json`
+   - See [ENV_SETUP.md](ENV_SETUP.md) for configuration
 
-3. **Launch the Editor**:
+3. **Launch the Web Application** (optional, in development):
    ```bash
-   cd HengcordTCG.Editor
+   cd HengcordTCG.Web
    dotnet run
    ```
+   - Web UI available at `http://localhost:5000`
+   - Requires Discord OAuth configuration
 
 ## Development
-- **Database**: Uses SQLite (`data/bot.db`).
-- **Assets**: All card templates, fonts, and art are stored in the `Assets/` directory.
-- **Decoupling**: The Bot project has NO direct database access; it communicates exclusively via the Server API.
+- **Database**: Uses SQLite (`data/bot.db`)
+- **API Keys**: All clients authenticate with Server using X-API-Key header (configure in environment variables)
 
 ---
 *Created with ❤️ by the HengcordTCG Team.*
