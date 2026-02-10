@@ -9,6 +9,14 @@ using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load configuration from appsettings and environment variables
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables(prefix: "HENGCORD_")
+    .Build();
+
 // Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();

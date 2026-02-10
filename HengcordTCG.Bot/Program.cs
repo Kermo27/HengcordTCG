@@ -12,8 +12,11 @@ using HengcordTCG.Shared.Services;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
     {
-        config.AddJsonFile("appsettings.json", optional: true);
-        config.AddEnvironmentVariables();
+        config
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json", optional: true)
+            .AddEnvironmentVariables(prefix: "HENGCORD_");
     })
     .ConfigureServices((context, services) =>
     {

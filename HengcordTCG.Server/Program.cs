@@ -6,6 +6,14 @@ using HengcordTCG.Server.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load configuration from appsettings and environment variables
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables(prefix: "HENGCORD_")
+    .Build();
+
 // Add CORS for Web project on port 5000
 builder.Services.AddCors(options =>
 {
