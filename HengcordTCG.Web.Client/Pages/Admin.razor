@@ -100,13 +100,13 @@
                                             <div>
                                                 <span class="font-medium">@pack.Name</span>
                                                 <span class="text-xs text-muted-foreground ml-2">
-                                                    (@(pack.IsActive ? "aktywna" : "wyłączona"))
+                                                    (@(pack.IsAvailable ? "aktywna" : "wyłączona"))
                                                 </span>
                                             </div>
                                             <Button Size="ButtonSize.Small" Variant="ButtonVariant.Outline"
                                                     Disabled="@isToggleBusy"
                                                     OnClick="@(() => TogglePackAsync(pack))">
-                                                @(pack.IsActive ? "Wyłącz" : "Włącz")
+                                                @(pack.IsAvailable ? "Wyłącz" : "Włącz")
                                             </Button>
                                         </div>
                                     }
@@ -234,7 +234,7 @@
             }
 
             // Locally flip IsActive
-            pack.IsActive = !pack.IsActive;
+            pack.IsAvailable = !pack.IsAvailable;
             StateHasChanged();
         }
         catch

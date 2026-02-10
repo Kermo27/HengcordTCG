@@ -40,7 +40,7 @@
             else
             {
                 <div class="grid gap-4 md:grid-cols-3">
-                    @foreach (var pack in packs.Where(p => p.IsActive))
+                    @foreach (var pack in packs.Where(p => p.IsAvailable))
                     {
                         <Card class="bg-slate-900/60 border-slate-800 hover:border-primary/60 transition-colors">
                             <CardHeader>

@@ -20,7 +20,7 @@ public class PackAutocompleteHandler : AutocompleteHandler
         var packs = await client.GetPacksAsync();
         
         var results = packs
-            .Where(p => p.IsActive)
+            .Where(p => p.IsAvailable)
             .Where(p => p.Name.ToLower().Contains(userInput.ToLower()))
             .Take(25)
             .Select(p => new AutocompleteResult($"{p.Name} ({p.Price}g)", p.Name));

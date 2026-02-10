@@ -135,7 +135,7 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             ChanceCommon = common,
             ChanceRare = rare,
             ChanceLegendary = legendary,
-            IsActive = true
+            IsAvailable = true
         };
 
         var success = await _client.CreatePackAsync(pack);

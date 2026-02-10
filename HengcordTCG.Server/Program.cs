@@ -6,13 +6,21 @@ using HengcordTCG.Server.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Set content root path to project directory for proper configuration loading
+var projectRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..");
+builder.Environment.ContentRootPath = Path.GetFullPath(projectRoot);
+
 // Load configuration from appsettings and environment variables
 builder.Configuration
-    .SetBasePath(Directory.GetCurrentDirectory())
+    .SetBasePath(builder.Environment.ContentRootPath)
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables(prefix: "HENGCORD_")
     .Build();
+
+// Ensure data directory exists for SQLite database
+var dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "data");
+Directory.CreateDirectory(dataDirectory);
 
 // Add CORS for Web project on port 5000
 builder.Services.AddCors(options =>
@@ -35,9 +43,13 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 // Database Configuration
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+var dbPath = Path.Combine(builder.Environment.ContentRootPath, connectionString.Replace("Data Source=", ""));
+var absoluteConnectionString = $"Data Source={dbPath}";
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        absoluteConnectionString,
         b => b.MigrationsAssembly("HengcordTCG.Server")));
 
 // Business Services
