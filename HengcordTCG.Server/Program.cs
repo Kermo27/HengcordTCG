@@ -81,6 +81,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<RateLimitMiddleware>();
+
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 app.UseMiddleware<ApiKeyAuthMiddleware>();
