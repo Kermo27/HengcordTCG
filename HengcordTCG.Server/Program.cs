@@ -60,6 +60,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
 app.UseMiddleware<ApiKeyAuthMiddleware>();
 
 app.UseCors("AllowWeb");

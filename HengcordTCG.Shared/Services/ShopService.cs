@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
+using Microsoft.Extensions.Logging;
 
 namespace HengcordTCG.Shared.Services;
 
@@ -8,39 +9,49 @@ public class ShopService
 {
     private readonly AppDbContext _db;
     private readonly UserService _userService;
+    private readonly ILogger<ShopService> _logger;
 
-    public ShopService(AppDbContext db, UserService userService)
+    public ShopService(AppDbContext db, UserService userService, ILogger<ShopService> logger)
     {
         _db = db;
         _userService = userService;
+        _logger = logger;
     }
 
     public async Task<(bool success, List<Card> cards, string message)> BuyPackAsync(ulong discordId, string username, string packName = "Base Set")
     {
-        var user = await _userService.GetOrCreateUserAsync(discordId, username);
-        
-        var pack = await _db.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-        
-        if (pack == null && packName == "Base Set")
+        try
         {
-            pack = new PackType { Name = "Base Set", Price = 100 };
-            _db.PackTypes.Add(pack);
-            await _db.SaveChangesAsync();
-        }
-        else if (pack == null)
-        {
-            return (false, new List<Card>(), $"Nie znaleziono paczki o nazwie '{packName}'.");
-        }
+            _logger.LogInformation("Buy pack request from Discord ID {DiscordId}. Pack: {PackName}", discordId, packName);
+            
+            var user = await _userService.GetOrCreateUserAsync(discordId, username);
+            
+            var pack = await _db.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
+            
+            if (pack == null && packName == "Base Set")
+            {
+                _logger.LogInformation("Creating default Base Set pack");
+                pack = new PackType { Name = "Base Set", Price = 100 };
+                _db.PackTypes.Add(pack);
+                await _db.SaveChangesAsync();
+            }
+            else if (pack == null)
+            {
+                _logger.LogWarning("Pack not found: {PackName}", packName);
+                return (false, new List<Card>(), $"Nie znaleziono paczki o nazwie '{packName}'.");
+            }
 
-        if (!pack.IsAvailable)
-        {
-            return (false, new List<Card>(), $"Paczka '{packName}' jest obecnie niedostępna w sklepie.");
-        }
+            if (!pack.IsAvailable)
+            {
+                _logger.LogWarning("Pack unavailable: {PackName}", packName);
+                return (false, new List<Card>(), $"Paczka '{packName}' jest obecnie niedostępna w sklepie.");
+            }
 
-        if (user.Gold < pack.Price)
-        {
-            return (false, new List<Card>(), $"Brakuje Ci złota! Koszt paczki '{pack.Name}': {pack.Price}, masz: {user.Gold}");
-        }
+            if (user.Gold < pack.Price)
+            {
+                _logger.LogWarning("Insufficient gold for Discord ID {DiscordId}. Required: {Price}, Has: {Gold}", discordId, pack.Price, user.Gold);
+                return (false, new List<Card>(), $"Brakuje Ci złota! Koszt paczki '{pack.Name}': {pack.Price}, masz: {user.Gold}");
+            }
         
         var poolQuery = _db.Cards.AsQueryable();
         
@@ -124,7 +135,14 @@ public class ShopService
         user.Gold -= pack.Price;
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("Pack purchased successfully for Discord ID {DiscordId}. Pack: {PackName}, Amount: {Amount} gold", discordId, pack.Name, pack.Price);
         return (true, drawnCards, $"Paczka '{pack.Name}' otwarta!");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error buying pack for Discord ID {DiscordId}. Pack: {PackName}", discordId, packName);
+            return (false, new List<Card>(), "Błąd podczas kupna paczki. Spróbuj ponownie.");
+        }
     }
 
     public async Task<List<UserCard>> GetUserCollectionAsync(ulong discordId)
