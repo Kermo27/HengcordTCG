@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Services;
 using Scalar.AspNetCore;
+using HengcordTCG.Server.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ApiKeyAuthMiddleware>();
 
 app.UseCors("AllowWeb");
 

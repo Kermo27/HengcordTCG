@@ -19,11 +19,13 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddBlazorBlueprintPrimitives();
 builder.Services.AddScoped<ToastService>();
 
-// API Client for syncing users
+// API Client for syncing users with API Key authentication
 builder.Services.AddHttpClient<HengcordTCGClient>(client =>
 {
-    var serverUrl = builder.Configuration["ServerUrl"] ?? "http://localhost:5266"; // Match user's HTTP request
+    var serverUrl = builder.Configuration["ServerUrl"] ?? "http://localhost:5266";
+    var webApiKey = builder.Configuration["ApiKey"] ?? "YOUR_WEB_API_KEY";
     client.BaseAddress = new Uri(serverUrl);
+    client.DefaultRequestHeaders.Add("X-API-Key", webApiKey);
 });
 
 // Authentication

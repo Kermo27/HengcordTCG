@@ -26,11 +26,13 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()));
         services.AddSingleton<InteractionHandler>();
         
-        // API Client
+        // API Client with API Key authentication
         var serverUrl = context.Configuration["ServerUrl"] ?? "https://localhost:7193";
+        var botApiKey = context.Configuration["ApiKey"] ?? "YOUR_BOT_API_KEY";
         services.AddHttpClient<HengcordTCGClient>(client =>
         {
             client.BaseAddress = new Uri(serverUrl);
+            client.DefaultRequestHeaders.Add("X-API-Key", botApiKey);
         });
 
         // Some services might still be needed locally if they don't use DB, 
