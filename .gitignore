@@ -11,6 +11,9 @@
 # Visual Studio Code
 .vscode/
 
+# JetBrains Rider / IntelliJ IDEA
+.idea/
+
 # Build results
 [Dd]ebug/
 [Rr]elease/
