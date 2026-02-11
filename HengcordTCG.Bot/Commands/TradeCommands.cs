@@ -17,15 +17,15 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
         _client = client;
     }
 
-    [SlashCommand("trade", "Zaproponuj wymianę z innym graczem")]
+    [SlashCommand("trade", "Propose a trade with another player")]
     public async Task TradeAsync(
-        [Summary("gracz", "Z kim chcesz się wymienić?")] Discord.IUser target,
-        [Summary("oferta", "Co dajesz? (np. 'Smoczy Miecz x1, Gold: 100')")] string offer,
-        [Summary("zadanie", "Czego oczekujesz? (np. 'Tarcza x1')")] string request)
+        [Summary("player", "Who do you want to trade with?")] Discord.IUser target,
+        [Summary("offer", "What are you offering? (e.g., 'Dragon Sword x1, Gold: 100')")] string offer,
+        [Summary("request", "What do you want? (e.g., 'Shield x1')")] string request)
     {
         if (target.IsBot)
         {
-            await RespondAsync("🤖 Bipy boop. Nie wymieniam się z robotami.", ephemeral: true);
+            await RespondAsync("🤖 Beep boop. I don't trade with robots.", ephemeral: true);
             return;
         }
 
@@ -42,22 +42,20 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
         var trade = result.Trade;
 
         var embed = new EmbedBuilder()
-            .WithTitle("🤝 Propozycja Wymiany")
-            .WithDescription($"**{Context.User.Username}** proponuje wymianę z **{target.Username}**!")
-            .AddField($"📤 {Context.User.Username} Oferuje:", FormatTradeDetails(result.OfferContent!))
-            .AddField($"📥 {Context.User.Username} Oczekuje:", FormatTradeDetails(result.RequestContent!))
+            .WithTitle("🤝 Trade Proposal")
+            .WithDescription($"**{Context.User.Username}** proposes a trade with **{target.Username}**!")
+            .AddField($"📤 {Context.User.Username} Offers:", FormatTradeDetails(result.OfferContent!))
+            .AddField($"📥 {Context.User.Username} Requests:", FormatTradeDetails(result.RequestContent!))
             .WithColor(Color.Orange)
             .Build();
 
         var components = new ComponentBuilder()
-            .WithButton("Akceptuj", $"trade_accept:{trade.Id}", ButtonStyle.Success)
-            .WithButton("Odrzuć", $"trade_reject:{trade.Id}", ButtonStyle.Danger)
+            .WithButton("Accept", $"trade_accept:{trade.Id}", ButtonStyle.Success)
+            .WithButton("Reject", $"trade_reject:{trade.Id}", ButtonStyle.Danger)
             .Build();
 
-        await RespondAsync($"{target.Mention}, masz nową ofertę wymiany!", embed: embed, components: components);
+        await RespondAsync($"{target.Mention}, you have a new trade offer!", embed: embed, components: components);
     }
-
-    // ... handler methods ...
 
     private string FormatTradeDetails(TradeContent content)
     {
@@ -72,7 +70,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
             }
         }
 
-        if (items.Count == 0) return "(Nic)";
+        if (items.Count == 0) return "(Nothing)";
         return string.Join("\n", items);
     }
 
@@ -91,7 +89,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
             {
                 await component.Message.ModifyAsync(msg => {
                     msg.Components = new ComponentBuilder().Build(); // Clear buttons
-                    msg.Content += "\n✅ **WYMIANA ZAKOŃCZONA!**";
+                    msg.Content += "\n✅ **TRADE COMPLETED!**";
                 });
             }
         }
@@ -116,7 +114,7 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
             {
                 await component.Message.ModifyAsync(msg => {
                     msg.Components = new ComponentBuilder().Build();
-                    msg.Content += "\n⛔ **WYMIANA ODWOŁANA.**";
+                    msg.Content += "\n⛔ **TRADE CANCELLED.**";
                 });
             }
         }
@@ -125,6 +123,4 @@ public class TradeCommands : InteractionModuleBase<SocketInteractionContext>
             await RespondAsync($"❌ {result.Message}", ephemeral: true);
         }
     }
-
-
 }

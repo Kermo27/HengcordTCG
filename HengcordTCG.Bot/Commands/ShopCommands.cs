@@ -14,9 +14,9 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
         _client = client;
     }
 
-    [SlashCommand("buy", "Kup paczkę kart")]
+    [SlashCommand("buy", "Buy a card pack")]
     public async Task BuyPackAsync(
-        [Summary("paczka", "Nazwa paczki (domyślnie Base Set)")]
+        [Summary("pack", "Pack name (default: Base Set)")]
         [Autocomplete(typeof(Handlers.PackAutocompleteHandler))] string packName = "Base Set")
     {
         var result = await _client.BuyPackAsync(Context.User.Id, Context.User.Username, packName);
@@ -28,9 +28,9 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
         }
 
         var embed = new EmbedBuilder()
-            .WithTitle($"📦 Otwarto paczkę: {packName}")
+            .WithTitle($"📦 Opened Pack: {packName}")
             .WithColor(Color.Purple)
-            .WithDescription($"Otrzymano {result.cards.Count} karty:");
+            .WithDescription($"You received {result.cards.Count} cards:");
 
         foreach (var card in result.cards)
         {
@@ -40,11 +40,11 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
         await RespondAsync(embed: embed.Build());
     }
 
-    [SlashCommand("collection", "Pokaż moje karty")]
+    [SlashCommand("collection", "Show your cards")]
     public async Task ShowCollectionAsync(
-        [Summary("widok", "Wybierz widok (domyślnie karty)")] 
-        [Choice("Karty (Interaktywne)", "cards")] 
-        [Choice("Lista (Tekst)", "list")] string view = "cards")
+        [Summary("view", "Select view (default: cards)")] 
+        [Choice("Cards (Interactive)", "cards")] 
+        [Choice("List (Text)", "list")] string view = "cards")
     {
         if (view == "list")
         {
@@ -64,7 +64,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 
         if (collection.Count == 0)
         {
-            await RespondAsync("📭 Nie masz jeszcze żadnych kart. Użyj `/buy pack`!", ephemeral: true);
+            await RespondAsync("📭 You don't have any cards yet. Use `/buy pack`!", ephemeral: true);
             return;
         }
 
@@ -74,16 +74,16 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
             .ToList();
 
         var description = string.Join("\n", sortedCollection.Select(uc => 
-            $"`{uc.Count}x` **{uc.Card.Name}** ({uc.Card.Rarity})")); // Simplified format
+            $"`{uc.Count}x` **{uc.Card.Name}** ({uc.Card.Rarity})"));
 
         if (description.Length > 4000) 
-            description = description.Substring(0, 3950) + "\n... (zbyt długa lista)";
+            description = description.Substring(0, 3950) + "\n... (list too long)";
 
         var embed = new EmbedBuilder()
-            .WithTitle($"📜 Lista kart: {Context.User.Username}")
+            .WithTitle($"📜 Card List: {Context.User.Username}")
             .WithDescription(description)
             .WithColor(Color.Blue)
-            .WithFooter($"Łącznie: {sortedCollection.Sum(x => x.Count)} kart | {sortedCollection.Count} unikalnych")
+            .WithFooter($"Total: {sortedCollection.Sum(x => x.Count)} cards | {sortedCollection.Count} unique")
             .Build();
 
         await RespondAsync(embed: embed);
@@ -112,7 +112,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
                     await component.UpdateAsync(msg =>
                     {
                         msg.Components = new ComponentBuilder().Build(); // Remove buttons
-                        msg.Content = "⚠️ **Sesja wygasła.** Użyj `/collection` ponownie.";
+                        msg.Content = "⚠️ **Session expired.** Use `/collection` again.";
                     });
                 }
                 return;
@@ -125,7 +125,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 
         if (collection.Count == 0)
         {
-            await RespondAsync("📭 Nie masz jeszcze żadnych kart. Użyj `/buy pack`!", ephemeral: true);
+            await RespondAsync("📭 You don't have any cards yet. Use `/buy pack`!", ephemeral: true);
             return;
         }
         
@@ -144,10 +144,10 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 
         var embed = new EmbedBuilder()
             .WithTitle(card.Name)
-            .WithDescription($"**Rzadkość:** {card.Rarity}\n**Ilość:** {userCard.Count} szt.\n⏳ Wygasa: <t:{expirySeconds}:R>")
-            .AddField("⚔️ Atak", card.Attack.ToString(), inline: true)
-            .AddField("🛡️ Obrona", card.Defense.ToString(), inline: true)
-            .WithFooter($"Karta {page + 1}/{sortedCollection.Count}")
+            .WithDescription($"**Rarity:** {card.Rarity}\n**Count:** {userCard.Count}\n⏳ Expires: <t:{expirySeconds}:R>")
+            .AddField("⚔️ Attack", card.Attack.ToString(), inline: true)
+            .AddField("🛡️ Defense", card.Defense.ToString(), inline: true)
+            .WithFooter($"Card {page + 1}/{sortedCollection.Count}")
             .WithColor(GetRarityColor(card.Rarity));
 
         if (!string.IsNullOrEmpty(card.ImageUrl))

@@ -6,7 +6,7 @@ using HengcordTCG.Shared.Models;
 
 namespace HengcordTCG.Bot.Commands;
 
-[Group("admin", "Komendy administracyjne bota")]
+[Group("admin", "Bot administrative commands")]
 [RequireBotAdmin]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
@@ -18,13 +18,13 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
         _client = client;
     }
 
-    [SlashCommand("addcard", "Dodaje nową kartę do gry")]
+    [SlashCommand("addcard", "Add a new card to the game")]
     public async Task AddCardAsync(
-        [Summary("nazwa", "Nazwa karty")] string name,
-        [Summary("atak", "Wartość ataku")] int attack,
-        [Summary("obrona", "Wartość obrony")] int defense,
-        [Summary("rzadkosc", "Rzadkość karty")] Rarity rarity = Rarity.Common,
-        [Summary("obrazek", "Link do obrazka (opcjonalny)")] string? imageUrl = null)
+        [Summary("name", "Card name")] string name,
+        [Summary("attack", "Attack value")] int attack,
+        [Summary("defense", "Defense value")] int defense,
+        [Summary("rarity", "Card rarity")] Rarity rarity = Rarity.Common,
+        [Summary("image", "Image URL (optional)")] string? imageUrl = null)
     {
         var card = new Card
         {
@@ -38,93 +38,93 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
 
         var success = await _client.AddCardAsync(card);
         if (success)
-            await RespondAsync($"✅ Dodano kartę: **{name}** (ATK: {attack}, DEF: {defense}, Rarity: {rarity})");
+            await RespondAsync($"✅ Added card: **{name}** (ATK: {attack}, DEF: {defense}, Rarity: {rarity})");
         else
-            await RespondAsync($"❌ Nie udało się dodać karty '{name}'.", ephemeral: true);
+            await RespondAsync($"❌ Failed to add card '{name}'.", ephemeral: true);
     }
 
-    [SlashCommand("removecard", "Usuwa kartę z gry")]
-    public async Task RemoveCardAsync([Summary("nazwa", "Nazwa karty")] string name)
+    [SlashCommand("removecard", "Remove a card from the game")]
+    public async Task RemoveCardAsync([Summary("name", "Card name")] string name)
     {
         var success = await _client.RemoveCardAsync(name);
         if (success)
-            await RespondAsync($"🗑️ Usunięto kartę: **{name}**");
+            await RespondAsync($"🗑️ Removed card: **{name}**");
         else
-            await RespondAsync($"❌ Nie znaleziono lub nie udało się usunąć karty '{name}'", ephemeral: true);
+            await RespondAsync($"❌ Card '{name}' not found or could not be removed", ephemeral: true);
     }
 
-    [SlashCommand("listcards", "Wyświetla listę kart")]
+    [SlashCommand("listcards", "Display list of cards")]
     public async Task ListCardsAsync()
     {
         var cards = await _client.GetCardsAsync();
         
         if (cards.Count == 0)
         {
-            await RespondAsync("📭 Baza kart jest pusta.");
+            await RespondAsync("📭 Card database is empty.");
             return;
         }
 
         var description = string.Join("\n", cards.Select(c => $"- **{c.Name}** (ATK: {c.Attack}, DEF: {c.Defense})"));
         
         if (description.Length > 1900)
-            description = description.Substring(0, 1900) + "... (i więcej)";
+            description = description.Substring(0, 1900) + "... (and more)";
 
-        await RespondAsync($"📚 **Lista kart ({cards.Count}):**\n{description}");
+        await RespondAsync($"📚 **Card List ({cards.Count}):**\n{description}");
     }
 
-    [SlashCommand("reload", "Przeładowuje dane bota")]
+    [SlashCommand("reload", "Reload bot data")]
     public async Task ReloadAsync()
     {
-        await RespondAsync("🔄 Dane są pobierane z API na bieżąco.");
+        await RespondAsync("🔄 Data is fetched from API in real-time.");
     }
 
-    [SlashCommand("givegold", "Daje złoto użytkownikowi")]
+    [SlashCommand("givegold", "Give gold to a user")]
     public async Task GiveGoldAsync(
-        [Summary("uzytkownik", "Użytkownik")] Discord.IUser user,
-        [Summary("ilosc", "Ilość złota")] int amount)
+        [Summary("user", "User")] Discord.IUser user,
+        [Summary("amount", "Amount of gold")] int amount)
     {
         if (amount <= 0)
         {
-            await RespondAsync("❌ Ilość musi być dodatnia!");
+            await RespondAsync("❌ Amount must be positive!");
             return;
         }
 
         var newBalance = await _client.GiveGoldAdminAsync(user.Id, amount);
         if (newBalance != -1)
-            await RespondAsync($"✅ Dodano **{amount}** złota dla **{user.Username}**. Nowy balans: **{newBalance}**.");
+            await RespondAsync($"✅ Added **{amount}** gold to **{user.Username}**. New balance: **{newBalance}**");
         else
-            await RespondAsync($"❌ Nie udało się dodać złota dla **{user.Username}**.", ephemeral: true);
+            await RespondAsync($"❌ Failed to add gold to **{user.Username}**.", ephemeral: true);
     }
 
-    [SlashCommand("setgold", "Ustawia złoto użytkownikowi")]
+    [SlashCommand("setgold", "Set user's gold amount")]
     public async Task SetGoldAsync(
-        [Summary("uzytkownik", "Użytkownik")] Discord.IUser user,
-        [Summary("ilosc", "Ilość złota")] int amount)
+        [Summary("user", "User")] Discord.IUser user,
+        [Summary("amount", "Amount of gold")] int amount)
     {
         if (amount < 0)
         {
-            await RespondAsync("❌ Ilość nie może być ujemna!");
+            await RespondAsync("❌ Amount cannot be negative!");
             return;
         }
 
         var newBalance = await _client.SetGoldAdminAsync(user.Id, amount);
         if (newBalance != -1)
-            await RespondAsync($"✅ Ustawiono balans **{user.Username}** na **{newBalance}** złota.");
+            await RespondAsync($"✅ Set **{user.Username}**'s balance to **{newBalance}** gold.");
         else
-            await RespondAsync($"❌ Nie udało się ustawić złota dla **{user.Username}**.", ephemeral: true);
+            await RespondAsync($"❌ Failed to set gold for **{user.Username}**.", ephemeral: true);
     }
 
-    [SlashCommand("createpack", "Tworzy nowy typ paczki")]
+    [SlashCommand("createpack", "Create a new pack type")]
     public async Task CreatePackAsync(
-        [Summary("nazwa", "Nazwa paczki")] string name,
-        [Summary("cena", "Cena paczki")] int price,
-        [Summary("common", "Szansa na Common (waga)")] int common,
-        [Summary("rare", "Szansa na Rare (waga)")] int rare,
-        [Summary("legendary", "Szansa na Legendary (waga)")] int legendary)
+        [Summary("name", "Pack name")] string name,
+        [Summary("price", "Pack price")] int price,
+        [Summary("common", "Chance for Common (weight)")] int common,
+        [Summary("rare", "Chance for Rare (weight)")] int rare,
+        [Summary("legendary", "Chance for Legendary (weight)")] int legendary)
     {
         if (price <= 0)
         {
-            await RespondAsync("❌ Cena musi być dodatnia!");
+            await RespondAsync("❌ Price must be positive!");
             return;
         }
 
@@ -140,25 +140,25 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
 
         var success = await _client.CreatePackAsync(pack);
         if (success)
-            await RespondAsync($"✅ Utworzono paczkę **{name}** (Cena: {price}).\nSzans: C:{common} R:{rare} L:{legendary}");
+            await RespondAsync($"✅ Created pack **{name}** (Price: {price}).\nChances: C:{common} R:{rare} L:{legendary}");
         else
-            await RespondAsync($"❌ Nie udało się utworzyć paczki '{name}'.", ephemeral: true);
+            await RespondAsync($"❌ Failed to create pack '{name}'.", ephemeral: true);
     }
 
-    [SlashCommand("listpacks", "Lista dostępnych paczek")]
+    [SlashCommand("listpacks", "List available packs")]
     public async Task ListPacksAsync()
     {
         var packs = await _client.GetPacksAsync();
         if (packs.Count == 0)
         {
-            await RespondAsync("Brak paczek w bazie.");
+            await RespondAsync("No packs in database.");
             return;
         }
 
         var description = string.Join("\n", packs.Select(p => $"- **{p.Name}** ({p.Price}g) [C:{p.ChanceCommon}% R:{p.ChanceRare}% L:{p.ChanceLegendary}%]"));
         
         var embed = new EmbedBuilder()
-            .WithTitle("📦 Dostępne paczki")
+            .WithTitle("📦 Available Packs")
             .WithDescription(description)
             .WithColor(Color.Blue)
             .Build();
@@ -166,75 +166,75 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
         await RespondAsync(embed: embed);
     }
 
-    [SlashCommand("setcardpack", "Przypisuje kartę do paczki (lub usuwa przypisanie)")]
+    [SlashCommand("setcardpack", "Assign card to pack (or remove assignment)")]
     public async Task SetCardPackAsync(
-        [Summary("karta", "Nazwa karty")] string cardName,
-        [Summary("paczka", "Nazwa paczki (wpisz 'null' aby usunąć)")] string packName)
+        [Summary("card", "Card name")] string cardName,
+        [Summary("pack", "Pack name (type 'null' to remove)")] string packName)
     {
         var success = await _client.SetCardPackAsync(cardName, packName);
         if (success)
-            await RespondAsync($"✅ Zaktualizowano przypisanie karty **{cardName}**.");
+            await RespondAsync($"✅ Updated card **{cardName}** assignment.");
         else
-            await RespondAsync($"❌ Nie udało się zaktualizować przypisania karty '{cardName}'.", ephemeral: true);
+            await RespondAsync($"❌ Failed to update assignment for card '{cardName}'.", ephemeral: true);
     }
 
-    [SlashCommand("togglepack", "Włącza/wyłącza dostępność paczki")]
+    [SlashCommand("togglepack", "Toggle pack availability")]
     public async Task TogglePackAsync(
-        [Summary("paczka", "Nazwa paczki")] string packName)
+        [Summary("pack", "Pack name")] string packName)
     {
         var success = await _client.TogglePackAsync(packName);
         if (success)
-            await RespondAsync($"✅ Zmieniono dostępność paczki **{packName}**.");
+            await RespondAsync($"✅ Changed availability for pack **{packName}**");
         else
-            await RespondAsync($"❌ Nie znaleziono paczki '{packName}'!", ephemeral: true);
+            await RespondAsync($"❌ Pack '{packName}' not found!", ephemeral: true);
     }
 
-    [SlashCommand("fixinventory", "Naprawia zduplikowane karty w ekwipunku")]
+    [SlashCommand("fixinventory", "Fix duplicate cards in inventory")]
     public async Task FixInventoryAsync()
     {
         var success = await _client.FixInventoryAsync();
         if (success)
-            await RespondAsync("✅ Naprawiono zduplikowane wpisy w ekwipunku.");
+            await RespondAsync("✅ Fixed duplicate entries in inventory.");
         else
-            await RespondAsync("❌ Błąd podczas naprawy ekwipunku.", ephemeral: true);
+            await RespondAsync("❌ Error while fixing inventory.", ephemeral: true);
     }
 
-    [SlashCommand("givecard", "Daje kartę użytkownikowi")]
+    [SlashCommand("givecard", "Give a card to a user")]
     public async Task GiveCardAsync(
-        [Summary("uzytkownik", "Użytkownik")] Discord.IUser user,
-        [Summary("karta", "Nazwa karty")] [Autocomplete(typeof(CardAutocompleteHandler))] string cardName,
-        [Summary("ilosc", "Ilość (domyślnie 1)")] int amount = 1)
+        [Summary("user", "User")] Discord.IUser user,
+        [Summary("card", "Card name")] [Autocomplete(typeof(CardAutocompleteHandler))] string cardName,
+        [Summary("amount", "Amount (default: 1)")] int amount = 1)
     {
         if (amount <= 0)
         {
-            await RespondAsync("❌ Ilość musi być dodatnia!", ephemeral: true);
+            await RespondAsync("❌ Amount must be positive!", ephemeral: true);
             return;
         }
 
         var success = await _client.GiveCardAsync(user.Id, cardName, amount);
         if (success)
-            await RespondAsync($"✅ Przekazano **{amount}x {cardName}** użytkownikowi **{user.Username}**.");
+            await RespondAsync($"✅ Gave **{amount}x {cardName}** to **{user.Username}**");
         else
-            await RespondAsync($"❌ Nie udało się przekazać karty '{cardName}'!", ephemeral: true);
+            await RespondAsync($"❌ Failed to give card '{cardName}'!", ephemeral: true);
     }
 
-    [SlashCommand("addadmin", "Dodaje uprawnienia admina użytkownikowi")]
-    public async Task AddAdminAsync([Summary("uzytkownik", "Użytkownik")] Discord.IUser user)
+    [SlashCommand("addadmin", "Add bot admin privileges to a user")]
+    public async Task AddAdminAsync([Summary("user", "User")] Discord.IUser user)
     {
         var success = await _client.AddAdminAsync(user.Id);
         if (success)
-            await RespondAsync($"✅ Nadano uprawnienia admina użytkownikowi **{user.Username}**.");
+            await RespondAsync($"✅ Granted bot admin privileges to **{user.Username}**");
         else
-            await RespondAsync($"❌ Nie udało się nadać uprawnień admina dla **{user.Username}**.", ephemeral: true);
+            await RespondAsync($"❌ Failed to grant admin privileges to **{user.Username}**.", ephemeral: true);
     }
 
-    [SlashCommand("removeadmin", "Usuwa uprawnienia admina użytkownikowi")]
-    public async Task RemoveAdminAsync([Summary("uzytkownik", "Użytkownik")] Discord.IUser user)
+    [SlashCommand("removeadmin", "Remove bot admin privileges from a user")]
+    public async Task RemoveAdminAsync([Summary("user", "User")] Discord.IUser user)
     {
         var success = await _client.RemoveAdminAsync(user.Id);
         if (success)
-            await RespondAsync($"✅ Usunięto uprawnienia admina użytkownikowi **{user.Username}**.");
+            await RespondAsync($"✅ Removed bot admin privileges from **{user.Username}**");
         else
-            await RespondAsync($"❌ Nie udało się usunąć uprawnień admina dla **{user.Username}**.", ephemeral: true);
+            await RespondAsync($"❌ Failed to remove admin privileges from **{user.Username}**.", ephemeral: true);
     }
 }

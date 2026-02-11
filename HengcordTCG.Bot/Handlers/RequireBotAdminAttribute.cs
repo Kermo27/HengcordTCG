@@ -29,6 +29,6 @@ public class RequireBotAdminAttribute : PreconditionAttribute
             return PreconditionResult.FromSuccess();
         }
 
-        return PreconditionResult.FromError("Nie masz uprawnień admina bota.");
+        return PreconditionResult.FromError("You don't have bot admin privileges.");
     }
 }

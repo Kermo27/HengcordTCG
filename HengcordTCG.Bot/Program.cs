@@ -8,7 +8,6 @@ using HengcordTCG.Bot.Handlers;
 using HengcordTCG.Bot.Services;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Services;
-using Microsoft.Extensions.Logging;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
@@ -21,14 +20,6 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((context, services) =>
     {
-        // Logging
-        services.AddLogging(configure =>
-        {
-            configure.AddConsole();
-            configure.AddDebug();
-            configure.SetMinimumLevel(LogLevel.Information);
-        });
-
         // Discord
         services.AddSingleton(new DiscordSocketConfig
         {
@@ -47,8 +38,6 @@ var host = Host.CreateDefaultBuilder(args)
             client.DefaultRequestHeaders.Add("X-API-Key", botApiKey);
         });
 
-        // CardImageService
-        services.AddScoped<CardImageService>(sp => new CardImageService(AppContext.BaseDirectory));
         
         services.AddHostedService<BotService>();
     })

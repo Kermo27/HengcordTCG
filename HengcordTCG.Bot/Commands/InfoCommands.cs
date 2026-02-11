@@ -14,9 +14,9 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
         _client = client;
     }
 
-    [SlashCommand("card", "Wyszukaj informacje o karcie")]
+    [SlashCommand("card", "Search for card information")]
     public async Task CardInfoAsync(
-        [Summary("nazwa", "Nazwa karty")] 
+        [Summary("name", "Card name")] 
         [Autocomplete(typeof(CardAutocompleteHandler))] string cardName)
     {
         var cards = await _client.GetCardsAsync();
@@ -24,7 +24,7 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
 
         if (card == null)
         {
-            await RespondAsync($"❌ Nie znaleziono karty o nazwie **{cardName}**.", ephemeral: true);
+            await RespondAsync($"❌ Card **{cardName}** not found.", ephemeral: true);
             return;
         }
 
@@ -38,20 +38,18 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
 
         var embed = new EmbedBuilder()
             .WithTitle(card.Name)
-            .WithDescription($"**Rzadkość:** {card.Rarity}")
-            .AddField("⚔️ Atak", card.Attack.ToString(), inline: true)
-            .AddField("🛡️ Obrona", card.Defense.ToString(), inline: true)
+            .WithDescription($"**Rarity:** {card.Rarity}")
+            .AddField("⚔️ Attack", card.Attack.ToString(), inline: true)
+            .AddField("🛡️ Defense", card.Defense.ToString(), inline: true)
             .WithColor(rarityColor);
 
         if (card.ExclusivePackId.HasValue)
         {
-            // Note: Since we don't have GetPacksAsync in client yet, 
-            // we just show that it is exclusive. 
-            embed.AddField("📦 Dostępność", "Karta ekskluzywna dla konkretnej paczki.");
+            embed.AddField("📦 Availability", "Exclusive to a specific pack.");
         }
         else
         {
-            embed.AddField("📦 Dostępność", "Wszystkie paczki (Global Pool)");
+            embed.AddField("📦 Availability", "All packs (Global Pool)");
         }
 
         if (!string.IsNullOrEmpty(card.ImageUrl))

@@ -8,8 +8,6 @@ public class UserService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<UserService> _logger;
-    private static readonly Random _random = new Random();
-    private static readonly object _randomLock = new object();
 
     public UserService(AppDbContext db, ILogger<UserService> logger)
     {
@@ -64,14 +62,8 @@ public class UserService
         var user = await GetByDiscordIdAsync(discordId);
         if (user != null)
         {
-            if (user.Gold + amount < 0)
-            {
-                throw new InvalidOperationException($"Insufficient gold. Current: {user.Gold}, Attempting to subtract: {-amount}");
-            }
-            
             user.Gold += amount;
             await _db.SaveChangesAsync();
-            _logger.LogInformation("Gold updated for Discord ID {DiscordId}. Amount: {Amount}, New Balance: {NewBalance}", discordId, amount, user.Gold);
         }
     }
 
@@ -82,30 +74,25 @@ public class UserService
             var user = await GetOrCreateUserAsync(discordId, username);
             var now = DateTime.UtcNow;
 
-            // Use lock to prevent race condition
-            lock (_randomLock)
+            if (user.LastDaily.HasValue)
             {
-                if (user.LastDaily.HasValue)
+                var diff = now - user.LastDaily.Value;
+                if (diff.TotalHours < 20)
                 {
-                    var diff = now - user.LastDaily.Value;
-                    if (diff.TotalHours < 20)
-                    {
-                        var timeRemaining = TimeSpan.FromHours(20) - diff;
-                        _logger.LogInformation("Daily cooldown active for Discord ID {DiscordId}. Time remaining: {TimeRemaining}", discordId, timeRemaining);
-                        return (false, 0, timeRemaining);
-                    }
+                    var timeRemaining = TimeSpan.FromHours(20) - diff;
+                    _logger.LogInformation("Daily cooldown active for Discord ID {DiscordId}. Time remaining: {TimeRemaining}", discordId, timeRemaining);
+                    return (false, 0, timeRemaining);
                 }
-
-                var amount = _random.Next(100, 501);
-                user.Gold += amount;
-                user.LastDaily = now;
-
-                // Save immediately within the lock to prevent race condition
-                _db.SaveChanges();
-                _logger.LogInformation("Daily claimed for Discord ID {DiscordId}. Amount: {Amount} gold", discordId, amount);
-
-                return (true, amount, null);
             }
+
+            var amount = new Random().Next(100, 501);
+            user.Gold += amount;
+            user.LastDaily = now;
+            
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("Daily claimed for Discord ID {DiscordId}. Amount: {Amount} gold", discordId, amount);
+            
+            return (true, amount, null);
         }
         catch (Exception ex)
         {
