@@ -71,8 +71,8 @@ Common logic shared across all projects.
    cd HengcordTCG.Server
    dotnet run
    ```
-   - API available at `http://localhost:5266`
-   - API Documentation (Scalar): `http://localhost:5266/scalar` (Development mode)
+   - API available at `https://localhost:7156`
+   - API Documentation (Scalar): `https://localhost:7156/scalar` (Development mode)
 
 2. **Run the Discord Bot**:
    ```bash

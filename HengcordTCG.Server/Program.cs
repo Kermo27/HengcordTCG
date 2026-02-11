@@ -20,7 +20,7 @@ Directory.CreateDirectory(dataDirectory);
 
 // Add CORS - configurable via appsettings
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
-    ?? new[] { "http://localhost:5000", "https://localhost:5001" };
+    ?? new[] { "https://localhost:5001" };
 
 builder.Services.AddCors(options =>
 {
@@ -99,8 +99,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
-
-app.UseHttpsRedirection();
 
 app.UseMiddleware<RateLimitMiddleware>();
 

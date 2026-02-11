@@ -38,13 +38,13 @@ export HENGCORD_ConnectionStrings__DefaultConnection="Data Source=/data/bot.db"
 # For Bot
 export HENGCORD_Discord__Token=your_discord_token
 export HENGCORD_Discord__GuildId=your_guild_id
-export HENGCORD_ServerUrl=http://localhost:5266
+export HENGCORD_ServerUrl=https://localhost:7156
 export HENGCORD_ApiKey=bot_api_key_here
 
 # For Web
 export HENGCORD_Discord__ClientId=your_client_id
 export HENGCORD_Discord__ClientSecret=your_client_secret
-export HENGCORD_ServerUrl=http://localhost:5266
+export HENGCORD_ServerUrl=https://localhost:7156
 export HENGCORD_ApiKey=web_api_key_here
 ```
 
