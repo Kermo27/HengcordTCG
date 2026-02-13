@@ -1,5 +1,6 @@
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
 [Route("me")]
-[Authorize]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class WebMeController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -77,6 +78,31 @@ public class WebMeController : ControllerBase
             .ToListAsync();
 
         return Ok(cards);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        if (!TryGetDiscordId(out var discordId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(new
+        {
+            Id = user.DiscordId,
+            Username = user.Username,
+            AvatarUrl = $"https://cdn.discordapp.com/avatars/{user.DiscordId}/{User.FindFirst("urn:discord:avatar")?.Value}.png",
+            Gold = user.Gold,
+            IsBotAdmin = user.IsBotAdmin,
+            LastDaily = user.LastDaily
+        });
     }
 
     private bool TryGetDiscordId(out ulong discordId)

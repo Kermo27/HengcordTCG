@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Models;
@@ -8,6 +10,7 @@ namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ShopController : ControllerBase
 {
     private readonly ShopService _shopService;
@@ -20,6 +23,7 @@ public class ShopController : ControllerBase
     }
 
     [HttpGet("packs")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<PackType>>> GetPacks()
     {
         return await _db.PackTypes.ToListAsync();

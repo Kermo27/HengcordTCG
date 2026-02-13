@@ -1,6 +1,7 @@
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,7 @@ public class WebShopController : ControllerBase
     }
 
     [HttpPost("buy-pack")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<IActionResult> BuyPack([FromQuery] string packName = "Base Set")
     {
         if (!TryGetDiscordId(out var discordId))

@@ -1,0 +1,113 @@
+@using HengcordTCG.Shared.Models
+
+<Card class="border-slate-800 bg-slate-900/50 overflow-hidden">
+    <!-- Pack Header -->
+    <div class="relative h-40 bg-gradient-to-br @GetGradient() p-6 flex items-center justify-center">
+        <div class="absolute inset-0 opacity-20">
+            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')]"></div>
+        </div>
+        <div class="relative text-center">
+            <LucideIcon Name="package" Size="64" class="text-white drop-shadow-lg" />
+        </div>
+    </div>
+
+    <CardHeader>
+        <CardTitle class="text-slate-100 text-xl">@Pack.Name</CardTitle>
+        <CardDescription class="text-slate-400">
+            @(Pack.IsAvailable ? "Available Now" : "Currently Unavailable")
+        </CardDescription>
+    </CardHeader>
+
+    <CardContent class="space-y-4">
+        <!-- Drop Rates -->
+        <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-500">Legendary</span>
+                <span class="text-amber-400 font-semibold">@Pack.ChanceLegendary%</span>
+            </div>
+            <Progress Value="@Pack.ChanceLegendary" Max="100" 
+                class="h-2 bg-slate-800 [&>div]:bg-gradient-to-r [&>div]:from-amber-500 [&>div]:to-orange-500" />
+
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-500">Rare</span>
+                <span class="text-purple-400 font-semibold">@Pack.ChanceRare%</span>
+            </div>
+            <Progress Value="@Pack.ChanceRare" Max="100" 
+                class="h-2 bg-slate-800 [&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-blue-500" />
+
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-500">Common</span>
+                <span class="text-slate-400 font-semibold">@Pack.ChanceCommon%</span>
+            </div>
+            <Progress Value="@Pack.ChanceCommon" Max="100" 
+                class="h-2 bg-slate-800 [&>div]:bg-slate-500" />
+        </div>
+
+        <!-- Price -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+            <div class="flex items-center gap-2">
+                <LucideIcon Name="coins" Size="20" class="text-amber-400" />
+                <span class="text-2xl font-bold text-amber-400">@Pack.Price.ToString("N0")</span>
+            </div>
+            @if (IsAuthenticated)
+            {
+                @if (UserGold >= Pack.Price)
+                {
+                    <Badge Variant="BadgeVariant.Outline" Class="border-emerald-500/50 text-emerald-400">
+                        Affordable
+                    </Badge>
+                }
+                else
+                {
+                    <Badge Variant="BadgeVariant.Outline" Class="border-red-500/50 text-red-400">
+                        Need @((Pack.Price - UserGold).ToString("N0")) more
+                    </Badge>
+                }
+            }
+        </div>
+    </CardContent>
+
+    <CardFooter>
+        @if (IsAuthenticated)
+        {
+            <Button 
+                @onclick="OnBuy"
+                Disabled="@(!Pack.IsAvailable || UserGold < Pack.Price)"
+                class="@($"w-full h-12 text-base font-semibold {GetButtonClass()}")">
+                <LucideIcon Name="shopping-cart" Size="18" class="mr-2" />
+                @(UserGold < Pack.Price ? "Insufficient Gold" : "Buy Pack")
+            </Button>
+        }
+        else
+        {
+            <Button 
+                @onclick="OnBuy"
+                class="w-full h-12 text-base font-semibold bg-indigo-500 hover:bg-indigo-600">
+                <LucideIcon Name="log-in" Size="18" class="mr-2" />
+                Login to Purchase
+            </Button>
+        }
+    </CardFooter>
+</Card>
+
+@code {
+    [Parameter] public PackType Pack { get; set; } = default!;
+    [Parameter] public long UserGold { get; set; }
+    [Parameter] public bool IsAuthenticated { get; set; }
+    [Parameter] public EventCallback OnBuy { get; set; }
+
+    private string GetGradient() => Pack.Name.ToLower() switch
+    {
+        var n when n.Contains("legend") => "from-amber-600 via-orange-600 to-red-600",
+        var n when n.Contains("rare") => "from-purple-600 via-indigo-600 to-blue-600",
+        var n when n.Contains("basic") => "from-slate-600 via-gray-600 to-slate-700",
+        _ => "from-emerald-600 via-teal-600 to-cyan-600"
+    };
+
+    private string GetButtonClass()
+    {
+        if (!Pack.IsAvailable) return "bg-slate-700 text-slate-400 cursor-not-allowed";
+        if (UserGold < Pack.Price) return "bg-slate-700 text-slate-400 cursor-not-allowed";
+        return "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600";
+    }
+}

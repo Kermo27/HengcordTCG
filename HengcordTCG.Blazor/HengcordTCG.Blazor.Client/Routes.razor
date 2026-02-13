@@ -1,0 +1,41 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated != true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <div class="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                        <LucideIcon Name="shield-alert" Size="64" class="text-red-400" />
+                        <h1 class="text-2xl font-bold text-slate-100">Access Denied</h1>
+                        <p class="text-slate-400">You don't have permission to access this page.</p>
+                        <a href="/" class="text-amber-400 hover:text-amber-300 underline">Go home</a>
+                    </div>
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(Shared.MainLayout)">
+            <div class="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] gap-4">
+                <div class="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center">
+                    <LucideIcon Name="search-x" Size="48" class="text-slate-500" />
+                </div>
+                <h1 class="text-4xl font-bold text-slate-100">404</h1>
+                <p class="text-slate-400">This page seems to have vanished into the void...</p>
+                <a href="/" class="mt-4">
+                    <Button class="bg-gradient-to-r from-amber-500 to-orange-500">
+                        <LucideIcon Name="arrow-left" Size="18" class="mr-2" />
+                        Return Home
+                    </Button>
+                </a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

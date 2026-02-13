@@ -1,0 +1,239 @@
+@page "/collection"
+@attribute [Authorize]
+@using HengcordTCG.Shared.Models
+@inject HengcordTCGClient Client
+@inject AuthService AuthService
+@inject ToastService Toast
+
+<PageTitle>My Collection - HengcordTCG</PageTitle>
+
+<div class="container py-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-100">My Collection</h1>
+            <p class="text-slate-400">@FilteredCards.Count cards collected</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center space-x-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20">
+                <LucideIcon Name="coins" Size="18" class="text-amber-400" />
+                <span class="text-amber-400 font-semibold">@Gold.ToString("N0")</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <Card class="border-slate-800 bg-slate-900/50 mb-6">
+        <CardContent class="p-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <LucideIcon Name="search" Size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Input 
+                            Placeholder="Search cards..."
+                            @bind-Value="SearchQuery"
+                            @bind-Value:after="ApplyFilters"
+                            class="pl-10 bg-slate-950 border-slate-700" />
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <Select @bind-Value="SelectedRarity" @bind-Value:after="ApplyFilters">
+                        <SelectItem Value="@string.Empty">All Rarities</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
+                    </Select>
+                    <Select @bind-Value="SortBy" @bind-Value:after="ApplyFilters">
+                        <SelectItem Value="@("newest")">Newest First</SelectItem>
+                        <SelectItem Value="@("oldest")">Oldest First</SelectItem>
+                        <SelectItem Value="@("rarity")">Rarity</SelectItem>
+                        <SelectItem Value="@("name")">Name</SelectItem>
+                    </Select>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Cards Grid -->
+    @if (IsLoading)
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @for (int i = 0; i < 10; i++)
+            {
+                <Skeleton class="aspect-[3/4] rounded-lg" />
+            }
+        </div>
+    }
+    else if (FilteredCards.Count == 0)
+    {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                <LucideIcon Name="package-open" Size="40" class="text-slate-600" />
+            </div>
+            <h3 class="text-xl font-semibold text-slate-300 mb-2">No cards found</h3>
+            <p class="text-slate-500 max-w-md">
+                @(string.IsNullOrEmpty(SearchQuery) && string.IsNullOrEmpty(SelectedRarity) 
+                    ? "Your collection is empty. Visit the shop to buy card packs!" 
+                    : "No cards match your filters. Try adjusting your search.")
+            </p>
+            @if (string.IsNullOrEmpty(SearchQuery) && string.IsNullOrEmpty(SelectedRarity))
+            {
+                <Button @onclick="@(() => Navigation.NavigateTo("/shop"))" 
+                    class="mt-6 bg-gradient-to-r from-emerald-500 to-teal-500">
+                    <LucideIcon Name="shopping-bag" Size="18" class="mr-2" />
+                    Visit Shop
+                </Button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @foreach (var card in FilteredCards)
+            {
+                <CardComponent 
+                    Card="card.Card" 
+                    Count="card.Count"
+                    OnClick="() => ShowCardDetails(card)" />
+            }
+        </div>
+    }
+</div>
+
+<!-- Card Details Dialog -->
+<Dialog @bind-Open="DetailsOpen">
+    @if (SelectedCard != null)
+    {
+        <DialogContent class="max-w-md">
+            <DialogHeader>
+                <DialogTitle class="text-slate-100">@SelectedCard.Card.Name</DialogTitle>
+                <DialogDescription class="text-slate-400">
+                    @SelectedCard.Card.Rarity • Owned: @SelectedCard.Count
+                </DialogDescription>
+            </DialogHeader>
+            <div class="py-4">
+                <div class="aspect-[3/4] rounded-lg overflow-hidden bg-slate-800 mb-4">
+                    @if (!string.IsNullOrEmpty(SelectedCard.Card.ImageUrl))
+                    {
+                        <img src="@SelectedCard.Card.ImageUrl" alt="@SelectedCard.Card.Name" 
+                            class="w-full h-full object-cover" />
+                    }
+                    else
+                    {
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br @GetRarityGradient(SelectedCard.Card.Rarity)">
+                            <LucideIcon Name="image" Size="64" class="text-white/50" />
+                        </div>
+                    }
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-3 rounded-lg bg-slate-800">
+                        <div class="text-2xl font-bold text-red-400">@SelectedCard.Card.Attack</div>
+                        <div class="text-xs text-slate-500 uppercase">Attack</div>
+                    </div>
+                    <div class="text-center p-3 rounded-lg bg-slate-800">
+                        <div class="text-2xl font-bold text-blue-400">@SelectedCard.Card.Defense</div>
+                        <div class="text-xs text-slate-500 uppercase">Defense</div>
+                    </div>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button Variant="ButtonVariant.Outline" @onclick="() => DetailsOpen = false">Close</Button>
+                <Button @onclick="@(() => Navigation.NavigateTo($"/trades?offer={SelectedCard.Card.Name}"))">
+                    <LucideIcon Name="arrow-left-right" Size="16" class="mr-2" />
+                    Trade
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    }
+</Dialog>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private List<UserCard> UserCards { get; set; } = new();
+    private List<UserCard> FilteredCards { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private long Gold { get; set; }
+
+    // Filters
+    private string SearchQuery { get; set; } = "";
+    private string SelectedRarity { get; set; } = "";
+    private string SortBy { get; set; } = "newest";
+
+    // Dialog
+    private bool DetailsOpen { get; set; }
+    private UserCard? SelectedCard { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCollection();
+    }
+
+    private async Task LoadCollection()
+    {
+        IsLoading = true;
+        try
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                Gold = user.Gold;
+                UserCards = await Client.GetCollectionAsync(user.Id);
+                ApplyFilters();
+            }
+        }
+        catch
+        {
+            Toast.Error("Failed to load collection");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = UserCards.AsEnumerable();
+
+        // Search
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            query = query.Where(c => c.Card.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Rarity filter
+        if (!string.IsNullOrEmpty(SelectedRarity))
+        {
+            if (Enum.TryParse<Rarity>(SelectedRarity, out var rarity))
+            {
+                query = query.Where(c => c.Card.Rarity == rarity);
+            }
+        }
+
+        // Sort
+        query = SortBy switch
+        {
+            "newest" => query.OrderByDescending(c => c.ObtainedAt),
+            "oldest" => query.OrderBy(c => c.ObtainedAt),
+            "rarity" => query.OrderByDescending(c => c.Card.Rarity).ThenBy(c => c.Card.Name),
+            "name" => query.OrderBy(c => c.Card.Name),
+            _ => query
+        };
+
+        FilteredCards = query.ToList();
+    }
+
+    private void ShowCardDetails(UserCard card)
+    {
+        SelectedCard = card;
+        DetailsOpen = true;
+    }
+
+    private string GetRarityGradient(Rarity rarity) => rarity switch
+    {
+        Rarity.Legendary => "from-amber-500 to-orange-600",
+        Rarity.Rare => "from-blue-500 to-purple-600",
+        _ => "from-slate-500 to-slate-600"
+    };
+}

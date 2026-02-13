@@ -1,0 +1,303 @@
+@page "/showcase/forms"
+@layout _ShowcaseLayout
+
+<PageTitle>Forms - Showcase</PageTitle>
+
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold tracking-tight">Forms</h1>
+        <p class="text-muted-foreground mt-2">
+            Form components for collecting user input.
+        </p>
+    </div>
+
+    <!-- Input -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Input</CardTitle>
+            <CardDescription>Text input fields with various states.</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4 max-w-md">
+            <div class="space-y-2">
+                <Label For="email">Email</Label>
+                <Input id="email" Type="InputType.Email" Placeholder="Enter your email" />
+            </div>
+            <div class="space-y-2">
+                <Label For="password">Password</Label>
+                <Input id="password" Type="InputType.Password" Placeholder="Enter your password" />
+            </div>
+            <div class="space-y-2">
+                <Label For="disabled">Disabled</Label>
+                <Input id="disabled" Disabled="true" Placeholder="Disabled input" />
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Textarea -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Textarea</CardTitle>
+            <CardDescription>Multi-line text input.</CardDescription>
+        </CardHeader>
+        <CardContent class="max-w-md">
+            <div class="space-y-2">
+                <Label For="bio">Bio</Label>
+                <Textarea id="bio" Placeholder="Tell us about yourself..." class="min-h-[100px]" />
+                <p class="text-sm text-muted-foreground">
+                    Write a few sentences about yourself.
+                </p>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Select -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Select</CardTitle>
+            <CardDescription>Dropdown selection component.</CardDescription>
+        </CardHeader>
+        <CardContent class="max-w-md">
+            <div class="space-y-2">
+                <Label>Select a framework</Label>
+                <Select @bind-Value="selectedFramework" TValue="string">
+                    <SelectTrigger>
+                        <SelectValue Placeholder="Choose a framework" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Frameworks</SelectLabel>
+                            <SelectItem Value="@("blazor")" Text="Blazor" TValue="string">Blazor</SelectItem>
+                            <SelectItem Value="@("react")" Text="React" TValue="string">React</SelectItem>
+                            <SelectItem Value="@("vue")" Text="Vue" TValue="string">Vue</SelectItem>
+                            <SelectItem Value="@("angular")" Text="Angular" TValue="string">Angular</SelectItem>
+                            <SelectItem Value="@("svelte")" Text="Svelte" TValue="string">Svelte</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                @if (!string.IsNullOrEmpty(selectedFramework))
+                {
+                    <p class="text-sm text-muted-foreground">
+                        Selected: @selectedFramework
+                    </p>
+                }
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Combobox -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Combobox</CardTitle>
+            <CardDescription>Searchable dropdown with autocomplete.</CardDescription>
+        </CardHeader>
+        <CardContent class="max-w-md">
+            <div class="space-y-2">
+                <Label>Select a country</Label>
+                <Combobox TItem="Country"
+                          Items="countries"
+                          @bind-Value="selectedCountry"
+                          ValueSelector="@(c => c.Code)"
+                          DisplaySelector="@(c => c.Name)"
+                          Placeholder="Select country..."
+                          SearchPlaceholder="Search countries..."
+                          EmptyMessage="No country found."
+                          MatchTriggerWidth="true" />
+                @if (!string.IsNullOrEmpty(selectedCountry))
+                {
+                    <p class="text-sm text-muted-foreground">
+                        Selected: @selectedCountry
+                    </p>
+                }
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- MultiSelect -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Multi Select</CardTitle>
+            <CardDescription>Select multiple items with search and tags.</CardDescription>
+        </CardHeader>
+        <CardContent class="max-w-md">
+            <div class="space-y-2">
+                <Label>Select technologies</Label>
+                <MultiSelect TItem="Technology"
+                             Items="technologies"
+                             @bind-Values="selectedTechnologies"
+                             ValueSelector="@(t => t.Id)"
+                             DisplaySelector="@(t => t.Name)"
+                             Placeholder="Select technologies..."
+                             SearchPlaceholder="Search technologies..."
+                             EmptyMessage="No technologies found."
+                             MaxDisplayTags="3"
+                             MatchTriggerWidth="true" />
+                @if (selectedTechnologies?.Any() == true)
+                {
+                    <p class="text-sm text-muted-foreground">
+                        Selected: @string.Join(", ", selectedTechnologies)
+                    </p>
+                }
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Checkbox -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Checkbox</CardTitle>
+            <CardDescription>Checkboxes for multiple selections.</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4">
+            <div class="flex items-center space-x-2">
+                <Checkbox id="terms" />
+                <Label For="terms">Accept terms and conditions</Label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <Checkbox id="marketing" Checked="true" />
+                <Label For="marketing">Receive marketing emails</Label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <Checkbox id="disabled-check" Disabled="true" />
+                <Label For="disabled-check" class="text-muted-foreground">Disabled checkbox</Label>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Radio Group -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Radio Group</CardTitle>
+            <CardDescription>Radio buttons for single selection.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <RadioGroup @bind-Value="selectedPlan" class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <RadioGroupItem Value="@("free")" id="radio-free" />
+                    <Label For="radio-free">Free</Label>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <RadioGroupItem Value="@("pro")" id="radio-pro" />
+                    <Label For="radio-pro">Pro - $9/month</Label>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <RadioGroupItem Value="@("enterprise")" id="radio-enterprise" />
+                    <Label For="radio-enterprise">Enterprise - Contact us</Label>
+                </div>
+            </RadioGroup>
+            @if (!string.IsNullOrEmpty(selectedPlan))
+            {
+                <p class="text-sm text-muted-foreground mt-4">
+                    Selected plan: @selectedPlan
+                </p>
+            }
+        </CardContent>
+    </Card>
+
+    <!-- Switch -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Switch</CardTitle>
+            <CardDescription>Toggle switches for on/off states.</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4">
+            <div class="flex items-center justify-between max-w-md">
+                <div class="space-y-0.5">
+                    <Label>Airplane Mode</Label>
+                    <p class="text-sm text-muted-foreground">Disable all wireless connections.</p>
+                </div>
+                <Switch @bind-Checked="airplaneMode" />
+            </div>
+            <Separator class="max-w-md" />
+            <div class="flex items-center justify-between max-w-md">
+                <div class="space-y-0.5">
+                    <Label>Wi-Fi</Label>
+                    <p class="text-sm text-muted-foreground">Connect to wireless networks.</p>
+                </div>
+                <Switch Checked="true" Disabled="@airplaneMode" />
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Complete Form Example -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Complete Form</CardTitle>
+            <CardDescription>A complete form example with multiple field types.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form class="space-y-6 max-w-md">
+                <div class="space-y-2">
+                    <Label For="form-name">Name</Label>
+                    <Input id="form-name" Placeholder="Your name" />
+                </div>
+                <div class="space-y-2">
+                    <Label For="form-email">Email</Label>
+                    <Input id="form-email" Type="InputType.Email" Placeholder="you@example.com" />
+                </div>
+                <div class="space-y-2">
+                    <Label>Role</Label>
+                    <Select TValue="string">
+                        <SelectTrigger>
+                            <SelectValue Placeholder="Select your role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem Value="@("developer")" Text="Developer" TValue="string">Developer</SelectItem>
+                            <SelectItem Value="@("designer")" Text="Designer" TValue="string">Designer</SelectItem>
+                            <SelectItem Value="@("manager")" Text="Manager" TValue="string">Manager</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div class="space-y-2">
+                    <Label For="form-message">Message</Label>
+                    <Textarea id="form-message" Placeholder="Your message..." />
+                </div>
+                <div class="flex items-center space-x-2">
+                    <Checkbox id="subscribe" />
+                    <Label For="subscribe">Subscribe to newsletter</Label>
+                </div>
+                <Button Type="ButtonType.Submit" class="w-full">Submit</Button>
+            </form>
+        </CardContent>
+    </Card>
+</div>
+
+@code {
+    private string? selectedFramework;
+    private string selectedPlan = "free";
+    private bool airplaneMode;
+    private string? selectedCountry;
+    private IEnumerable<string>? selectedTechnologies;
+
+    // Data for Combobox
+    private List<Country> countries = new()
+    {
+        new("us", "United States"),
+        new("gb", "United Kingdom"),
+        new("ca", "Canada"),
+        new("au", "Australia"),
+        new("de", "Germany"),
+        new("fr", "France"),
+        new("jp", "Japan"),
+        new("br", "Brazil"),
+        new("in", "India"),
+        new("mx", "Mexico")
+    };
+
+    // Data for MultiSelect
+    private List<Technology> technologies = new()
+    {
+        new("csharp", "C#"),
+        new("blazor", "Blazor"),
+        new("dotnet", ".NET"),
+        new("typescript", "TypeScript"),
+        new("javascript", "JavaScript"),
+        new("react", "React"),
+        new("vue", "Vue"),
+        new("angular", "Angular"),
+        new("tailwind", "Tailwind CSS"),
+        new("postgres", "PostgreSQL")
+    };
+
+    private record Country(string Code, string Name);
+    private record Technology(string Id, string Name);
+}

@@ -1,0 +1,447 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@using ModelCard = HengcordTCG.Shared.Models.Card
+@using HengcordTCG.Shared.Models
+@inject HengcordTCGClient Client
+@inject AuthService AuthService
+@inject ToastService Toast
+
+<PageTitle>Admin Panel - HengcordTCG</PageTitle>
+
+<div class="container py-8">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <LucideIcon Name="shield" Size="28" class="text-white" />
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold text-slate-100">Admin Panel</h1>
+            <p class="text-slate-400">Manage cards, packs, and users</p>
+        </div>
+    </div>
+
+    <!-- Admin Tabs -->
+    <Tabs @bind-Value="ActiveTab" class="w-full">
+        <TabsList class="bg-slate-900 border border-slate-800">
+            <TabsTrigger Value="cards" class="data-[state=active]:bg-slate-800">
+                <LucideIcon Name="images" Size="16" class="mr-2" />
+                Cards
+            </TabsTrigger>
+            <TabsTrigger Value="packs" class="data-[state=active]:bg-slate-800">
+                <LucideIcon Name="package" Size="16" class="mr-2" />
+                Packs
+            </TabsTrigger>
+            <TabsTrigger Value="users" class="data-[state=active]:bg-slate-800">
+                <LucideIcon Name="users" Size="16" class="mr-2" />
+                Users
+            </TabsTrigger>
+            <TabsTrigger Value="tools" class="data-[state=active]:bg-slate-800">
+                <LucideIcon Name="wrench" Size="16" class="mr-2" />
+                Tools
+            </TabsTrigger>
+        </TabsList>
+
+        <!-- Cards Tab -->
+        <TabsContent Value="cards" class="mt-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-slate-100">Manage Cards</h2>
+                <Button @onclick="() => ShowAddCard = true" class="bg-emerald-500 hover:bg-emerald-600">
+                    <LucideIcon Name="plus" Size="18" class="mr-2" />
+                    Add Card
+                </Button>
+            </div>
+
+            @if (IsLoading)
+            {
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    @for (int i = 0; i < 8; i++)
+                    {
+                        <Skeleton class="aspect-[3/4] rounded-lg" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    @foreach (var card in AllCards)
+                    {
+                        <div class="relative group">
+                            <CardComponent Card="card" />
+                            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                                <Button @onclick="() => EditCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
+                                    <LucideIcon Name="pencil" Size="16" />
+                                </Button>
+                                <Button @onclick="() => DeleteCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Destructive">
+                                    <LucideIcon Name="trash-2" Size="16" />
+                                </Button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </TabsContent>
+
+        <!-- Packs Tab -->
+        <TabsContent Value="packs" class="mt-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
+                <Button @onclick="() => ShowAddPack = true" class="bg-emerald-500 hover:bg-emerald-600">
+                    <LucideIcon Name="plus" Size="18" class="mr-2" />
+                    Add Pack
+                </Button>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var pack in AllPacks)
+                {
+                    <Card class="border-slate-800 bg-slate-900/50">
+                        <CardHeader>
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <CardTitle class="text-slate-100">@pack.Name</CardTitle>
+                                    <CardDescription class="text-slate-400">
+                                        @(pack.IsAvailable ? "Available" : "Unavailable")
+                                    </CardDescription>
+                                </div>
+                                <Badge Variant="BadgeVariant.Outline" 
+                                    class="@(pack.IsAvailable ? "border-emerald-500 text-emerald-400" : "border-slate-500 text-slate-400")">
+                                    @(pack.IsAvailable ? "Active" : "Inactive")
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Price</span>
+                                    <span class="text-amber-400 font-semibold">@pack.Price.ToString("N0") Gold</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Legendary</span>
+                                    <span class="text-amber-400">@pack.ChanceLegendary%</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Rare</span>
+                                    <span class="text-purple-400">@pack.ChanceRare%</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Common</span>
+                                    <span class="text-slate-400">@pack.ChanceCommon%</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter class="flex gap-2">
+                            <Button @onclick="() => TogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 border-slate-700">
+                                @(pack.IsAvailable ? "Disable" : "Enable")
+                            </Button>
+                            <Button @onclick="() => EditPack(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
+                                <LucideIcon Name="pencil" Size="16" />
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                }
+            </div>
+        </TabsContent>
+
+        <!-- Users Tab -->
+        <TabsContent Value="users" class="mt-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-slate-100">User Management</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <LucideIcon Name="search" Size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Input Placeholder="Search users..." class="pl-10 bg-slate-950 border-slate-700 w-64" />
+                    </div>
+                </div>
+            </div>
+
+            <Card class="border-slate-800 bg-slate-900/50">
+                <CardContent class="p-0">
+                    <div class="divide-y divide-slate-800">
+                        @foreach (var user in Users)
+                        {
+                            <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                                        @(user.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-slate-200">@user.Username</div>
+                                        <div class="text-sm text-slate-500">ID: @user.Id</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-right">
+                                        <div class="text-amber-400 font-semibold">@user.Gold.ToString("N0") Gold</div>
+                                        @if (user.IsBotAdmin)
+                                        {
+                                            <Badge Variant="BadgeVariant.Outline" class="border-amber-500 text-amber-400">Admin</Badge>
+                                        }
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger>
+                                            <Button Size="ButtonSize.Icon" Variant="ButtonVariant.Ghost">
+                                                <LucideIcon Name="more-vertical" Size="16" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem @onclick="() => GiveGold(user)">
+                                                <LucideIcon Name="coins" Size="16" class="mr-2" />
+                                                Give Gold
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem @onclick="() => GiveCard(user)">
+                                                <LucideIcon Name="image" Size="16" class="mr-2" />
+                                                Give Card
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem @onclick="() => ToggleAdmin(user)" class="@(user.IsBotAdmin ? "text-red-400" : "text-emerald-400")">
+                                                <LucideIcon Name="@(user.IsBotAdmin ? "user-minus" : "user-plus")" Size="16" class="mr-2" />
+                                                @(user.IsBotAdmin ? "Remove Admin" : "Make Admin")
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </CardContent>
+            </Card>
+        </TabsContent>
+
+        <!-- Tools Tab -->
+        <TabsContent Value="tools" class="mt-6 space-y-6">
+            <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardHeader>
+                        <CardTitle class="text-slate-100 flex items-center gap-2">
+                            <LucideIcon Name="database" Size="20" class="text-blue-400" />
+                            Database Tools
+                        </CardTitle>
+                        <CardDescription class="text-slate-400">
+                            Maintenance and repair tools
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-3">
+                        <Button @onclick="FixInventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
+                            <LucideIcon Name="package-check" Size="18" class="mr-2" />
+                            Fix Inventory Issues
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardHeader>
+                        <CardTitle class="text-slate-100 flex items-center gap-2">
+                            <LucideIcon Name="bar-chart-3" Size="20" class="text-emerald-400" />
+                            Statistics
+                        </CardTitle>
+                        <CardDescription class="text-slate-400">
+                            Platform overview
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@AllCards.Count</div>
+                                <div class="text-xs text-slate-500">Total Cards</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@AllPacks.Count</div>
+                                <div class="text-xs text-slate-500">Pack Types</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@Users.Count</div>
+                                <div class="text-xs text-slate-500">Total Users</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@Users.Count(u => u.IsBotAdmin)</div>
+                                <div class="text-xs text-slate-500">Admins</div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </TabsContent>
+    </Tabs>
+</div>
+
+<!-- Add Card Dialog -->
+<Dialog @bind-Open="ShowAddCard">
+    <DialogContent class="max-w-md">
+        <DialogHeader>
+            <DialogTitle class="text-slate-100">Add New Card</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+            <div>
+                <Label class="text-slate-400">Card Name</Label>
+                <Input @bind-Value="NewCard.Name" class="mt-1 bg-slate-950 border-slate-700" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <Label class="text-slate-400">Attack</Label>
+                    <Input @bind-Value="NewCardAttackString" class="mt-1 bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                    <Label class="text-slate-400">Defense</Label>
+                    <Input @bind-Value="NewCardDefenseString" class="mt-1 bg-slate-950 border-slate-700" />
+                </div>
+            </div>
+            <div>
+                <Label class="text-slate-400">Rarity</Label>
+                <Select @bind-Value="NewCardRarity" class="mt-1">
+                    <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
+                    <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
+                    <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
+                </Select>
+            </div>
+            <div>
+                <Label class="text-slate-400">Image URL</Label>
+                <Input @bind-Value="NewCard.ImageUrl" placeholder="https://..." class="mt-1 bg-slate-950 border-slate-700" />
+            </div>
+        </div>
+        <DialogFooter>
+            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowAddCard = false">Cancel</Button>
+            <Button @onclick="AddCard" class="bg-emerald-500 hover:bg-emerald-600">Add Card</Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+
+@code {
+    private string ActiveTab { get; set; } = "cards";
+    private bool IsLoading { get; set; } = true;
+
+    private List<ModelCard> AllCards { get; set; } = new();
+    private List<PackType> AllPacks { get; set; } = new();
+    private List<UserInfo> Users { get; set; } = new();
+
+    // Dialogs
+    private bool ShowAddCard { get; set; }
+    private bool ShowAddPack { get; set; }
+
+    // New Card
+    private ModelCard NewCard { get; set; } = new() { Name = "", Attack = 50, Defense = 50 };
+    private string NewCardRarity { get; set; } = "Common";
+    private string NewCardAttackString { get; set; } = "50";
+    private string NewCardDefenseString { get; set; } = "50";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        try
+        {
+            AllCards = await Client.GetCardsAsync();
+            AllPacks = await Client.GetPacksAsync();
+            // TODO: Load users when endpoint available
+            Users = new List<UserInfo>();
+        }
+        catch
+        {
+            Toast.Error("Failed to load admin data");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task AddCard()
+    {
+        if (string.IsNullOrWhiteSpace(NewCard.Name))
+        {
+            Toast.Error("Card name is required");
+            return;
+        }
+
+        NewCard.Rarity = Enum.Parse<Rarity>(NewCardRarity);
+        NewCard.Attack = int.TryParse(NewCardAttackString, out var atk) ? atk : 50;
+        NewCard.Defense = int.TryParse(NewCardDefenseString, out var def) ? def : 50;
+        
+        var success = await Client.AddCardAsync(NewCard);
+        if (success)
+        {
+            Toast.Success($"Card '{NewCard.Name}' added!");
+            ShowAddCard = false;
+            NewCard = new() { Name = "", Attack = 50, Defense = 50 };
+            NewCardAttackString = "50";
+            NewCardDefenseString = "50";
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error("Failed to add card");
+        }
+    }
+
+    private async Task DeleteCard(ModelCard card)
+    {
+        var success = await Client.RemoveCardAsync(card.Name);
+        if (success)
+        {
+            Toast.Success($"Card '{card.Name}' removed!");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error("Failed to remove card");
+        }
+    }
+
+    private void EditCard(ModelCard card)
+    {
+        // TODO: Implement edit
+        Toast.Success("Edit functionality coming soon");
+    }
+
+    private async Task TogglePack(PackType pack)
+    {
+        var success = await Client.TogglePackAsync(pack.Name);
+        if (success)
+        {
+            Toast.Success($"Pack '{pack.Name}' {(pack.IsAvailable ? "disabled" : "enabled")}!");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error("Failed to toggle pack");
+        }
+    }
+
+    private void EditPack(PackType pack)
+    {
+        Toast.Success("Edit functionality coming soon");
+    }
+
+    private async Task FixInventory()
+    {
+        var success = await Client.FixInventoryAsync();
+        if (success)
+        {
+            Toast.Success("Inventory issues fixed!");
+        }
+        else
+        {
+            Toast.Error("Failed to fix inventory");
+        }
+    }
+
+    private void GiveGold(UserInfo user)
+    {
+        Toast.Success("Give gold functionality coming soon");
+    }
+
+    private void GiveCard(UserInfo user)
+    {
+        Toast.Success("Give card functionality coming soon");
+    }
+
+    private void ToggleAdmin(UserInfo user)
+    {
+        Toast.Success("Toggle admin functionality coming soon");
+    }
+}

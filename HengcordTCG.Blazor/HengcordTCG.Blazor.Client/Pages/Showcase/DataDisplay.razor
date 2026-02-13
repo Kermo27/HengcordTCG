@@ -1,0 +1,219 @@
+@page "/showcase/data-display"
+@layout _ShowcaseLayout
+
+<PageTitle>Data Display - Showcase</PageTitle>
+
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold tracking-tight">Data Display</h1>
+        <p class="text-muted-foreground mt-2">
+            Components for displaying data: tables, avatars, badges, and progress indicators.
+        </p>
+    </div>
+
+    <!-- Avatar -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Avatar</CardTitle>
+            <CardDescription>Display user profile images with fallbacks.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="flex items-center gap-4">
+                <Avatar>
+                    <AvatarImage Source="images/avatar.png" Alt="User avatar" />
+                    <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                    <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                    <AvatarFallback class="bg-primary text-primary-foreground">AB</AvatarFallback>
+                </Avatar>
+                <Avatar class="h-14 w-14">
+                    <AvatarFallback class="text-lg">LG</AvatarFallback>
+                </Avatar>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Badge -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Badge</CardTitle>
+            <CardDescription>Small status indicators and labels.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="flex flex-wrap gap-4">
+                <Badge>Default</Badge>
+                <Badge Variant="BadgeVariant.Secondary">Secondary</Badge>
+                <Badge Variant="BadgeVariant.Outline">Outline</Badge>
+                <Badge Variant="BadgeVariant.Destructive">Destructive</Badge>
+            </div>
+            <Separator class="my-4" />
+            <div class="flex flex-wrap gap-4">
+                <Badge class="bg-green-500 hover:bg-green-500/80">
+                    <LucideIcon Name="check" Size="12" class="mr-1" />
+                    Active
+                </Badge>
+                <Badge class="bg-yellow-500 hover:bg-yellow-500/80 text-black">
+                    <LucideIcon Name="clock" Size="12" class="mr-1" />
+                    Pending
+                </Badge>
+                <Badge class="bg-blue-500 hover:bg-blue-500/80">
+                    <LucideIcon Name="info" Size="12" class="mr-1" />
+                    Info
+                </Badge>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Progress -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Progress</CardTitle>
+            <CardDescription>Show progress completion with visual indicators.</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-6">
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>Loading...</span>
+                    <span>25%</span>
+                </div>
+                <Progress Value="25" />
+            </div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>Uploading file</span>
+                    <span>66%</span>
+                </div>
+                <Progress Value="66" />
+            </div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>Complete</span>
+                    <span>100%</span>
+                </div>
+                <Progress Value="100" />
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Skeleton -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Skeleton</CardTitle>
+            <CardDescription>Loading placeholders that mimic content structure.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="flex items-center space-x-4">
+                <Skeleton class="h-12 w-12 rounded-full" />
+                <div class="space-y-2">
+                    <Skeleton class="h-4 w-[250px]" />
+                    <Skeleton class="h-4 w-[200px]" />
+                </div>
+            </div>
+            <Separator class="my-6" />
+            <div class="space-y-3">
+                <Skeleton class="h-[125px] w-full rounded-xl" />
+                <div class="space-y-2">
+                    <Skeleton class="h-4 w-full" />
+                    <Skeleton class="h-4 w-4/5" />
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Table -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Table</CardTitle>
+            <CardDescription>Display tabular data with consistent styling.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="relative w-full overflow-auto">
+                <table class="w-full caption-bottom text-sm">
+                    <thead class="[&_tr]:border-b">
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground w-[100px]">Invoice</th>
+                            <th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Status</th>
+                            <th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Method</th>
+                            <th class="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="[&_tr:last-child]:border-0">
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <td class="p-2 align-middle font-medium">INV001</td>
+                            <td class="p-2 align-middle">
+                                <Badge class="bg-green-500 hover:bg-green-500/80">Paid</Badge>
+                            </td>
+                            <td class="p-2 align-middle">Credit Card</td>
+                            <td class="p-2 align-middle text-right">$250.00</td>
+                        </tr>
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <td class="p-2 align-middle font-medium">INV002</td>
+                            <td class="p-2 align-middle">
+                                <Badge class="bg-yellow-500 hover:bg-yellow-500/80 text-black">Pending</Badge>
+                            </td>
+                            <td class="p-2 align-middle">PayPal</td>
+                            <td class="p-2 align-middle text-right">$150.00</td>
+                        </tr>
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <td class="p-2 align-middle font-medium">INV003</td>
+                            <td class="p-2 align-middle">
+                                <Badge Variant="BadgeVariant.Destructive">Unpaid</Badge>
+                            </td>
+                            <td class="p-2 align-middle">Bank Transfer</td>
+                            <td class="p-2 align-middle text-right">$350.00</td>
+                        </tr>
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <td class="p-2 align-middle font-medium">INV004</td>
+                            <td class="p-2 align-middle">
+                                <Badge class="bg-green-500 hover:bg-green-500/80">Paid</Badge>
+                            </td>
+                            <td class="p-2 align-middle">Credit Card</td>
+                            <td class="p-2 align-middle text-right">$450.00</td>
+                        </tr>
+                        <tr class="border-b transition-colors hover:bg-muted/50">
+                            <td class="p-2 align-middle font-medium">INV005</td>
+                            <td class="p-2 align-middle">
+                                <Badge class="bg-green-500 hover:bg-green-500/80">Paid</Badge>
+                            </td>
+                            <td class="p-2 align-middle">PayPal</td>
+                            <td class="p-2 align-middle text-right">$550.00</td>
+                        </tr>
+                    </tbody>
+                    <tfoot class="border-t bg-muted/50 font-medium [&>tr]:last:border-b-0">
+                        <tr>
+                            <td class="p-2 align-middle" colspan="3">Total</td>
+                            <td class="p-2 align-middle text-right font-bold">$1,750.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Separator -->
+    <Card>
+        <CardHeader>
+            <CardTitle>Separator</CardTitle>
+            <CardDescription>Visual divider between sections.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div class="space-y-1">
+                <h4 class="text-sm font-medium leading-none">BlazorBlueprint</h4>
+                <p class="text-sm text-muted-foreground">
+                    A beautiful component library for Blazor.
+                </p>
+            </div>
+            <Separator class="my-4" />
+            <div class="flex h-5 items-center space-x-4 text-sm">
+                <div>Docs</div>
+                <Separator Orientation="SeparatorOrientation.Vertical" />
+                <div>Source</div>
+                <Separator Orientation="SeparatorOrientation.Vertical" />
+                <div>GitHub</div>
+            </div>
+        </CardContent>
+    </Card>
+</div>

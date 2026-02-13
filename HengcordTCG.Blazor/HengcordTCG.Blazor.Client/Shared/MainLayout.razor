@@ -1,0 +1,196 @@
+@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<CascadingAuthenticationState>
+    <div class="relative min-h-screen flex flex-col bg-slate-950 text-slate-50">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
+            <div class="container flex h-16 items-center">
+                <!-- Logo -->
+                <div class="mr-4 flex">
+                    <a href="/" class="mr-6 flex items-center space-x-2 group">
+                        <div class="relative">
+                            <LucideIcon Name="sparkles" Size="28" class="text-amber-400 group-hover:text-amber-300 transition-colors" />
+                        </div>
+                        <span class="font-bold text-xl bg-gradient-to-r from-amber-400 to-purple-500 bg-clip-text text-transparent">
+                            HengcordTCG
+                        </span>
+                    </a>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <NavLink href="/" Match="NavLinkMatch.All" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="home" Size="18" class="mr-2" />
+                        Home
+                    </NavLink>
+                    <NavLink href="/collection" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="layers" Size="18" class="mr-2" />
+                        Collection
+                    </NavLink>
+                    <NavLink href="/gallery" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="images" Size="18" class="mr-2" />
+                        Gallery
+                    </NavLink>
+                    <NavLink href="/shop" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="shopping-bag" Size="18" class="mr-2" />
+                        Shop
+                    </NavLink>
+                    <NavLink href="/trades" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="arrow-left-right" Size="18" class="mr-2" />
+                        Trades
+                    </NavLink>
+                    <AuthorizeView Roles="Admin">
+                        <NavLink href="/admin" class="nav-link text-amber-400" ActiveClass="nav-link-active text-amber-400">
+                            <LucideIcon Name="shield" Size="18" class="mr-2" />
+                            Admin
+                        </NavLink>
+                    </AuthorizeView>
+                </nav>
+
+                <!-- Right side -->
+                <div class="flex flex-1 items-center justify-end space-x-4">
+                    <!-- Gold Display -->
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                                <LucideIcon Name="coins" Size="16" class="text-amber-400" />
+                                <span class="text-amber-400 font-semibold">@Gold.ToString("N0")</span>
+                            </div>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <!-- User Menu -->
+                    <AuthorizeView>
+                        <Authorized>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger>
+                                    <Button Variant="ButtonVariant.Ghost" class="relative h-9 w-9 rounded-full overflow-hidden border-2 border-slate-700 hover:border-slate-500 transition-colors">
+                                        @if (!string.IsNullOrEmpty(AvatarUrl))
+                                        {
+                                            <img src="@AvatarUrl" alt="@Username" class="h-full w-full object-cover" />
+                                        }
+                                        else
+                                        {
+                                            <div class="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
+                                                @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                            </div>
+                                        }
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent class="w-56">
+                                    <DropdownMenuLabel class="font-normal">
+                                        <div class="flex flex-col space-y-1">
+                                            <p class="text-sm font-medium">@Username</p>
+                                            <p class="text-xs text-muted-foreground">@Gold.ToString("N0") Gold</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem @onclick="GoToProfile">
+                                        <LucideIcon Name="user" Size="16" class="mr-2" />
+                                        Profile
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem @onclick="GoToCollection">
+                                        <LucideIcon Name="layers" Size="16" class="mr-2" />
+                                        My Collection
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem @onclick="Logout" class="text-red-400 focus:text-red-400">
+                                        <LucideIcon Name="log-out" Size="16" class="mr-2" />
+                                        Log out
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </Authorized>
+                        <NotAuthorized>
+                            <Button @onclick="Login" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
+                                <LucideIcon Name="log-in" Size="18" class="mr-2" />
+                                Login with Discord
+                            </Button>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            @Body
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-800 py-6 bg-slate-950">
+            <div class="container flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm text-slate-500">
+                    2025 HengcordTCG. All rights reserved.
+                </p>
+                <div class="flex items-center space-x-6">
+                    <a href="https://discord.com" target="_blank" class="text-slate-500 hover:text-slate-300 transition-colors">
+                        <LucideIcon Name="message-circle" Size="20" />
+                    </a>
+                    <a href="https://github.com" target="_blank" class="text-slate-500 hover:text-slate-300 transition-colors">
+                        <LucideIcon Name="github" Size="20" />
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <ToastProvider Position="ToastPosition.BottomRight" />
+    <PortalHost />
+</CascadingAuthenticationState>
+
+@code {
+    private string? Username { get; set; }
+    private string? AvatarUrl { get; set; }
+    private long Gold { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize auth state from localStorage (browser only)
+            // This returns the user if token is valid, or null if not
+            var user = await AuthService.InitializeAsync();
+            
+            if (user != null)
+            {
+                Username = user.Username;
+                AvatarUrl = user.AvatarUrl;
+                Gold = user.Gold;
+                StateHasChanged();
+            }
+            
+            // Enable dark mode by default
+            await JS.InvokeVoidAsync("eval", @"
+                if (!document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.add('dark');
+                }
+            ");
+        }
+    }
+
+    private void Login()
+    {
+        var loginUrl = AuthService.GetDiscordLoginUrl();
+        Navigation.NavigateTo(loginUrl, forceLoad: true);
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private void GoToProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+
+    private void GoToCollection()
+    {
+        Navigation.NavigateTo("/collection");
+    }
+}

@@ -31,3 +31,6 @@ data/
 appsettings.json
 appsettings.Development.json
 appsettings.Production.json
+HengcordTCG.Blazor/HengcordTCG.Blazor.Client/wwwroot/appsettings.json
+HengcordTCG.Web/appsettings.Development.json
+HengcordTCG.Web/appsettings.Production.json

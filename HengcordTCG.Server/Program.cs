@@ -3,6 +3,12 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Services;
 using Scalar.AspNetCore;
 using HengcordTCG.Server.Middleware;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +77,61 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TradeService>();
 builder.Services.AddScoped<ShopService>();
 
+// Authentication & Discord OAuth
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.LoginPath = "/api/auth/login";
+    options.LogoutPath = "/api/auth/logout";
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "HengcordTCG",
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "HengcordTCG.Web",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+    };
+})
+.AddDiscord(options =>
+{
+    options.ClientId = builder.Configuration["Discord:ClientId"]!;
+    options.ClientSecret = builder.Configuration["Discord:ClientSecret"]!;
+    options.CallbackPath = "/signin-discord";
+    options.Scope.Add("identify");
+    options.SaveTokens = true;
+    
+    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+    options.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
+    options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
+    
+    options.Events.OnCreatingTicket = async context =>
+    {
+        // Ensure user is synced to database
+        var discordId = context.Identity?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var username = context.Identity?.FindFirst(ClaimTypes.Name)?.Value;
+        
+        if (!string.IsNullOrEmpty(discordId) && !string.IsNullOrEmpty(username))
+        {
+            // This will be handled by the next request to sync the user
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Apply database migrations automatically
@@ -104,11 +165,13 @@ app.UseMiddleware<RateLimitMiddleware>();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-app.UseMiddleware<ApiKeyAuthMiddleware>();
-
 app.UseCors("AllowWeb");
 
+// Authentication must come BEFORE ApiKeyAuthMiddleware so User context is populated
+app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<ApiKeyAuthMiddleware>();
 
 app.MapControllers();
 

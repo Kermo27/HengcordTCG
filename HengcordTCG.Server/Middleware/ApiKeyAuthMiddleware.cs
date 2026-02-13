@@ -6,7 +6,7 @@ public class ApiKeyAuthMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyAuthMiddleware> _logger;
-    private readonly string[] _publicPaths = { "/scalar", "/openapi", "/health" };
+    private readonly string[] _publicPaths = { "/scalar", "/openapi", "/health", "/api/auth" };
 
     public ApiKeyAuthMiddleware(RequestDelegate next, ILogger<ApiKeyAuthMiddleware> logger)
     {
@@ -32,7 +32,16 @@ public class ApiKeyAuthMiddleware
             return;
         }
 
-        // All /api/* routes require API key
+        // Skip API key check if user is authenticated (via JWT or cookie)
+        if (context.User?.Identity?.IsAuthenticated == true)
+        {
+            _logger.LogInformation("User {User} authenticated via JWT for {Method} {Path}", 
+                context.User.Identity.Name, context.Request.Method, path);
+            await _next(context);
+            return;
+        }
+
+        // All /api/* routes require API key if not authenticated
         if (!context.Request.Headers.TryGetValue("X-API-Key", out var apiKeyHeader))
         {
             _logger.LogWarning("Missing X-API-Key header for {Method} {Path}", context.Request.Method, path);

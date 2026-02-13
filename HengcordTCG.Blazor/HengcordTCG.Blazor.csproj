@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="HengcordTCG.Blazor.Client\**" />
+    <Content Remove="HengcordTCG.Blazor.Client\**" />
+    <None Remove="HengcordTCG.Blazor.Client\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BlazorBlueprint.Components" Version="2.*" />
+    <PackageReference Include="BlazorBlueprint.Primitives" Version="2.*" />
+    <PackageReference Include="BlazorBlueprint.Icons.Lucide" Version="2.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.*" />
+    <ProjectReference Include="HengcordTCG.Blazor.Client\HengcordTCG.Blazor.Client.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,233 @@
+@page "/gallery"
+@using ModelCard = HengcordTCG.Shared.Models.Card
+@using HengcordTCG.Shared.Models
+@inject HengcordTCGClient Client
+@inject ToastService Toast
+
+<PageTitle>Card Gallery - HengcordTCG</PageTitle>
+
+<div class="container py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-100">Card Gallery</h1>
+        <p class="text-slate-400">Browse all @AllCards.Count cards in the game</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 md:grid-cols-4 gap-4 mb-8">
+        <Card class="border-slate-800 bg-slate-900/50">
+            <CardContent class="p-4 text-center">
+                <div class="text-2xl font-bold text-slate-100">@AllCards.Count</div>
+                <div class="text-xs text-slate-500 uppercase">Total</div>
+            </CardContent>
+        </Card>
+        <Card class="border-slate-800 bg-slate-900/50">
+            <CardContent class="p-4 text-center">
+                <div class="text-2xl font-bold text-slate-400">@AllCards.Count(c => c.Rarity == Rarity.Common)</div>
+                <div class="text-xs text-slate-500 uppercase">Common</div>
+            </CardContent>
+        </Card>
+        <Card class="border-slate-800 bg-slate-900/50">
+            <CardContent class="p-4 text-center">
+                <div class="text-2xl font-bold text-purple-400">@AllCards.Count(c => c.Rarity == Rarity.Rare)</div>
+                <div class="text-xs text-slate-500 uppercase">Rare</div>
+            </CardContent>
+        </Card>
+        <Card class="border-slate-800 bg-slate-900/50">
+            <CardContent class="p-4 text-center">
+                <div class="text-2xl font-bold text-amber-400">@AllCards.Count(c => c.Rarity == Rarity.Legendary)</div>
+                <div class="text-xs text-slate-500 uppercase">Legendary</div>
+            </CardContent>
+        </Card>
+    </div>
+
+    <!-- Filters -->
+    <Card class="border-slate-800 bg-slate-900/50 mb-6">
+        <CardContent class="p-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <LucideIcon Name="search" Size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Input 
+                            Placeholder="Search cards..."
+                            @bind-Value="SearchQuery"
+                            @bind-Value:after="ApplyFilters"
+                            class="pl-10 bg-slate-950 border-slate-700" />
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <Select @bind-Value="SelectedRarity" @bind-Value:after="ApplyFilters">
+                        <SelectItem Value="@string.Empty">All Rarities</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
+                    </Select>
+                    <Select @bind-Value="SortBy" @bind-Value:after="ApplyFilters">
+                        <SelectItem Value="@("name")">Name</SelectItem>
+                        <SelectItem Value="@("rarity")">Rarity</SelectItem>
+                        <SelectItem Value="@("attack")">Attack</SelectItem>
+                        <SelectItem Value="@("defense")">Defense</SelectItem>
+                    </Select>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+
+    <!-- Cards Grid -->
+    @if (IsLoading)
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @for (int i = 0; i < 10; i++)
+            {
+                <Skeleton class="aspect-[3/4] rounded-lg" />
+            }
+        </div>
+    }
+    else if (FilteredCards.Count == 0)
+    {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                <LucideIcon Name="search-x" Size="40" class="text-slate-600" />
+            </div>
+            <h3 class="text-xl font-semibold text-slate-300 mb-2">No cards found</h3>
+            <p class="text-slate-500">Try adjusting your search filters.</p>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @foreach (var card in FilteredCards)
+            {
+                <CardComponent 
+                    Card="card" 
+                    OnClick="() => ShowCardDetails(card)" />
+            }
+        </div>
+    }
+</div>
+
+<!-- Card Details Dialog -->
+<Dialog @bind-Open="DetailsOpen">
+    @if (SelectedCard != null)
+    {
+        <DialogContent class="max-w-md">
+            <DialogHeader>
+                <DialogTitle class="text-slate-100">@SelectedCard.Name</DialogTitle>
+                <DialogDescription class="text-slate-400">
+                    @SelectedCard.Rarity Card
+                </DialogDescription>
+            </DialogHeader>
+            <div class="py-4">
+                <div class="aspect-[3/4] rounded-lg overflow-hidden bg-slate-800 mb-4">
+                    @if (!string.IsNullOrEmpty(SelectedCard.ImageUrl))
+                    {
+                        <img src="@SelectedCard.ImageUrl" alt="@SelectedCard.Name" 
+                            class="w-full h-full object-cover" />
+                    }
+                    else
+                    {
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br @GetRarityGradient(SelectedCard.Rarity)">
+                            <LucideIcon Name="image" Size="64" class="text-white/50" />
+                        </div>
+                    }
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-3 rounded-lg bg-slate-800">
+                        <div class="text-2xl font-bold text-red-400">@SelectedCard.Attack</div>
+                        <div class="text-xs text-slate-500 uppercase">Attack</div>
+                    </div>
+                    <div class="text-center p-3 rounded-lg bg-slate-800">
+                        <div class="text-2xl font-bold text-blue-400">@SelectedCard.Defense</div>
+                        <div class="text-xs text-slate-500 uppercase">Defense</div>
+                    </div>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button Variant="ButtonVariant.Outline" @onclick="() => DetailsOpen = false">Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    }
+</Dialog>
+
+@code {
+    private List<ModelCard> AllCards { get; set; } = new();
+    private List<ModelCard> FilteredCards { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    // Filters
+    private string SearchQuery { get; set; } = "";
+    private string SelectedRarity { get; set; } = "";
+    private string SortBy { get; set; } = "name";
+
+    // Dialog
+    private bool DetailsOpen { get; set; }
+    private ModelCard? SelectedCard { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCards();
+    }
+
+    private async Task LoadCards()
+    {
+        IsLoading = true;
+        try
+        {
+            AllCards = await Client.GetCardsAsync();
+            ApplyFilters();
+        }
+        catch
+        {
+            Toast.Error("Failed to load cards");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = AllCards.AsEnumerable();
+
+        // Search
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            query = query.Where(c => c.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Rarity filter
+        if (!string.IsNullOrEmpty(SelectedRarity))
+        {
+            if (Enum.TryParse<Rarity>(SelectedRarity, out var rarity))
+            {
+                query = query.Where(c => c.Rarity == rarity);
+            }
+        }
+
+        // Sort
+        query = SortBy switch
+        {
+            "name" => query.OrderBy(c => c.Name),
+            "rarity" => query.OrderByDescending(c => c.Rarity).ThenBy(c => c.Name),
+            "attack" => query.OrderByDescending(c => c.Attack).ThenBy(c => c.Name),
+            "defense" => query.OrderByDescending(c => c.Defense).ThenBy(c => c.Name),
+            _ => query.OrderBy(c => c.Name)
+        };
+
+        FilteredCards = query.ToList();
+    }
+
+    private void ShowCardDetails(ModelCard card)
+    {
+        SelectedCard = card;
+        DetailsOpen = true;
+    }
+
+    private string GetRarityGradient(Rarity rarity) => rarity switch
+    {
+        Rarity.Legendary => "from-amber-500 to-orange-600",
+        Rarity.Rare => "from-blue-500 to-purple-600",
+        _ => "from-slate-500 to-slate-600"
+    };
+}

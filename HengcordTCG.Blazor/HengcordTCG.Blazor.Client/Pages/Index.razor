@@ -1,0 +1,265 @@
+@page "/"
+@inject HengcordTCGClient Client
+@inject AuthService AuthService
+@inject ToastService Toast
+@inject NavigationManager Navigation
+
+<PageTitle>Home - HengcordTCG</PageTitle>
+
+<div class="min-h-[calc(100vh-8rem)]">
+    <!-- Hero Section -->
+    <div class="relative overflow-hidden">
+        <!-- Background gradient -->
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent"></div>
+        
+        <div class="relative container py-16 md:py-24">
+            <div class="text-center space-y-6 max-w-3xl mx-auto">
+                <Badge Variant="BadgeVariant.Outline" class="border-amber-500/30 text-amber-400">
+                    <LucideIcon Name="sparkles" Size="14" class="mr-1" />
+                    Trading Card Game
+                </Badge>
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight">
+                    <span class="bg-gradient-to-r from-amber-400 via-orange-400 to-purple-500 bg-clip-text text-transparent">
+                        Collect, Trade
+                    </span>
+                    <br />
+                    <span class="text-slate-100">& Conquer</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
+                    Build your ultimate card collection, trade with other players, and become the most powerful card master in the realm.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                    <AuthorizeView>
+                        <Authorized>
+                            <Button @onclick="@(() => Navigation.NavigateTo("/collection"))" 
+                                class="h-12 px-8 text-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                                <LucideIcon Name="layers" Size="20" class="mr-2" />
+                                View Collection
+                            </Button>
+                            <Button @onclick="@(() => Navigation.NavigateTo("/shop"))" 
+                                Variant="ButtonVariant.Outline"
+                                class="h-12 px-8 text-lg border-slate-700 text-slate-300 hover:bg-slate-800">
+                                <LucideIcon Name="shopping-bag" Size="20" class="mr-2" />
+                                Visit Shop
+                            </Button>
+                        </Authorized>
+                        <NotAuthorized>
+                            <Button @onclick="@(() => Navigation.NavigateTo("/login"))" 
+                                class="h-12 px-8 text-lg bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
+                                <LucideIcon Name="log-in" Size="20" class="mr-2" />
+                                Get Started
+                            </Button>
+                            <Button @onclick="@(() => Navigation.NavigateTo("/gallery"))" 
+                                Variant="ButtonVariant.Outline"
+                                class="h-12 px-8 text-lg border-slate-700 text-slate-300 hover:bg-slate-800">
+                                <LucideIcon Name="images" Size="20" class="mr-2" />
+                                Browse Cards
+                            </Button>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="border-y border-slate-800 bg-slate-950/50">
+        <div class="container py-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="text-center space-y-2">
+                    <div class="text-3xl md:text-4xl font-bold text-amber-400">@@Stats.TotalCards</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider">Total Cards</div>
+                </div>
+                <div class="text-center space-y-2">
+                    <div class="text-3xl md:text-4xl font-bold text-purple-400">@@Stats.TotalPacks</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider">Pack Types</div>
+                </div>
+                <div class="text-center space-y-2">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-400">@@Stats.TotalTrades</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider">Trades Made</div>
+                </div>
+                <div class="text-center space-y-2">
+                    <div class="text-3xl md:text-4xl font-bold text-blue-400">@@Stats.TotalPlayers</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider">Players</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="container py-16 md:py-24">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-slate-100 mb-4">Game Features</h2>
+            <p class="text-slate-400">Discover everything HengcordTCG has to offer</p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Collection Feature -->
+            <Card class="border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group">
+                <CardHeader>
+                    <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <LucideIcon Name="layers" Size="24" class="text-amber-400" />
+                    </div>
+                    <CardTitle class="text-slate-100">Build Your Collection</CardTitle>
+                    <CardDescription class="text-slate-400">
+                        Collect cards of different rarities - Common, Rare, and Legendary. Complete your collection and show off your rarest finds.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button @onclick="@(() => Navigation.NavigateTo("/collection"))" 
+                        Variant="ButtonVariant.Ghost" 
+                        class="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 p-0">
+                        View Collection <LucideIcon Name="arrow-right" Size="16" class="ml-2" />
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <!-- Trading Feature -->
+            <Card class="border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group">
+                <CardHeader>
+                    <div class="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <LucideIcon Name="arrow-left-right" Size="24" class="text-purple-400" />
+                    </div>
+                    <CardTitle class="text-slate-100">Trade with Players</CardTitle>
+                    <CardDescription class="text-slate-400">
+                        Exchange cards with other players. Create trade offers, negotiate deals, and expand your collection through trading.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button @onclick="@(() => Navigation.NavigateTo("/trades"))" 
+                        Variant="ButtonVariant.Ghost" 
+                        class="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 p-0">
+                        Start Trading <LucideIcon Name="arrow-right" Size="16" class="ml-2" />
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <!-- Shop Feature -->
+            <Card class="border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group">
+                <CardHeader>
+                    <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <LucideIcon Name="shopping-bag" Size="24" class="text-emerald-400" />
+                    </div>
+                    <CardTitle class="text-slate-100">Card Shop</CardTitle>
+                    <CardDescription class="text-slate-400">
+                        Buy card packs with in-game gold. Each pack contains random cards with different rarity chances. Try your luck!
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button @onclick="@(() => Navigation.NavigateTo("/shop"))" 
+                        Variant="ButtonVariant.Ghost" 
+                        class="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-0">
+                        Visit Shop <LucideIcon Name="arrow-right" Size="16" class="ml-2" />
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    </div>
+
+    <!-- Daily Rewards Section -->
+    <AuthorizeView>
+        <Authorized>
+            <div class="border-t border-slate-800 bg-slate-950/30">
+                <div class="container py-16">
+                    <div class="max-w-2xl mx-auto text-center">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-6">
+                            <LucideIcon Name="gift" Size="32" class="text-white" />
+                        </div>
+                        <h2 class="text-3xl font-bold text-slate-100 mb-4">Daily Rewards</h2>
+                        <p class="text-slate-400 mb-8">
+                            Log in every day to claim free gold! The more consecutive days you log in, the bigger the rewards.
+                        </p>
+                        <Button 
+                            @onclick="ClaimDaily"
+                            Disabled="IsClaimingDaily"
+                            class="h-14 px-12 text-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                            @if (IsClaimingDaily)
+                            {
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                <span>Claiming...</span>
+                            }
+                            else
+                            {
+                                <LucideIcon Name="coins" Size="20" class="mr-2" />
+                                <span>Claim Daily Reward</span>
+                            }
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private GameStats Stats { get; set; } = new();
+    private bool IsClaimingDaily { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStats();
+    }
+
+    private async Task LoadStats()
+    {
+        try
+        {
+            var cards = await Client.GetCardsAsync();
+            var packs = await Client.GetPacksAsync();
+            
+            Stats.TotalCards = cards.Count;
+            Stats.TotalPacks = packs.Count;
+            Stats.TotalTrades = 0; // Would need endpoint for this
+            Stats.TotalPlayers = 0; // Would need endpoint for this
+        }
+        catch (Exception ex)
+        {
+            Toast.Error("Failed to load stats");
+        }
+    }
+
+    private async Task ClaimDaily()
+    {
+        IsClaimingDaily = true;
+        try
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user == null)
+            {
+                Toast.Error("Please log in to claim daily rewards");
+                return;
+            }
+
+            var result = await Client.ClaimDailyAsync(user.Id, user.Username);
+            if (result.Success)
+            {
+                Toast.Success($"Claimed {result.Amount} gold!");
+            }
+            else if (!string.IsNullOrEmpty(result.TimeRemaining))
+            {
+                Toast.Success($"Already claimed! Next reward in {result.TimeRemaining}");
+            }
+            else
+            {
+                Toast.Error("Failed to claim daily reward");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error("An error occurred");
+        }
+        finally
+        {
+            IsClaimingDaily = false;
+        }
+    }
+
+    private class GameStats
+    {
+        public int TotalCards { get; set; }
+        public int TotalPacks { get; set; }
+        public int TotalTrades { get; set; }
+        public int TotalPlayers { get; set; }
+    }
+}
