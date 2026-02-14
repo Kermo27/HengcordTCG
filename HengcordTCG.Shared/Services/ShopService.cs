@@ -52,91 +52,78 @@ public class ShopService
                 _logger.LogWarning("Insufficient gold for Discord ID {DiscordId}. Required: {Price}, Has: {Gold}", discordId, pack.Price, user.Gold);
                 return (false, new List<Card>(), $"Brakuje Ci złota! Koszt paczki '{pack.Name}': {pack.Price}, masz: {user.Gold}");
             }
-        
-        var poolQuery = _db.Cards.AsQueryable();
-        
-        if (pack.Name == "Base Set")
-        {
-             poolQuery = poolQuery.Where(c => c.ExclusivePackId == null || c.ExclusivePackId == pack.Id);
-        }
-        else
-        {
-             poolQuery = poolQuery.Where(c => c.ExclusivePackId == pack.Id || c.ExclusivePackId == null);
-        }
 
-        var availableCards = await poolQuery.ToListAsync();
+            var availableCards = await _db.Cards
+                .Where(c => c.ExclusivePackId == null || c.ExclusivePackId == pack.Id)
+                .ToListAsync();
 
-        if (availableCards.Count == 0)
-        {
-            return (false, new List<Card>(), "Ta paczka jest pusta!");
-        }
-
-        var random = new Random();
-        var drawnCards = new List<Card>();
-        
-        for (var i = 0; i < 3; i++)
-        {
-            var totalWeight = pack.ChanceCommon + pack.ChanceRare + pack.ChanceLegendary;
-            var roll = random.Next(1, totalWeight + 1);
-            
-            Rarity targetRarity;
-            var currentThreshold = 0;
-
-            if (roll <= (currentThreshold += pack.ChanceCommon)) targetRarity = Rarity.Common;
-            else if (roll <= (currentThreshold += pack.ChanceRare)) targetRarity = Rarity.Rare;
-            else targetRarity = Rarity.Legendary;
-            
-            var specificPool = availableCards.Where(c => c.Rarity == targetRarity).ToList();
-            
-            if (specificPool.Count == 0)
+            if (availableCards.Count == 0)
             {
-               if (targetRarity > Rarity.Common)
-               {
-                   specificPool = availableCards.Where(c => c.Rarity < targetRarity).ToList();
-               }
+                return (false, new List<Card>(), "Ta paczka jest pusta!");
             }
+
+            var drawnCards = new List<Card>();
             
-            if (specificPool.Count == 0) specificPool = availableCards;
-
-            var card = specificPool[random.Next(specificPool.Count)];
-            drawnCards.Add(card);
-        }
-        
-        var drawnCounts = drawnCards.GroupBy(c => c.Id)
-                                    .ToDictionary(g => g.Key, g => g.Count());
-
-        foreach (var kvp in drawnCounts)
-        {
-            var cardId = kvp.Key;
-            var countToAdd = kvp.Value;
-            var cardObj = drawnCards.First(c => c.Id == cardId);
-            
-            var userCard = await _db.UserCards
-                .FirstOrDefaultAsync(uc => uc.UserId == user.Id && uc.CardId == cardId);
-
-            if (userCard != null)
+            for (var i = 0; i < 3; i++)
             {
-                userCard.Count += countToAdd;
-            }
-            else
-            {
-                _db.UserCards.Add(new UserCard
+                var totalWeight = pack.ChanceCommon + pack.ChanceRare + pack.ChanceLegendary;
+                var roll = Random.Shared.Next(1, totalWeight + 1);
+                
+                Rarity targetRarity;
+                var currentThreshold = 0;
+
+                if (roll <= (currentThreshold += pack.ChanceCommon)) targetRarity = Rarity.Common;
+                else if (roll <= (currentThreshold += pack.ChanceRare)) targetRarity = Rarity.Rare;
+                else targetRarity = Rarity.Legendary;
+                
+                var specificPool = availableCards.Where(c => c.Rarity == targetRarity).ToList();
+                
+                if (specificPool.Count == 0 && targetRarity > Rarity.Common)
                 {
-                    UserId = user.Id,
-                    CardId = cardId,
-                    Card = cardObj,
-                    User = user,
-                    Count = countToAdd,
-                    ObtainedAt = DateTime.UtcNow
-                });
+                    specificPool = availableCards.Where(c => c.Rarity < targetRarity).ToList();
+                }
+                
+                if (specificPool.Count == 0) specificPool = availableCards;
+
+                var card = specificPool[Random.Shared.Next(specificPool.Count)];
+                drawnCards.Add(card);
             }
-        }
+            
+            var drawnCounts = drawnCards.GroupBy(c => c.Id)
+                                        .ToDictionary(g => g.Key, g => g.Count());
 
-        user.Gold -= pack.Price;
-        await _db.SaveChangesAsync();
+            foreach (var kvp in drawnCounts)
+            {
+                var cardId = kvp.Key;
+                var countToAdd = kvp.Value;
+                var cardObj = drawnCards.First(c => c.Id == cardId);
+                
+                var userCard = await _db.UserCards
+                    .FirstOrDefaultAsync(uc => uc.UserId == user.Id && uc.CardId == cardId);
 
-        _logger.LogInformation("Pack purchased successfully for Discord ID {DiscordId}. Pack: {PackName}, Amount: {Amount} gold", discordId, pack.Name, pack.Price);
-        return (true, drawnCards, $"Paczka '{pack.Name}' otwarta!");
+                if (userCard != null)
+                {
+                    userCard.Count += countToAdd;
+                }
+                else
+                {
+                    _db.UserCards.Add(new UserCard
+                    {
+                        UserId = user.Id,
+                        CardId = cardId,
+                        Card = cardObj,
+                        User = user,
+                        Count = countToAdd,
+                        ObtainedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            user.Gold -= pack.Price;
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Pack purchased successfully for Discord ID {DiscordId}. Pack: {PackName}, Amount: {Amount} gold", discordId, pack.Name, pack.Price);
+            return (true, drawnCards, $"Paczka '{pack.Name}' otwarta!");
         }
         catch (Exception ex)
         {

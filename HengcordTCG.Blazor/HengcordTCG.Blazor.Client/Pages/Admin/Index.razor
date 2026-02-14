@@ -1,10 +1,12 @@
 @page "/admin"
-@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Components.Authorization
 @using ModelCard = HengcordTCG.Shared.Models.Card
 @using HengcordTCG.Shared.Models
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
 @inject ToastService Toast
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Admin Panel - HengcordTCG</PageTitle>
 
@@ -130,7 +132,7 @@
                             </div>
                         </CardContent>
                         <CardFooter class="flex gap-2">
-                            <Button @onclick="() => TogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 border-slate-700">
+                            <Button @onclick="() => TogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 justify-start border-slate-700">
                                 @(pack.IsAvailable ? "Disable" : "Enable")
                             </Button>
                             <Button @onclick="() => EditPack(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
@@ -223,7 +225,7 @@
                         </CardDescription>
                     </CardHeader>
                     <CardContent class="space-y-3">
-                        <Button @onclick="FixInventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
+onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
                             <LucideIcon Name="package-check" Size="18" class="mr-2" />
                             Fix Inventory Issues
                         </Button>
@@ -315,11 +317,9 @@
     private List<PackType> AllPacks { get; set; } = new();
     private List<UserInfo> Users { get; set; } = new();
 
-    // Dialogs
     private bool ShowAddCard { get; set; }
     private bool ShowAddPack { get; set; }
 
-    // New Card
     private ModelCard NewCard { get; set; } = new() { Name = "", Attack = 50, Defense = 50 };
     private string NewCardRarity { get; set; } = "Common";
     private string NewCardAttackString { get; set; } = "50";
@@ -327,6 +327,18 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Initialize auth state from localStorage
+        await AuthService.InitializeAsync();
+        
+        // Check admin role from auth state
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated != true || !user.IsInRole("Admin"))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+        
         await LoadData();
     }
 
@@ -337,7 +349,6 @@
         {
             AllCards = await Client.GetCardsAsync();
             AllPacks = await Client.GetPacksAsync();
-            // TODO: Load users when endpoint available
             Users = new List<UserInfo>();
         }
         catch
@@ -394,7 +405,6 @@
 
     private void EditCard(ModelCard card)
     {
-        // TODO: Implement edit
         Toast.Success("Edit functionality coming soon");
     }
 

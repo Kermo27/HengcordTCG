@@ -15,7 +15,6 @@ public class BotService : IHostedService
     private readonly InteractionService _interactions;
     private readonly InteractionHandler _handler;
     private readonly IConfiguration _config;
-    private readonly IServiceProvider _services;
     private readonly ILogger<BotService> _logger;
 
     public BotService(
@@ -23,14 +22,12 @@ public class BotService : IHostedService
         InteractionService interactions,
         InteractionHandler handler,
         IConfiguration config,
-        IServiceProvider services,
         ILogger<BotService> logger)
     {
         _client = client;
         _interactions = interactions;
         _handler = handler;
         _config = config;
-        _services = services;
         _logger = logger;
     }
 

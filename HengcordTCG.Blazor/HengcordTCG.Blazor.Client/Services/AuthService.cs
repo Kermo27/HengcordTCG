@@ -75,6 +75,31 @@ public class AuthService
 
     public string? GetToken() => _jwtToken;
 
+    private bool ExtractIsAdminFromToken(string token)
+    {
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length >= 2)
+            {
+                var payload = parts[1];
+                var padding = 4 - payload.Length % 4;
+                if (padding != 4) payload += new string('=', padding);
+                
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                // JwtSecurityTokenHandler serializes ClaimTypes.Role as the full URI
+                if (json.Contains("\"role\":\"Admin\"") || json.Contains("\"role\": \"Admin\"")
+                    || json.Contains("claims/role\":\"Admin\"") || json.Contains("claims/role\": \"Admin\"")
+                    || json.Contains("\"is_admin\":\"true\"") || json.Contains("\"is_admin\": \"true\""))
+                {
+                    return true;
+                }
+            }
+        }
+        catch { }
+        return false;
+    }
+
     private ulong ExtractUserIdFromToken(string token)
     {
         try
@@ -117,12 +142,29 @@ public class AuthService
                         // Extract user ID from JWT token payload (simple base64 decode)
                         var userId = ExtractUserIdFromToken(_jwtToken);
                         
+                        // Fetch user details (including gold) from users API
+                        long gold = 0;
+                        try
+                        {
+                            var userResponse = await _http.GetAsync($"api/users/{userId}");
+                            if (userResponse.IsSuccessStatusCode)
+                            {
+                                var userData = await userResponse.Content.ReadFromJsonAsync<UserDetails>();
+                                if (userData != null)
+                                {
+                                    gold = userData.Gold;
+                                }
+                            }
+                        }
+                        catch { /* Ignore errors, use defaults */ }
+                        
                         var user = new UserInfo
                         {
                             Id = userId,
                             Username = authInfo.Name ?? "Unknown",
                             AvatarUrl = authInfo.AvatarUrl,
-                            IsBotAdmin = authInfo.IsAdmin
+                            IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken),
+                            Gold = gold
                         };
                         _authStateProvider.SetAuthenticated(user);
                         return true;
@@ -196,7 +238,7 @@ public class AuthService
                         Id = userId,
                         Username = authInfo.Name ?? "Unknown",
                         AvatarUrl = authInfo.AvatarUrl,
-                        IsBotAdmin = authInfo.IsAdmin,
+                        IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken),
                         Gold = gold,
                         LastDaily = lastDaily
                     };

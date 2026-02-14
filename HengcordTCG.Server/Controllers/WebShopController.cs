@@ -1,6 +1,7 @@
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Services;
+using HengcordTCG.Server.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,11 +50,7 @@ public class WebShopController : ControllerBase
         });
     }
 
-    private bool TryGetDiscordId(out ulong discordId)
-    {
-        discordId = 0;
-        var discordIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return ulong.TryParse(discordIdStr, out discordId);
-    }
+    private bool TryGetDiscordId(out ulong discordId) => 
+        ControllerBaseExtensions.TryGetDiscordId(this, out discordId);
 }
 

@@ -227,9 +227,9 @@
                 CurrentGold = user.Gold;
             }
 
-            // TODO: Load trades from API when endpoint is available
-            ActiveTrades = new List<Trade>();
-            MyTrades = new List<Trade>();
+            var allTrades = await Client.GetTradesForUserAsync(CurrentUserId);
+            ActiveTrades = allTrades.Where(t => t.Status == TradeStatus.Pending && t.TargetId != 0).ToList();
+            MyTrades = allTrades.Where(t => t.Initiator?.DiscordId == CurrentUserId).ToList();
         }
         catch
         {
@@ -288,20 +288,44 @@
 
     private async Task AcceptTrade(Trade trade)
     {
-        // TODO: Implement when endpoint is available
-        Toast.Success("Trade accepted!");
+        var result = await Client.AcceptTradeAsync(trade.Id, CurrentUserId);
+        if (result.Success)
+        {
+            Toast.Success("Trade accepted!");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error(result.Message);
+        }
     }
 
     private async Task RejectTrade(Trade trade)
     {
-        // TODO: Implement when endpoint is available
-        Toast.Success("Trade rejected");
+        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
+        if (result.Success)
+        {
+            Toast.Success("Trade rejected");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error(result.Message);
+        }
     }
 
     private async Task CancelTrade(Trade trade)
     {
-        // TODO: Implement when endpoint is available
-        Toast.Success("Trade cancelled");
+        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
+        if (result.Success)
+        {
+            Toast.Success("Trade cancelled");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error(result.Message);
+        }
     }
 
     private class NewTradeModel

@@ -28,6 +28,18 @@ public class TradesController : ControllerBase
         return await _context.Trades
             .Where(t => t.Status == TradeStatus.Pending)
             .Include(t => t.Initiator)
+            .Include(t => t.Target)
+            .ToListAsync();
+    }
+
+    [HttpGet("user/{discordId}")]
+    public async Task<ActionResult<IEnumerable<Trade>>> GetTradesForUser(ulong discordId)
+    {
+        return await _context.Trades
+            .Include(t => t.Initiator)
+            .Include(t => t.Target)
+            .Where(t => t.Initiator.DiscordId == discordId || t.Target.DiscordId == discordId)
+            .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
     }
 

@@ -16,6 +16,5 @@ public class PackType
     public int ChanceRare { get; set; } = 35;
     public int ChanceLegendary { get; set; } = 5;
 
-    // Navigation property for exclusive cards
     public List<Card> ExclusiveCards { get; set; } = new();
 }

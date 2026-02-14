@@ -193,7 +193,7 @@
 </div>
 
 @code {
-    private GameStats Stats { get; set; } = new();
+    private HengcordTCGClient.GameStats Stats { get; set; } = new();
     private bool IsClaimingDaily { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -205,15 +205,9 @@
     {
         try
         {
-            var cards = await Client.GetCardsAsync();
-            var packs = await Client.GetPacksAsync();
-            
-            Stats.TotalCards = cards.Count;
-            Stats.TotalPacks = packs.Count;
-            Stats.TotalTrades = 0; // Would need endpoint for this
-            Stats.TotalPlayers = 0; // Would need endpoint for this
+            Stats = await Client.GetStatsAsync();
         }
-        catch (Exception ex)
+        catch
         {
             Toast.Error("Failed to load stats");
         }
@@ -245,7 +239,7 @@
                 Toast.Error("Failed to claim daily reward");
             }
         }
-        catch (Exception ex)
+        catch
         {
             Toast.Error("An error occurred");
         }
@@ -253,13 +247,5 @@
         {
             IsClaimingDaily = false;
         }
-    }
-
-    private class GameStats
-    {
-        public int TotalCards { get; set; }
-        public int TotalPacks { get; set; }
-        public int TotalTrades { get; set; }
-        public int TotalPlayers { get; set; }
     }
 }

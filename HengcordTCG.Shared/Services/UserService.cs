@@ -85,7 +85,7 @@ public class UserService
                 }
             }
 
-            var amount = new Random().Next(100, 501);
+            var amount = Random.Shared.Next(100, 501);
             user.Gold += amount;
             user.LastDaily = now;
             

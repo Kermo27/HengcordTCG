@@ -17,7 +17,6 @@ public class TradeService
     }
 
 
-
     public async Task<(bool success, string message, Trade? trade, TradeContent? offerContent, TradeContent? requestContent)> CreateTradeAsync(
         ulong initiatorId, string initiatorName,
         ulong targetId, string targetName,
@@ -142,7 +141,7 @@ public class TradeService
                 await transaction.CommitAsync();
                 return (true, "Wymiana zakończona sukcesem!");
             }
-            catch (Exception ex)
+            catch
             {
                 await transaction.RollbackAsync();
                 throw;
@@ -180,12 +179,10 @@ public class TradeService
             var cardId = kvp.Key;
             var count = kvp.Value;
 
-            // Remove from source
             var sourceCard = fromUser.UserCards.First(uc => uc.CardId == cardId);
             sourceCard.Count -= count;
             if (sourceCard.Count == 0) _db.UserCards.Remove(sourceCard);
 
-            // Add to dest
             var destCard = toUser.UserCards.FirstOrDefault(uc => uc.CardId == cardId);
             if (destCard != null)
             {
@@ -193,22 +190,13 @@ public class TradeService
             }
             else
             {
-                // We need to fetch Card entity to be safe or just set ID? 
-                // Setting ID is enough if we just Add.
-                // But let's check if 'toUser.UserCards' collection is loaded fully? 
-                // In AcceptTradeAsync we included UserCards, so it should be fine.
-                // But if 'destCard' is null, it means it's not in the loaded collection OR not in DB.
-                // Since we included it, it's not in DB.
-                
-                // Caution: we are adding to a tracking collection.
-                var newCard = new UserCard
+                _db.UserCards.Add(new UserCard
                 {
                     UserId = toUser.Id,
                     CardId = cardId,
                     Count = count,
                     ObtainedAt = DateTime.UtcNow
-                };
-                _db.UserCards.Add(newCard); // Add to context directly or to collection
+                });
             }
         }
     }

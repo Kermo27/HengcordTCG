@@ -8,8 +8,8 @@ public class RateLimitMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitMiddleware> _logger;
     private static readonly ConcurrentDictionary<string, RateLimitEntry> _requestCounts = new();
-    private readonly int _requestsPerMinute = 60;
-    private readonly int _requestsPerHour = 1000;
+    private const int RequestsPerMinute = 60;
+    private const int RequestsPerHour = 1000;
 
     public RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddleware> logger)
     {
@@ -22,53 +22,47 @@ public class RateLimitMiddleware
         var identifier = GetClientIdentifier(context);
         var now = DateTime.UtcNow;
 
-        if (!_requestCounts.TryGetValue(identifier, out var entry))
-        {
-            entry = new RateLimitEntry();
-            _requestCounts.TryAdd(identifier, entry);
-        }
+        var entry = _requestCounts.GetOrAdd(identifier, _ => new RateLimitEntry());
 
-        // Clean up old entries older than 1 hour
-        if ((now - entry.LastResetHour).TotalMinutes > 60)
+        lock (entry)
         {
-            entry.HourlyCount = 0;
-            entry.LastResetHour = now;
-        }
+            if ((now - entry.LastResetHour).TotalMinutes > 60)
+            {
+                entry.HourlyCount = 0;
+                entry.LastResetHour = now;
+            }
 
-        // Clean up old entries older than 1 minute
-        if ((now - entry.LastResetMinute).TotalSeconds > 60)
-        {
-            entry.MinuteCount = 0;
-            entry.LastResetMinute = now;
-        }
+            if ((now - entry.LastResetMinute).TotalSeconds > 60)
+            {
+                entry.MinuteCount = 0;
+                entry.LastResetMinute = now;
+            }
 
-        // Check hourly limit
-        if (entry.HourlyCount >= _requestsPerHour)
-        {
-            _logger.LogWarning("Rate limit exceeded (hourly) for client {Identifier}", identifier);
-            context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-            await context.Response.WriteAsync("Rate limit exceeded. Try again later.");
-            return;
-        }
+            if (entry.HourlyCount >= RequestsPerHour)
+            {
+                _logger.LogWarning("Rate limit exceeded (hourly) for client {Identifier}", identifier);
+                context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+                context.Response.WriteAsync("Rate limit exceeded. Try again later.");
+                return;
+            }
 
-        // Check minute limit
-        if (entry.MinuteCount >= _requestsPerMinute)
-        {
-            _logger.LogWarning("Rate limit exceeded (per minute) for client {Identifier}", identifier);
-            context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-            await context.Response.WriteAsync("Rate limit exceeded. Try again in a minute.");
-            return;
-        }
+            if (entry.MinuteCount >= RequestsPerMinute)
+            {
+                _logger.LogWarning("Rate limit exceeded (per minute) for client {Identifier}", identifier);
+                context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+                context.Response.WriteAsync("Rate limit exceeded. Try again in a minute.");
+                return;
+            }
 
-        entry.MinuteCount++;
-        entry.HourlyCount++;
+            entry.MinuteCount++;
+            entry.HourlyCount++;
+        }
 
         await _next(context);
     }
 
     private static string GetClientIdentifier(HttpContext context)
     {
-        // Try to use API key as identifier, fallback to IP address
         if (context.Request.Headers.TryGetValue("X-API-Key", out var apiKey))
         {
             return $"api-key:{apiKey}";

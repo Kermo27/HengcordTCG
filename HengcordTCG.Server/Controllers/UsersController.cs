@@ -122,4 +122,22 @@ public class UsersController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpGet("stats")]
+    [AllowAnonymous]
+    public async Task<ActionResult> GetStats()
+    {
+        var totalCards = await _context.Cards.CountAsync();
+        var totalPacks = await _context.PackTypes.CountAsync();
+        var totalTrades = await _context.Trades.CountAsync(t => t.Status == TradeStatus.Executed);
+        var totalPlayers = await _context.Users.CountAsync();
+
+        return Ok(new
+        {
+            totalCards,
+            totalPacks,
+            totalTrades,
+            totalPlayers
+        });
+    }
 }

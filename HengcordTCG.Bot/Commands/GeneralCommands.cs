@@ -1,6 +1,5 @@
 using Discord;
 using Discord.Interactions;
-using System.Linq;
 
 namespace HengcordTCG.Bot.Commands;
 

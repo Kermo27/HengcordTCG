@@ -7,19 +7,15 @@ using BlazorBlueprint.Components.Toast;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// Add authorization services required by AuthorizeRouteView
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
-// Add BlazorBlueprint services
 builder.Services.AddBlazorBlueprintPrimitives();
 builder.Services.AddScoped<ToastService>();
 
-// Configure HttpClient and API services (required for prerendering)
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156";
 var apiKey = builder.Configuration["ApiKey"] ?? "dev-key";
 
@@ -39,7 +35,6 @@ builder.Services.AddScoped(sp =>
     return http;
 });
 
-// Register client services for prerendering
 builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
 builder.Services.AddScoped<AuthService>();
@@ -47,7 +42,6 @@ builder.Services.AddScoped<HengcordTCG.Shared.Clients.HengcordTCGClient>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");

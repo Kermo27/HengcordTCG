@@ -7,6 +7,8 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using HengcordTCG.Shared.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -14,10 +16,12 @@ namespace HengcordTCG.Server.Controllers;
 public class WebAuthController : ControllerBase
 {
     private readonly IConfiguration _config;
+    private readonly AppDbContext _db;
 
-    public WebAuthController(IConfiguration config)
+    public WebAuthController(IConfiguration config, AppDbContext db)
     {
         _config = config;
+        _db = db;
     }
 
     [HttpGet("login")]
@@ -45,8 +49,8 @@ public class WebAuthController : ControllerBase
     }
 
     [HttpGet("api/auth/callback")]
-    [Authorize]
-    public IActionResult Callback([FromQuery] string? returnUrl = null)
+    [Authorize(AuthenticationSchemes = "Discord")]
+    public async Task<IActionResult> Callback([FromQuery] string? returnUrl = null)
     {
         var jwtSecret = _config["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
@@ -54,6 +58,18 @@ public class WebAuthController : ControllerBase
 
         var claims = User.Claims.ToList();
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
+
+        // Check if user is admin from database and add claim
+        var discordIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(discordIdStr) && ulong.TryParse(discordIdStr, out var discordId))
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            if (user?.IsBotAdmin == true)
+            {
+                claims.Add(new Claim("is_admin", "true"));
+                claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+            }
+        }
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"] ?? "HengcordTCG",
@@ -86,9 +102,33 @@ public class WebAuthController : ControllerBase
     {
         var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
         var name = User.Identity?.Name;
-        var avatarUrl = User.FindFirst("urn:discord:avatar")?.Value;
+        var avatarHash = User.FindFirst("urn:discord:avatar")?.Value;
         var isAdmin = User.HasClaim("is_admin", "true");
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "role").Select(c => c.Value).ToList();
+
+        // Build full avatar URL from Discord CDN
+        string? avatarUrl = null;
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(avatarHash))
+        {
+            avatarUrl = $"https://cdn.discordapp.com/avatars/{userId}/{avatarHash}.png";
+        }
+        else if (!string.IsNullOrEmpty(userId))
+        {
+            // User has default Discord avatar (no custom avatar set)
+            // Use the default avatar based on user discriminator modulo 5
+            var discriminator = User.FindFirst("urn:discord:discriminator")?.Value;
+            int defaultAvatarIndex = 0;
+            if (!string.IsNullOrEmpty(discriminator) && int.TryParse(discriminator, out var disc))
+            {
+                defaultAvatarIndex = disc % 5;
+            }
+            else if (ulong.TryParse(userId, out var userIdNum))
+            {
+                defaultAvatarIndex = (int)(userIdNum % 5);
+            }
+            avatarUrl = $"https://cdn.discordapp.com/embed/avatars/{defaultAvatarIndex}.png";
+        }
 
         return Ok(new
         {
@@ -96,7 +136,8 @@ public class WebAuthController : ControllerBase
             name,
             avatarUrl,
             isAdmin,
-            userId
+            userId,
+            roles
         });
     }
 
@@ -141,5 +182,20 @@ public class WebAuthController : ControllerBase
             RedirectUri = "/api/auth/callback?returnUrl=" + Uri.EscapeDataString(redirect)
         };
         return Challenge(props, "Discord");
+    }
+
+    [HttpGet("api/auth/debug-admin")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DebugAdmin()
+    {
+        var discordIdStr = Request.Query["discordId"].ToString();
+        if (!string.IsNullOrEmpty(discordIdStr) && ulong.TryParse(discordIdStr, out var discordId))
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            return Ok(new { discordId, found = user != null, isAdmin = user?.IsBotAdmin ?? false });
+        }
+        
+        var allUsers = await _db.Users.Select(u => new { u.DiscordId, u.Username, u.IsBotAdmin }).Take(10).ToListAsync();
+        return Ok(new { message = "Provide discordId query param", users = allUsers });
     }
 }

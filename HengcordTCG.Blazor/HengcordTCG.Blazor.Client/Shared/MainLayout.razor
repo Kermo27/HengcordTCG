@@ -1,10 +1,11 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<CascadingAuthenticationState>
-    <div class="relative min-h-screen flex flex-col bg-slate-950 text-slate-50">
+<div class="relative min-h-screen flex flex-col bg-slate-950 text-slate-50">
         <!-- Header -->
         <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
             <div class="container flex h-16 items-center">
@@ -67,18 +68,15 @@
                         <Authorized>
                             <DropdownMenu>
                                 <DropdownMenuTrigger>
-                                    <Button Variant="ButtonVariant.Ghost" class="relative h-9 w-9 rounded-full overflow-hidden border-2 border-slate-700 hover:border-slate-500 transition-colors">
+                                    <Avatar class="h-9 w-9 cursor-pointer ring-2 ring-slate-700 hover:ring-slate-500 transition-all">
                                         @if (!string.IsNullOrEmpty(AvatarUrl))
                                         {
-                                            <img src="@AvatarUrl" alt="@Username" class="h-full w-full object-cover" />
+                                            <AvatarImage Source="@AvatarUrl" Alt="@Username" />
                                         }
-                                        else
-                                        {
-                                            <div class="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
-                                                @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                                            </div>
-                                        }
-                                    </Button>
+                                        <AvatarFallback class="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm">
+                                            @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                        </AvatarFallback>
+                                    </Avatar>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent class="w-56">
                                     <DropdownMenuLabel class="font-normal">
@@ -140,12 +138,17 @@
 
     <ToastProvider Position="ToastPosition.BottomRight" />
     <PortalHost />
-</CascadingAuthenticationState>
 
 @code {
     private string? Username { get; set; }
     private string? AvatarUrl { get; set; }
     private long Gold { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to authentication state changes
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -163,13 +166,40 @@
                 StateHasChanged();
             }
             
-            // Enable dark mode by default
-            await JS.InvokeVoidAsync("eval", @"
-                if (!document.documentElement.classList.contains('dark')) {
-                    document.documentElement.classList.add('dark');
-                }
-            ");
+            // Dark mode is now set in App.razor to avoid flash of white content
         }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        var user = authState.User;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // User logged in - fetch fresh data
+            var userInfo = await AuthService.GetCurrentUserAsync();
+            if (userInfo != null)
+            {
+                Username = userInfo.Username;
+                AvatarUrl = userInfo.AvatarUrl;
+                Gold = userInfo.Gold;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else
+        {
+            // User logged out
+            Username = null;
+            AvatarUrl = null;
+            Gold = 0;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 
     private void Login()

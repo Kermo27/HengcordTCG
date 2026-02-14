@@ -2,6 +2,8 @@ using System.Reflection;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using HengcordTCG.Shared.Clients;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace HengcordTCG.Bot.Handlers;
@@ -33,6 +35,17 @@ public class InteractionHandler
 
     private async Task HandleInteractionAsync(SocketInteraction interaction)
     {
+        // Auto-register the user before any command executes
+        try
+        {
+            var apiClient = _services.GetRequiredService<HengcordTCGClient>();
+            await apiClient.GetOrCreateUserAsync(interaction.User.Id, interaction.User.Username);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to auto-sync user {UserId} before command", interaction.User.Id);
+        }
+
         var context = new SocketInteractionContext(_client, interaction);
         await _interactions.ExecuteCommandAsync(context, _services);
     }

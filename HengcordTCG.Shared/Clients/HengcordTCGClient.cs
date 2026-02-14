@@ -14,6 +14,20 @@ public class HengcordTCGClient
     }
 
     // --- Users ---
+    public async Task<GameStats> GetStatsAsync()
+    {
+        try { return await _http.GetFromJsonAsync<GameStats>("api/users/stats") ?? new(); }
+        catch { return new(); }
+    }
+
+    public class GameStats
+    {
+        public int TotalCards { get; set; }
+        public int TotalPacks { get; set; }
+        public int TotalTrades { get; set; }
+        public int TotalPlayers { get; set; }
+    }
+
     public async Task<User?> GetUserAsync(ulong discordId)
     {
         try 
@@ -101,6 +115,12 @@ public class HengcordTCGClient
     }
 
     // --- Trades ---
+    public async Task<List<Trade>> GetTradesForUserAsync(ulong discordId)
+    {
+        try { return await _http.GetFromJsonAsync<List<Trade>>($"api/trades/user/{discordId}") ?? new(); }
+        catch { return new(); }
+    }
+
     public record CreateTradeRequest(
         ulong InitiatorId, string InitiatorName,
         ulong TargetId, string TargetName,

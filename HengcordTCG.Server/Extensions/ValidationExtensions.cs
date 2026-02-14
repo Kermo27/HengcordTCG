@@ -41,9 +41,6 @@ public static class ValidationExtensions
     {
         if (amount <= 0)
             throw new ArgumentException($"{paramName} must be greater than 0", paramName);
-
-        if (amount > long.MaxValue)
-            throw new ArgumentException($"{paramName} exceeds maximum value", paramName);
     }
 
     public static void ValidateLimitParameter(int limit, string paramName = "limit")
