@@ -165,6 +165,30 @@ public class HengcordTCGClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> UpdateCardAsync(Card card)
+    {
+        var response = await _http.PutAsJsonAsync($"api/admin/update-card/{card.Id}", card);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<string?> UploadImageAsync(Stream fileStream, string fileName, string folder = "cards")
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StreamContent(fileStream), "file", fileName);
+        var response = await _http.PostAsync($"api/images/upload?folder={folder}", content);
+        if (!response.IsSuccessStatusCode) return null;
+        var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+        return result?.Path;
+    }
+
+    public record UploadResult(string Path);
+
+    public async Task<List<User>> GetUsersAsync()
+    {
+        try { return await _http.GetFromJsonAsync<List<User>>("api/users") ?? new(); }
+        catch { return new(); }
+    }
+
     public async Task<bool> RemoveCardAsync(string name)
     {
         var response = await _http.DeleteAsync($"api/admin/remove-card/{Uri.EscapeDataString(name)}");

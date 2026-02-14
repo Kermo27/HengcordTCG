@@ -1,5 +1,6 @@
 @page "/admin"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @using ModelCard = HengcordTCG.Shared.Models.Card
 @using HengcordTCG.Shared.Models
 @inject HengcordTCGClient Client
@@ -18,7 +19,7 @@
         </div>
         <div>
             <h1 class="text-3xl font-bold text-slate-100">Admin Panel</h1>
-            <p class="text-slate-400">Manage cards, packs, and users</p>
+            <p class="text-slate-400">Manage cards, packs, users, and battles</p>
         </div>
     </div>
 
@@ -37,6 +38,10 @@
                 <LucideIcon Name="users" Size="16" class="mr-2" />
                 Users
             </TabsTrigger>
+            <TabsTrigger Value="battles" class="data-[state=active]:bg-slate-800">
+                <LucideIcon Name="swords" Size="16" class="mr-2" />
+                Battles
+            </TabsTrigger>
             <TabsTrigger Value="tools" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="wrench" Size="16" class="mr-2" />
                 Tools
@@ -47,10 +52,28 @@
         <TabsContent Value="cards" class="mt-6 space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-slate-100">Manage Cards</h2>
-                <Button @onclick="() => ShowAddCard = true" class="bg-emerald-500 hover:bg-emerald-600">
+                <Button @onclick="OpenAddCard" class="bg-emerald-500 hover:bg-emerald-600">
                     <LucideIcon Name="plus" Size="18" class="mr-2" />
                     Add Card
                 </Button>
+            </div>
+
+            <!-- Card Type Filter -->
+            <div class="flex gap-2">
+                <Button @onclick="() => CardFilter = null"
+                    Variant="@(CardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
+                    class="@(CardFilter == null ? "bg-slate-700" : "border-slate-700")">
+                    All (@AllCards.Count)
+                </Button>
+                @foreach (var type in Enum.GetValues<CardType>())
+                {
+                    var t = type;
+                    <Button @onclick="() => CardFilter = t"
+                        Variant="@(CardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)"
+                        class="@(CardFilter == t ? GetCardTypeColor(t) : "border-slate-700")">
+                        @GetCardTypeIcon(t) @t (@AllCards.Count(c => c.CardType == t))
+                    </Button>
+                }
             </div>
 
             @if (IsLoading)
@@ -65,12 +88,17 @@
             else
             {
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    @foreach (var card in AllCards)
+                    @foreach (var card in FilteredCards)
                     {
                         <div class="relative group">
                             <CardComponent Card="card" />
+                            <div class="absolute top-2 left-2">
+                                <Badge class="@GetCardTypeBadgeClass(card.CardType)">
+                                    @GetCardTypeIcon(card.CardType) @card.CardType
+                                </Badge>
+                            </div>
                             <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
-                                <Button @onclick="() => EditCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
+                                <Button @onclick="() => OpenEditCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
                                     <LucideIcon Name="pencil" Size="16" />
                                 </Button>
                                 <Button @onclick="() => DeleteCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Destructive">
@@ -151,7 +179,7 @@
                 <div class="flex gap-2">
                     <div class="relative">
                         <LucideIcon Name="search" Size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <Input Placeholder="Search users..." class="pl-10 bg-slate-950 border-slate-700 w-64" />
+                        <Input @bind-Value="UserSearch" Placeholder="Search users..." class="pl-10 bg-slate-950 border-slate-700 w-64" />
                     </div>
                 </div>
             </div>
@@ -159,7 +187,7 @@
             <Card class="border-slate-800 bg-slate-900/50">
                 <CardContent class="p-0">
                     <div class="divide-y divide-slate-800">
-                        @foreach (var user in Users)
+                        @foreach (var user in FilteredUsers)
                         {
                             <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
                                 <div class="flex items-center gap-3">
@@ -168,7 +196,7 @@
                                     </div>
                                     <div>
                                         <div class="font-medium text-slate-200">@user.Username</div>
-                                        <div class="text-sm text-slate-500">ID: @user.Id</div>
+                                        <div class="text-sm text-slate-500">ID: @user.DiscordId</div>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-4">
@@ -186,11 +214,11 @@
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent>
-                                            <DropdownMenuItem @onclick="() => GiveGold(user)">
+                                            <DropdownMenuItem @onclick="() => OpenGiveGold(user)">
                                                 <LucideIcon Name="coins" Size="16" class="mr-2" />
                                                 Give Gold
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem @onclick="() => GiveCard(user)">
+                                            <DropdownMenuItem @onclick="() => OpenGiveCard(user)">
                                                 <LucideIcon Name="image" Size="16" class="mr-2" />
                                                 Give Card
                                             </DropdownMenuItem>
@@ -209,6 +237,52 @@
             </Card>
         </TabsContent>
 
+        <!-- Battles Tab -->
+        <TabsContent Value="battles" class="mt-6 space-y-6">
+            <h2 class="text-xl font-semibold text-slate-100">Battle Leaderboard</h2>
+
+            @if (Leaderboard.Count == 0)
+            {
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardContent class="p-8 text-center">
+                        <LucideIcon Name="swords" Size="48" class="mx-auto mb-4 text-slate-600" />
+                        <p class="text-slate-400">No battles played yet.</p>
+                    </CardContent>
+                </Card>
+            }
+            else
+            {
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardContent class="p-0">
+                        <div class="divide-y divide-slate-800">
+                            @for (int i = 0; i < Leaderboard.Count; i++)
+                            {
+                                var entry = Leaderboard[i];
+                                var rank = i;
+                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg @GetRankClass(rank)">
+                                            @GetRankDisplay(rank)
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-slate-200">@entry.Username</div>
+                                            <div class="text-sm text-slate-500">@entry.Wins W / @entry.Losses L</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold @(entry.WinRate >= 50 ? "text-emerald-400" : "text-slate-400")">
+                                            @entry.WinRate% WR
+                                        </div>
+                                        <div class="text-xs text-slate-500">@(entry.Wins + entry.Losses) games</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </CardContent>
+                </Card>
+            }
+        </TabsContent>
+
         <!-- Tools Tab -->
         <TabsContent Value="tools" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
@@ -225,7 +299,7 @@
                         </CardDescription>
                     </CardHeader>
                     <CardContent class="space-y-3">
-onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
+                        <Button @onclick="FixInventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
                             <LucideIcon Name="package-check" Size="18" class="mr-2" />
                             Fix Inventory Issues
                         </Button>
@@ -268,43 +342,183 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
     </Tabs>
 </div>
 
-<!-- Add Card Dialog -->
-<Dialog @bind-Open="ShowAddCard">
-    <DialogContent class="max-w-md">
+<!-- Add/Edit Card Dialog -->
+<Dialog @bind-Open="ShowCardDialog">
+    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-            <DialogTitle class="text-slate-100">Add New Card</DialogTitle>
+            <DialogTitle class="text-slate-100">
+                @(IsEditingCard ? "Edit Card" : "Add New Card")
+            </DialogTitle>
         </DialogHeader>
         <div class="space-y-4 py-4">
-            <div>
-                <Label class="text-slate-400">Card Name</Label>
-                <Input @bind-Value="NewCard.Name" class="mt-1 bg-slate-950 border-slate-700" />
+            <!-- Basic Info -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <Label class="text-slate-400">Card Name</Label>
+                    <Input @bind-Value="EditingCard.Name" class="mt-1 bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                    <Label class="text-slate-400">Rarity</Label>
+                    <Select @bind-Value="EditingCardRarity" class="mt-1">
+                        <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
+                        <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
+                    </Select>
+                </div>
+                <div>
+                    <Label class="text-slate-400">Card Type</Label>
+                    <Select @bind-Value="EditingCardType" class="mt-1">
+                        <SelectItem Value="@nameof(CardType.Unit)">Unit</SelectItem>
+                        <SelectItem Value="@nameof(CardType.Commander)">Commander</SelectItem>
+                        <SelectItem Value="@nameof(CardType.Closer)">Closer</SelectItem>
+                    </Select>
+                </div>
             </div>
+
+            <!-- Image Upload -->
+            <div>
+                <Label class="text-slate-400">Card Image</Label>
+                <div class="mt-1 flex items-center gap-3">
+                    <div class="flex-1">
+                        <InputFile OnChange="OnImageSelected" Accept=".png,.jpg,.jpeg,.gif,.webp"
+                            class="block w-full text-sm text-slate-400 
+                                   file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0
+                                   file:text-sm file:font-semibold file:bg-slate-800 file:text-slate-200
+                                   hover:file:bg-slate-700 file:cursor-pointer" />
+                    </div>
+                    @if (IsUploading)
+                    {
+                        <div class="text-sm text-slate-400 flex items-center gap-2">
+                            <LucideIcon Name="loader-2" Size="16" class="animate-spin" />
+                            Uploading...
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
+                    {
+                        <img src="@($"/api/images/{EditingCard.ImagePath}")" alt="Preview"
+                             class="w-16 h-16 object-cover rounded-lg border border-slate-700" />
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
+                {
+                    <p class="text-xs text-slate-500 mt-1">@EditingCard.ImagePath</p>
+                }
+            </div>
+
+            <!-- Collection Stats -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <Label class="text-slate-400">Attack</Label>
-                    <Input @bind-Value="NewCardAttackString" class="mt-1 bg-slate-950 border-slate-700" />
+                    <Input @bind-Value="EditingCardAttackStr" class="mt-1 bg-slate-950 border-slate-700" />
                 </div>
                 <div>
                     <Label class="text-slate-400">Defense</Label>
-                    <Input @bind-Value="NewCardDefenseString" class="mt-1 bg-slate-950 border-slate-700" />
+                    <Input @bind-Value="EditingCardDefenseStr" class="mt-1 bg-slate-950 border-slate-700" />
                 </div>
             </div>
-            <div>
-                <Label class="text-slate-400">Rarity</Label>
-                <Select @bind-Value="NewCardRarity" class="mt-1">
-                    <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
-                    <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
-                    <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
-                </Select>
+
+            <!-- Game Stats Section -->
+            <div class="border-t border-slate-800 pt-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <LucideIcon Name="swords" Size="16" class="text-orange-400" />
+                    Battle Stats
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <Label class="text-slate-400">💡 Light Cost</Label>
+                        <Input @bind-Value="EditingCardLightCostStr" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400">❤️ Health</Label>
+                        <Input @bind-Value="EditingCardHealthStr" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400">🎲 Die Size</Label>
+                        <Input @bind-Value="EditingCardDieSizeStr" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400">⚡ Speed</Label>
+                        <Input @bind-Value="EditingCardSpeedStr" Placeholder="Commander only" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400">🗡️ Counter-Strike</Label>
+                        <Input @bind-Value="EditingCardCounterStrikeStr" Placeholder="Commander only" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                </div>
             </div>
-            <div>
-                <Label class="text-slate-400">Image Path</Label>
-                <Input @bind-Value="NewCard.ImagePath" placeholder="cards/my-card.png" class="mt-1 bg-slate-950 border-slate-700" />
+
+            <!-- Ability -->
+            <div class="border-t border-slate-800 pt-4">
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <LucideIcon Name="sparkles" Size="16" class="text-purple-400" />
+                    Ability
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <Label class="text-slate-400">Ability Text</Label>
+                        <Input @bind-Value="EditingCard.AbilityText" Placeholder="Human-readable ability description" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400">Ability ID</Label>
+                        <Input @bind-Value="EditingCard.AbilityId" Placeholder="e.g. heal_on_enter" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                </div>
             </div>
         </div>
         <DialogFooter>
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowAddCard = false">Cancel</Button>
-            <Button @onclick="AddCard" class="bg-emerald-500 hover:bg-emerald-600">Add Card</Button>
+            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowCardDialog = false">Cancel</Button>
+            <Button @onclick="SaveCard" class="bg-emerald-500 hover:bg-emerald-600" disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <LucideIcon Name="loader-2" Size="16" class="mr-2 animate-spin" />
+                }
+                @(IsEditingCard ? "Save Changes" : "Add Card")
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+
+<!-- Give Gold Dialog -->
+<Dialog @bind-Open="ShowGiveGoldDialog">
+    <DialogContent class="max-w-sm">
+        <DialogHeader>
+            <DialogTitle class="text-slate-100">Give Gold to @SelectedUser?.Username</DialogTitle>
+        </DialogHeader>
+        <div class="py-4">
+            <Label class="text-slate-400">Amount</Label>
+            <Input @bind-Value="GoldAmountStr" Placeholder="1000" class="mt-1 bg-slate-950 border-slate-700" />
+        </div>
+        <DialogFooter>
+            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowGiveGoldDialog = false">Cancel</Button>
+            <Button @onclick="GiveGold" class="bg-amber-500 hover:bg-amber-600">Give Gold</Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+
+<!-- Give Card Dialog -->
+<Dialog @bind-Open="ShowGiveCardDialog">
+    <DialogContent class="max-w-sm">
+        <DialogHeader>
+            <DialogTitle class="text-slate-100">Give Card to @SelectedUser?.Username</DialogTitle>
+        </DialogHeader>
+        <div class="py-4 space-y-4">
+            <div>
+                <Label class="text-slate-400">Card</Label>
+                <Select @bind-Value="SelectedCardName" class="mt-1">
+                    @foreach (var card in AllCards)
+                    {
+                        <SelectItem Value="@card.Name">@card.Name (@card.Rarity)</SelectItem>
+                    }
+                </Select>
+            </div>
+            <div>
+                <Label class="text-slate-400">Amount</Label>
+                <Input @bind-Value="CardAmountStr" Placeholder="1" class="mt-1 bg-slate-950 border-slate-700" />
+            </div>
+        </div>
+        <DialogFooter>
+            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowGiveCardDialog = false">Cancel</Button>
+            <Button @onclick="GiveCard" class="bg-emerald-500 hover:bg-emerald-600">Give Card</Button>
         </DialogFooter>
     </DialogContent>
 </Dialog>
@@ -315,22 +529,52 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
 
     private List<ModelCard> AllCards { get; set; } = new();
     private List<PackType> AllPacks { get; set; } = new();
-    private List<UserInfo> Users { get; set; } = new();
+    private List<User> Users { get; set; } = new();
+    private List<HengcordTCGClient.LeaderboardEntry> Leaderboard { get; set; } = new();
 
-    private bool ShowAddCard { get; set; }
+    // Card dialog
+    private bool ShowCardDialog { get; set; }
+    private bool IsEditingCard { get; set; }
+    private bool IsSaving { get; set; }
+    private bool IsUploading { get; set; }
+    private ModelCard EditingCard { get; set; } = new() { Name = "" };
+    private string EditingCardRarity { get; set; } = "Common";
+    private string EditingCardType { get; set; } = "Unit";
+    private string EditingCardAttackStr { get; set; } = "50";
+    private string EditingCardDefenseStr { get; set; } = "50";
+    private string EditingCardLightCostStr { get; set; } = "0";
+    private string EditingCardHealthStr { get; set; } = "0";
+    private string EditingCardDieSizeStr { get; set; } = "6";
+    private string EditingCardSpeedStr { get; set; } = "0";
+    private string EditingCardCounterStrikeStr { get; set; } = "0";
+
+    // Card filter
+    private CardType? CardFilter { get; set; }
+    private IEnumerable<ModelCard> FilteredCards =>
+        CardFilter.HasValue ? AllCards.Where(c => c.CardType == CardFilter.Value) : AllCards;
+
+    // Packs
     private bool ShowAddPack { get; set; }
 
-    private ModelCard NewCard { get; set; } = new() { Name = "", Attack = 50, Defense = 50 };
-    private string NewCardRarity { get; set; } = "Common";
-    private string NewCardAttackString { get; set; } = "50";
-    private string NewCardDefenseString { get; set; } = "50";
+    // Users
+    private string UserSearch { get; set; } = "";
+    private IEnumerable<User> FilteredUsers =>
+        string.IsNullOrWhiteSpace(UserSearch) ? Users :
+        Users.Where(u => u.Username?.Contains(UserSearch, StringComparison.OrdinalIgnoreCase) == true ||
+                         u.DiscordId.ToString().Contains(UserSearch));
+
+    // User action dialogs
+    private bool ShowGiveGoldDialog { get; set; }
+    private bool ShowGiveCardDialog { get; set; }
+    private User? SelectedUser { get; set; }
+    private string GoldAmountStr { get; set; } = "1000";
+    private string SelectedCardName { get; set; } = "";
+    private string CardAmountStr { get; set; } = "1";
 
     protected override async Task OnInitializedAsync()
     {
-        // Initialize auth state from localStorage
         await AuthService.InitializeAsync();
         
-        // Check admin role from auth state
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user.Identity?.IsAuthenticated != true || !user.IsInRole("Admin"))
@@ -347,9 +591,17 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
         IsLoading = true;
         try
         {
-            AllCards = await Client.GetCardsAsync();
-            AllPacks = await Client.GetPacksAsync();
-            Users = new List<UserInfo>();
+            var cardsTask = Client.GetCardsAsync();
+            var packsTask = Client.GetPacksAsync();
+            var usersTask = Client.GetUsersAsync();
+            var leaderboardTask = Client.GetLeaderboardAsync(20);
+
+            await Task.WhenAll(cardsTask, packsTask, usersTask, leaderboardTask);
+
+            AllCards = cardsTask.Result;
+            AllPacks = packsTask.Result;
+            Users = usersTask.Result;
+            Leaderboard = leaderboardTask.Result;
         }
         catch
         {
@@ -361,32 +613,138 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
         }
     }
 
-    private async Task AddCard()
+    // ── Card Dialog ──
+
+    private void OpenAddCard()
     {
-        if (string.IsNullOrWhiteSpace(NewCard.Name))
+        IsEditingCard = false;
+        EditingCard = new ModelCard { Name = "", Attack = 50, Defense = 50 };
+        EditingCardRarity = "Common";
+        EditingCardType = "Unit";
+        EditingCardAttackStr = "50";
+        EditingCardDefenseStr = "50";
+        EditingCardLightCostStr = "0";
+        EditingCardHealthStr = "0";
+        EditingCardDieSizeStr = "6";
+        EditingCardSpeedStr = "0";
+        EditingCardCounterStrikeStr = "0";
+        ShowCardDialog = true;
+    }
+
+    private void OpenEditCard(ModelCard card)
+    {
+        IsEditingCard = true;
+        EditingCard = new ModelCard
+        {
+            Id = card.Id,
+            Name = card.Name,
+            Attack = card.Attack,
+            Defense = card.Defense,
+            Rarity = card.Rarity,
+            ImagePath = card.ImagePath,
+            CardType = card.CardType,
+            LightCost = card.LightCost,
+            Health = card.Health,
+            Speed = card.Speed,
+            DieSize = card.DieSize,
+            CounterStrike = card.CounterStrike,
+            AbilityText = card.AbilityText,
+            AbilityId = card.AbilityId,
+            ExclusivePackId = card.ExclusivePackId
+        };
+        EditingCardRarity = card.Rarity.ToString();
+        EditingCardType = card.CardType.ToString();
+        EditingCardAttackStr = card.Attack.ToString();
+        EditingCardDefenseStr = card.Defense.ToString();
+        EditingCardLightCostStr = card.LightCost.ToString();
+        EditingCardHealthStr = card.Health.ToString();
+        EditingCardDieSizeStr = card.DieSize.ToString();
+        EditingCardSpeedStr = card.Speed.ToString();
+        EditingCardCounterStrikeStr = card.CounterStrike.ToString();
+        ShowCardDialog = true;
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            Toast.Error("File too large (max 10MB)");
+            return;
+        }
+
+        IsUploading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var path = await Client.UploadImageAsync(stream, file.Name);
+            if (path != null)
+            {
+                EditingCard.ImagePath = path;
+                Toast.Success("Image uploaded!");
+            }
+            else
+            {
+                Toast.Error("Upload failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"Upload error: {ex.Message}");
+        }
+        finally
+        {
+            IsUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveCard()
+    {
+        if (string.IsNullOrWhiteSpace(EditingCard.Name))
         {
             Toast.Error("Card name is required");
             return;
         }
 
-        NewCard.Rarity = Enum.Parse<Rarity>(NewCardRarity);
-        NewCard.Attack = int.TryParse(NewCardAttackString, out var atk) ? atk : 50;
-        NewCard.Defense = int.TryParse(NewCardDefenseString, out var def) ? def : 50;
-        
-        var success = await Client.AddCardAsync(NewCard);
+        IsSaving = true;
+        StateHasChanged();
+
+        // Parse string values
+        EditingCard.Rarity = Enum.Parse<Rarity>(EditingCardRarity);
+        EditingCard.CardType = Enum.Parse<CardType>(EditingCardType);
+        EditingCard.Attack = int.TryParse(EditingCardAttackStr, out var atk) ? atk : 50;
+        EditingCard.Defense = int.TryParse(EditingCardDefenseStr, out var def) ? def : 50;
+        EditingCard.LightCost = int.TryParse(EditingCardLightCostStr, out var lc) ? lc : 0;
+        EditingCard.Health = int.TryParse(EditingCardHealthStr, out var hp) ? hp : 0;
+        EditingCard.DieSize = int.TryParse(EditingCardDieSizeStr, out var ds) ? ds : 6;
+        EditingCard.Speed = int.TryParse(EditingCardSpeedStr, out var spd) ? spd : 0;
+        EditingCard.CounterStrike = int.TryParse(EditingCardCounterStrikeStr, out var cs) ? cs : 0;
+
+        bool success;
+        if (IsEditingCard)
+        {
+            success = await Client.UpdateCardAsync(EditingCard);
+        }
+        else
+        {
+            success = await Client.AddCardAsync(EditingCard);
+        }
+
         if (success)
         {
-            Toast.Success($"Card '{NewCard.Name}' added!");
-            ShowAddCard = false;
-            NewCard = new() { Name = "", Attack = 50, Defense = 50 };
-            NewCardAttackString = "50";
-            NewCardDefenseString = "50";
+            Toast.Success(IsEditingCard ? "Card updated!" : $"Card '{EditingCard.Name}' added!");
+            ShowCardDialog = false;
             await LoadData();
         }
         else
         {
-            Toast.Error("Failed to add card");
+            Toast.Error(IsEditingCard ? "Failed to update card" : "Failed to add card");
         }
+
+        IsSaving = false;
     }
 
     private async Task DeleteCard(ModelCard card)
@@ -403,10 +761,7 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
         }
     }
 
-    private void EditCard(ModelCard card)
-    {
-        Toast.Success("Edit functionality coming soon");
-    }
+    // ── Pack Actions ──
 
     private async Task TogglePack(PackType pack)
     {
@@ -424,8 +779,86 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
 
     private void EditPack(PackType pack)
     {
-        Toast.Success("Edit functionality coming soon");
+        Toast.Success("Edit pack functionality coming soon");
     }
+
+    // ── User Actions ──
+
+    private void OpenGiveGold(User user)
+    {
+        SelectedUser = user;
+        GoldAmountStr = "1000";
+        ShowGiveGoldDialog = true;
+    }
+
+    private async Task GiveGold()
+    {
+        if (SelectedUser == null) return;
+        var amount = int.TryParse(GoldAmountStr, out var a) ? a : 0;
+        if (amount <= 0) { Toast.Error("Invalid amount"); return; }
+
+        var result = await Client.GiveGoldAdminAsync(SelectedUser.DiscordId, amount);
+        if (result >= 0)
+        {
+            Toast.Success($"Gave {amount} gold to {SelectedUser.Username}! New balance: {result:N0}");
+            ShowGiveGoldDialog = false;
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error("Failed to give gold");
+        }
+    }
+
+    private void OpenGiveCard(User user)
+    {
+        SelectedUser = user;
+        CardAmountStr = "1";
+        SelectedCardName = AllCards.FirstOrDefault()?.Name ?? "";
+        ShowGiveCardDialog = true;
+    }
+
+    private async Task GiveCard()
+    {
+        if (SelectedUser == null || string.IsNullOrEmpty(SelectedCardName)) return;
+        var amount = int.TryParse(CardAmountStr, out var a) ? a : 1;
+
+        var success = await Client.GiveCardAsync(SelectedUser.DiscordId, SelectedCardName, amount);
+        if (success)
+        {
+            Toast.Success($"Gave {amount}x {SelectedCardName} to {SelectedUser.Username}!");
+            ShowGiveCardDialog = false;
+        }
+        else
+        {
+            Toast.Error("Failed to give card");
+        }
+    }
+
+    private async Task ToggleAdmin(User user)
+    {
+        bool success;
+        if (user.IsBotAdmin)
+        {
+            success = await Client.RemoveAdminAsync(user.DiscordId);
+        }
+        else
+        {
+            success = await Client.AddAdminAsync(user.DiscordId);
+        }
+
+        if (success)
+        {
+            Toast.Success(user.IsBotAdmin ? $"Removed admin from {user.Username}" : $"Made {user.Username} an admin");
+            await LoadData();
+        }
+        else
+        {
+            Toast.Error("Failed to toggle admin status");
+        }
+    }
+
+    // ── Tools ──
 
     private async Task FixInventory()
     {
@@ -440,18 +873,42 @@ onclick="Fix                        <Button @Inventory" Variant="ButtonVariant.O
         }
     }
 
-    private void GiveGold(UserInfo user)
-    {
-        Toast.Success("Give gold functionality coming soon");
-    }
+    // ── Helpers ──
 
-    private void GiveCard(UserInfo user)
+    private string GetCardTypeIcon(CardType type) => type switch
     {
-        Toast.Success("Give card functionality coming soon");
-    }
+        CardType.Commander => "👑",
+        CardType.Closer => "💥",
+        _ => "⚔️"
+    };
 
-    private void ToggleAdmin(UserInfo user)
+    private string GetCardTypeColor(CardType type) => type switch
     {
-        Toast.Success("Toggle admin functionality coming soon");
-    }
+        CardType.Commander => "bg-amber-600",
+        CardType.Closer => "bg-red-600",
+        _ => "bg-blue-600"
+    };
+
+    private string GetCardTypeBadgeClass(CardType type) => type switch
+    {
+        CardType.Commander => "bg-amber-500/20 text-amber-400 border-amber-500/50",
+        CardType.Closer => "bg-red-500/20 text-red-400 border-red-500/50",
+        _ => "bg-blue-500/20 text-blue-400 border-blue-500/50"
+    };
+
+    private string GetRankClass(int rank) => rank switch
+    {
+        0 => "bg-amber-500 text-white",
+        1 => "bg-slate-400 text-white",
+        2 => "bg-amber-700 text-white",
+        _ => "bg-slate-800 text-slate-400"
+    };
+
+    private string GetRankDisplay(int rank) => rank switch
+    {
+        0 => "🥇",
+        1 => "🥈",
+        2 => "🥉",
+        _ => $"{rank + 1}"
+    };
 }
