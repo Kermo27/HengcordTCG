@@ -226,4 +226,33 @@ public class HengcordTCGClient
         var response = await _http.PostAsync($"api/admin/remove-admin/{discordId}", null);
         return response.IsSuccessStatusCode;
     }
+
+    // --- Decks ---
+    public async Task<Deck?> GetDeckAsync(ulong discordId)
+    {
+        try { return await _http.GetFromJsonAsync<Deck>($"api/decks/{discordId}"); }
+        catch { return null; }
+    }
+
+    public record SaveDeckRequest(
+        ulong DiscordId,
+        string? Name,
+        int CommanderId,
+        List<int> MainDeckCardIds,
+        List<int> CloserCardIds
+    );
+
+    public record SaveDeckResponse(string Message);
+
+    public async Task<(bool Success, string Message)> SaveDeckAsync(SaveDeckRequest request)
+    {
+        var response = await _http.PostAsJsonAsync("api/decks/save", request);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<SaveDeckResponse>();
+            return (true, result?.Message ?? "Deck saved!");
+        }
+        var error = await response.Content.ReadAsStringAsync();
+        return (false, error);
+    }
 }
