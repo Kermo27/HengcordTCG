@@ -1,0 +1,23 @@
+@* Shared page header with title and breadcrumb *@
+
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="/">Home</a>
+        @if (!string.IsNullOrEmpty(Section))
+        {
+            <span>/</span>
+            <span>@Section</span>
+        }
+    </div>
+    <h1>@Title</h1>
+    @if (!string.IsNullOrEmpty(Subtitle))
+    {
+        <p class="text-sm text-slate-400 mt-1">@Subtitle</p>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Section { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+}

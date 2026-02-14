@@ -8,21 +8,15 @@
 <PageTitle>Card Shop - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-slate-100">Card Shop</h1>
-            <p class="text-slate-400">Purchase card packs to expand your collection</p>
-        </div>
-        <AuthorizeView>
-            <Authorized>
-                <div class="flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/20">
-                    <LucideIcon Name="coins" Size="24" class="text-amber-400" />
-                    <span class="text-2xl font-bold text-amber-400">@Gold.ToString("N0")</span>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-    </div>
+    <PageHeader Title="Card Shop" Section="Shop" Subtitle="Purchase card packs to expand your collection" />
+    <AuthorizeView>
+        <Authorized>
+            <div class="flex items-center gap-2 px-6 py-3 mb-6 rounded-full bg-amber-500/10 border border-amber-500/20 w-fit">
+                <LucideIcon Name="coins" Size="24" class="text-amber-400" />
+                <span class="text-2xl font-bold text-amber-400">@Gold.ToString("N0")</span>
+            </div>
+        </Authorized>
+    </AuthorizeView>
 
     <!-- Packs Grid -->
     @if (IsLoading)

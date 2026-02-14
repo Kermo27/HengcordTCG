@@ -8,12 +8,8 @@
 <PageTitle>Trading - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-slate-100">Trading Center</h1>
-            <p class="text-slate-400">Trade cards with other players</p>
-        </div>
+    <PageHeader Title="Trading Center" Section="Trades" Subtitle="Trade cards with other players" />
+    <div class="flex justify-end mb-6">
         <Button @onclick="() => ShowCreateTrade = true" class="bg-gradient-to-r from-purple-500 to-pink-500">
             <LucideIcon Name="plus" Size="18" class="mr-2" />
             Create Trade

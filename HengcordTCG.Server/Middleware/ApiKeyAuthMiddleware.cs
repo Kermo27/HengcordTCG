@@ -6,7 +6,7 @@ public class ApiKeyAuthMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyAuthMiddleware> _logger;
-    private readonly string[] _publicPaths = { "/scalar", "/openapi", "/health", "/api/auth" };
+    private readonly string[] _publicPaths = { "/scalar", "/openapi", "/health", "/api/auth", "/api/users/stats" };
 
     public ApiKeyAuthMiddleware(RequestDelegate next, ILogger<ApiKeyAuthMiddleware> logger)
     {

@@ -1,0 +1,59 @@
+@implements IDisposable
+
+<span class="stat-counter">@_displayValue</span>
+
+@code {
+    [Parameter] public int TargetValue { get; set; }
+    [Parameter] public int DurationMs { get; set; } = 1200;
+
+    private int _displayValue;
+    private System.Timers.Timer? _timer;
+    private int _elapsed;
+    private const int FrameInterval = 30;
+
+    protected override void OnParametersSet()
+    {
+        StartAnimation();
+    }
+
+    private void StartAnimation()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+        _displayValue = 0;
+        _elapsed = 0;
+
+        if (TargetValue <= 0)
+        {
+            _displayValue = TargetValue;
+            return;
+        }
+
+        _timer = new System.Timers.Timer(FrameInterval);
+        _timer.Elapsed += OnTick;
+        _timer.Start();
+    }
+
+    private void OnTick(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        _elapsed += FrameInterval;
+        var progress = Math.Min(1.0, (double)_elapsed / DurationMs);
+        // Ease-out cubic
+        var eased = 1 - Math.Pow(1 - progress, 3);
+        _displayValue = (int)Math.Round(eased * TargetValue);
+
+        if (progress >= 1.0)
+        {
+            _displayValue = TargetValue;
+            _timer?.Stop();
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}

@@ -9,6 +9,11 @@
         <!-- Header -->
         <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
             <div class="container flex h-16 items-center">
+                <!-- Mobile Menu Button -->
+                <Button @onclick="ToggleMobileMenu" Variant="ButtonVariant.Ghost" class="md:hidden mr-2 p-2 text-slate-400 hover:text-white">
+                    <LucideIcon Name="menu" Size="24" />
+                </Button>
+
                 <!-- Logo -->
                 <div class="mr-4 flex">
                     <a href="/" class="mr-6 flex items-center space-x-2 group">
@@ -21,7 +26,7 @@
                     </a>
                 </div>
 
-                <!-- Navigation -->
+                <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center space-x-1">
                     <NavLink href="/" Match="NavLinkMatch.All" class="nav-link" ActiveClass="nav-link-active">
                         <LucideIcon Name="home" Size="18" class="mr-2" />
@@ -113,16 +118,98 @@
             </div>
         </header>
 
+        <!-- Mobile Side Menu -->
+        <Sheet @bind-Open="IsMobileMenuOpen" Side="BlazorBlueprint.Primitives.Sheet.SheetSide.Left">
+            <SheetContent class="w-72 bg-slate-950 border-slate-800 p-0">
+                <SheetHeader class="p-6 border-b border-slate-800">
+                    <SheetTitle class="text-left">
+                        <span class="font-bold text-lg bg-gradient-to-r from-amber-400 to-purple-500 bg-clip-text text-transparent">
+                            HengcordTCG
+                        </span>
+                    </SheetTitle>
+                </SheetHeader>
+                <nav class="flex flex-col p-4 space-y-1">
+                    <a href="/" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/", true)">
+                        <LucideIcon Name="home" Size="20" class="mr-3" />
+                        Home
+                    </a>
+                    <a href="/collection" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/collection")">
+                        <LucideIcon Name="layers" Size="20" class="mr-3" />
+                        Collection
+                    </a>
+                    <a href="/gallery" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/gallery")">
+                        <LucideIcon Name="images" Size="20" class="mr-3" />
+                        Gallery
+                    </a>
+                    <a href="/shop" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/shop")">
+                        <LucideIcon Name="shopping-bag" Size="20" class="mr-3" />
+                        Shop
+                    </a>
+                    <a href="/trades" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/trades")">
+                        <LucideIcon Name="arrow-left-right" Size="20" class="mr-3" />
+                        Trades
+                    </a>
+                    <AuthorizeView Roles="Admin">
+                        <div class="pt-2 mt-2 border-t border-slate-800">
+                            <a href="/admin" @onclick="CloseMobileMenu" class="mobile-nav-link text-amber-400 @GetMobileActiveClass("/admin")">
+                                <LucideIcon Name="shield" Size="20" class="mr-3" />
+                                Admin
+                            </a>
+                        </div>
+                    </AuthorizeView>
+                </nav>
+
+                <!-- Mobile Gold Display -->
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="mx-4 mt-auto p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <div class="flex items-center gap-2">
+                                <LucideIcon Name="coins" Size="20" class="text-amber-400" />
+                                <span class="text-amber-400 font-bold text-lg">@Gold.ToString("N0")</span>
+                                <span class="text-amber-400/60 text-sm">Gold</span>
+                            </div>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </SheetContent>
+        </Sheet>
+
         <!-- Main Content -->
-        <main class="flex-1">
+        <main class="flex-1 pb-20 md:pb-0">
             @Body
         </main>
 
-        <!-- Footer -->
-        <footer class="border-t border-slate-800 py-6 bg-slate-950">
+        <!-- Mobile Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur">
+            <div class="flex items-center justify-around h-16">
+                <a href="/" class="bottom-nav-item @GetBottomNavActive("/", true)">
+                    <LucideIcon Name="home" Size="22" />
+                    <span class="text-[10px] mt-0.5">Home</span>
+                </a>
+                <a href="/collection" class="bottom-nav-item @GetBottomNavActive("/collection")">
+                    <LucideIcon Name="layers" Size="22" />
+                    <span class="text-[10px] mt-0.5">Collection</span>
+                </a>
+                <a href="/shop" class="bottom-nav-item @GetBottomNavActive("/shop")">
+                    <LucideIcon Name="shopping-bag" Size="22" />
+                    <span class="text-[10px] mt-0.5">Shop</span>
+                </a>
+                <a href="/trades" class="bottom-nav-item @GetBottomNavActive("/trades")">
+                    <LucideIcon Name="arrow-left-right" Size="22" />
+                    <span class="text-[10px] mt-0.5">Trades</span>
+                </a>
+                <a href="/gallery" class="bottom-nav-item @GetBottomNavActive("/gallery")">
+                    <LucideIcon Name="images" Size="22" />
+                    <span class="text-[10px] mt-0.5">Gallery</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Footer (hidden on mobile, bottom nav takes its place) -->
+        <footer class="hidden md:block border-t border-slate-800 py-6 bg-slate-950">
             <div class="container flex flex-col md:flex-row items-center justify-between gap-4">
                 <p class="text-sm text-slate-500">
-                    2025 HengcordTCG. All rights reserved.
+                    @DateTime.Now.Year HengcordTCG. All rights reserved.
                 </p>
                 <div class="flex items-center space-x-6">
                     <a href="https://discord.com" target="_blank" class="text-slate-500 hover:text-slate-300 transition-colors">
@@ -136,26 +223,26 @@
         </footer>
     </div>
 
-    <ToastProvider Position="ToastPosition.BottomRight" />
+    <ToastProvider Position="ToastPosition.TopRight" />
     <PortalHost />
 
 @code {
     private string? Username { get; set; }
     private string? AvatarUrl { get; set; }
     private long Gold { get; set; }
+    private bool IsMobileMenuOpen { get; set; }
+    private string CurrentPath => new Uri(Navigation.Uri).AbsolutePath;
 
     protected override void OnInitialized()
     {
-        // Subscribe to authentication state changes
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Initialize auth state from localStorage (browser only)
-            // This returns the user if token is valid, or null if not
             var user = await AuthService.InitializeAsync();
             
             if (user != null)
@@ -165,8 +252,6 @@
                 Gold = user.Gold;
                 StateHasChanged();
             }
-            
-            // Dark mode is now set in App.razor to avoid flash of white content
         }
     }
 
@@ -177,7 +262,6 @@
         
         if (user.Identity?.IsAuthenticated == true)
         {
-            // User logged in - fetch fresh data
             var userInfo = await AuthService.GetCurrentUserAsync();
             if (userInfo != null)
             {
@@ -189,7 +273,6 @@
         }
         else
         {
-            // User logged out
             Username = null;
             AvatarUrl = null;
             Gold = 0;
@@ -197,10 +280,20 @@
         }
     }
 
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        IsMobileMenuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
+
+    private void ToggleMobileMenu() => IsMobileMenuOpen = !IsMobileMenuOpen;
+    private void CloseMobileMenu() => IsMobileMenuOpen = false;
 
     private void Login()
     {
@@ -214,13 +307,15 @@
         Navigation.NavigateTo("/");
     }
 
-    private void GoToProfile()
-    {
-        Navigation.NavigateTo("/profile");
-    }
+    private void GoToProfile() => Navigation.NavigateTo("/profile");
+    private void GoToCollection() => Navigation.NavigateTo("/collection");
 
-    private void GoToCollection()
-    {
-        Navigation.NavigateTo("/collection");
-    }
+    private bool IsActive(string path, bool exact = false) =>
+        exact ? CurrentPath == path : CurrentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase);
+
+    private string GetMobileActiveClass(string path, bool exact = false) =>
+        IsActive(path, exact) ? "bg-slate-800 text-white" : "";
+
+    private string GetBottomNavActive(string path, bool exact = false) =>
+        IsActive(path, exact) ? "text-amber-400" : "text-slate-500";
 }
