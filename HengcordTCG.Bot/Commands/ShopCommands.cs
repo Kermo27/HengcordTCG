@@ -150,9 +150,9 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
             .WithFooter($"Card {page + 1}/{sortedCollection.Count}")
             .WithColor(GetRarityColor(card.Rarity));
 
-        if (!string.IsNullOrEmpty(card.ImageUrl))
+        if (!string.IsNullOrEmpty(card.ImagePath))
         {
-            embed.WithImageUrl(card.ImageUrl);
+            embed.WithImageUrl($"{_client.BaseUrl}/api/images/{card.ImagePath}");
         }
         
         var components = new ComponentBuilder()

@@ -8,6 +8,8 @@ public class HengcordTCGClient
 {
     private readonly HttpClient _http;
 
+    public string BaseUrl => _http.BaseAddress?.ToString().TrimEnd('/') ?? "";
+
     public HengcordTCGClient(HttpClient http)
     {
         _http = http;

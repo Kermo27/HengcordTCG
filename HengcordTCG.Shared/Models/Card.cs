@@ -18,13 +18,49 @@ public class Card
 
     public Rarity Rarity { get; set; } = Rarity.Common;
 
-    [Url(ErrorMessage = "ImageUrl must be a valid URL")]
-    public string? ImageUrl { get; set; }
-    
+    /// <summary>
+    /// Relative path to locally stored image file (e.g. "cards/dragon-sword.png").
+    /// Served via /api/images/cards/{filename}.
+    /// </summary>
+    [MaxLength(255)]
+    public string? ImagePath { get; set; }
+
     public int? ExclusivePackId { get; set; }
     public PackType? ExclusivePack { get; set; }
-    
+
     public DateTime CreatedAt { get; set; }
+
+    // ── Game / Battle Stats ──────────────────────────────
+
+    public CardType CardType { get; set; } = CardType.Unit;
+
+    /// <summary>Light cost to play this card (0–3 for Units, 4–7 for Closers).</summary>
+    [Range(0, 7)]
+    public int LightCost { get; set; }
+
+    /// <summary>Hit points. For Commanders this is the starting HP pool.</summary>
+    [Range(0, 999)]
+    public int Health { get; set; }
+
+    /// <summary>Commander-only: speed value for initiative roll.</summary>
+    [Range(0, 20)]
+    public int Speed { get; set; }
+
+    /// <summary>Size of the attack die (e.g. 6 = d6, 8 = d8).</summary>
+    [Range(0, 20)]
+    public int DieSize { get; set; }
+
+    /// <summary>Commander-only: fixed damage dealt back when hit by an unopposed attack.</summary>
+    [Range(0, 50)]
+    public int CounterStrike { get; set; }
+
+    /// <summary>Human-readable description of the card's special ability.</summary>
+    [MaxLength(500)]
+    public string? AbilityText { get; set; }
+
+    /// <summary>Machine-readable ability key for the game engine (e.g. "heal_on_enter").</summary>
+    [MaxLength(100)]
+    public string? AbilityId { get; set; }
 
     public Card()
     {

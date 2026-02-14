@@ -61,9 +61,9 @@
                     @foreach (var card in OpenedCards)
                     {
                         <div class="aspect-[3/4] rounded-lg overflow-hidden border-2 @GetBorderClass(card.Rarity)">
-                            @if (!string.IsNullOrEmpty(card.ImageUrl))
+                            @if (!string.IsNullOrEmpty(card.ImagePath))
                             {
-                                <img src="@card.ImageUrl" alt="@card.Name" class="w-full h-full object-cover" />
+                                <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover" />
                             }
                             else
                             {
