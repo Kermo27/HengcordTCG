@@ -144,6 +144,13 @@ public class GameButtonHandler
         var player = session.GetPlayer(component.User.Id);
         if (player == null) { await component.RespondAsync("❌ Not in this game.", ephemeral: true); return; }
 
+        // Turn validation: only the current strategy player can play
+        if (session.CurrentPhase == TurnPhase.Strategy && player != session.CurrentStrategyPlayer)
+        {
+            await component.RespondAsync("❌ It's not your turn to play.", ephemeral: true);
+            return;
+        }
+
         var handIndex = int.Parse(parts[2]);
         var isCloser = bool.Parse(parts[3]);
 
@@ -154,6 +161,7 @@ public class GameButtonHandler
             return;
         }
 
+        _gameManager.TouchGame(session);
         await UpdateGameMessage(component, session);
     }
 
@@ -166,6 +174,7 @@ public class GameButtonHandler
         if (player == null) return;
 
         GameEngine.Pass(session, player);
+        _gameManager.TouchGame(session);
         await UpdateGameMessage(component, session);
     }
 
@@ -188,6 +197,7 @@ public class GameButtonHandler
             return;
         }
 
+        _gameManager.TouchGame(session);
         await UpdateGameMessage(component, session);
     }
 
