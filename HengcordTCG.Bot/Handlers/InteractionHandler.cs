@@ -2,6 +2,7 @@ using System.Reflection;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using HengcordTCG.Bot.Game;
 using HengcordTCG.Shared.Clients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,9 @@ public class InteractionHandler
         _client.InteractionCreated += HandleInteractionAsync;
         _interactions.SlashCommandExecuted += SlashCommandExecutedAsync;
         
+        // Register button click handler for game interactions
+        _client.ButtonExecuted += HandleButtonExecutedAsync;
+        
         _logger.LogInformation("InteractionHandler initialized successfully");
     }
 
@@ -48,6 +52,16 @@ public class InteractionHandler
 
         var context = new SocketInteractionContext(_client, interaction);
         await _interactions.ExecuteCommandAsync(context, _services);
+    }
+
+    private async Task HandleButtonExecutedAsync(SocketMessageComponent component)
+    {
+        // Route game-related buttons to GameButtonHandler
+        if (component.Data.CustomId.StartsWith("game_"))
+        {
+            var handler = _services.GetRequiredService<GameButtonHandler>();
+            await handler.HandleButtonAsync(component);
+        }
     }
 
     private Task SlashCommandExecutedAsync(SlashCommandInfo command, IInteractionContext context, IResult result)
