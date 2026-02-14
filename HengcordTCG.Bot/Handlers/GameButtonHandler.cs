@@ -279,7 +279,21 @@ public class GameButtonHandler
                 msg.Components = new ComponentBuilder().Build();
             });
 
-            // TODO: Persist MatchResult in Phase 6
+            // Persist match result
+            var winner = session.Winner!;
+            var loser = session.GetOpponent(winner);
+            try
+            {
+                await _client.SaveMatchAsync(new HengcordTCGClient.SaveMatchRequest(
+                    winner.DiscordId, loser.DiscordId,
+                    session.TurnNumber, Math.Max(0, winner.CommanderHp)
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist match result for game {GameId}", session.GameId);
+            }
+
             _gameManager.EndGame(session);
             return;
         }

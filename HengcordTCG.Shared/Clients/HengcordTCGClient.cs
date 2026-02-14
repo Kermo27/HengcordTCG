@@ -255,4 +255,39 @@ public class HengcordTCGClient
         var error = await response.Content.ReadAsStringAsync();
         return (false, error);
     }
+
+    // --- Match Results ---
+    public record SaveMatchRequest(ulong WinnerDiscordId, ulong LoserDiscordId, int Turns, int WinnerHpRemaining);
+
+    public async Task<bool> SaveMatchAsync(SaveMatchRequest request)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync("api/matchresults", request);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public record PlayerStatsResponse(
+        int Wins, int Losses, int TotalGames, double WinRate,
+        int BestHpRemaining, int ShortestWin,
+        List<RecentMatchInfo> RecentMatches
+    );
+
+    public record RecentMatchInfo(string OpponentName, bool Won, int Turns, int HpRemaining, DateTime FinishedAt);
+
+    public async Task<PlayerStatsResponse?> GetPlayerStatsAsync(ulong discordId)
+    {
+        try { return await _http.GetFromJsonAsync<PlayerStatsResponse>($"api/matchresults/stats/{discordId}"); }
+        catch { return null; }
+    }
+
+    public record LeaderboardEntry(string Username, ulong DiscordId, int Wins, int Losses, double WinRate);
+
+    public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(int top = 10)
+    {
+        try { return await _http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/matchresults/leaderboard?top={top}") ?? new(); }
+        catch { return new(); }
+    }
 }

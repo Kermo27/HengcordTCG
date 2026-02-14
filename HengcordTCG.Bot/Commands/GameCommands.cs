@@ -1,5 +1,6 @@
 using Discord;
 using Discord.Interactions;
+using HengcordTCG.Bot.Game;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Models;
 
@@ -9,10 +10,12 @@ namespace HengcordTCG.Bot.Commands;
 public class GameCommands : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly HengcordTCGClient _client;
+    private readonly GameManager _gameManager;
 
-    public GameCommands(HengcordTCGClient client)
+    public GameCommands(HengcordTCGClient client, GameManager gameManager)
     {
         _client = client;
+        _gameManager = gameManager;
     }
 
     [Group("deck", "Manage your battle deck")]
@@ -226,15 +229,88 @@ public class GameCommands : InteractionModuleBase<SocketInteractionContext>
     public async Task Stats(
         [Summary("player", "View another player's stats (optional)")] IUser? player = null)
     {
+        await DeferAsync();
+
         var targetUser = player ?? Context.User;
-        // Placeholder — will connect to MatchResult data in Phase 6
-        await RespondAsync($"📊 Stats for **{targetUser.Username}** — Coming soon!");
+        var stats = await _client.GetPlayerStatsAsync(targetUser.Id);
+
+        if (stats == null || stats.TotalGames == 0)
+        {
+            await FollowupAsync($"📊 **{targetUser.Username}** hasn't played any matches yet.");
+            return;
+        }
+
+        var embed = new EmbedBuilder()
+            .WithTitle($"📊 {targetUser.Username}'s Battle Stats")
+            .AddField("🏆 Record", $"**{stats.Wins}W** / **{stats.Losses}L** ({stats.WinRate}% WR)", inline: true)
+            .AddField("🎮 Total Games", stats.TotalGames.ToString(), inline: true)
+            .AddField("❤️ Best Win HP", stats.BestHpRemaining.ToString(), inline: true)
+            .AddField("⚡ Fastest Win", $"{stats.ShortestWin} turns", inline: true)
+            .WithColor(stats.WinRate >= 50 ? Color.Gold : Color.LightGrey);
+
+        if (stats.RecentMatches.Count > 0)
+        {
+            var recentStr = string.Join("\n", stats.RecentMatches.Take(5).Select(m =>
+                $"{(m.Won ? "✅" : "❌")} vs **{m.OpponentName}** — {m.Turns} turns"));
+            embed.AddField("📋 Recent Matches", recentStr, inline: false);
+        }
+
+        await FollowupAsync(embed: embed.Build());
+    }
+
+    [SlashCommand("leaderboard", "View the battle leaderboard")]
+    public async Task Leaderboard()
+    {
+        await DeferAsync();
+
+        var entries = await _client.GetLeaderboardAsync(10);
+
+        if (entries.Count == 0)
+        {
+            await FollowupAsync("📊 No matches played yet!");
+            return;
+        }
+
+        var lines = entries.Select((e, i) =>
+        {
+            var medal = i switch { 0 => "🥇", 1 => "🥈", 2 => "🥉", _ => $"`{i + 1}.`" };
+            return $"{medal} **{e.Username}** — {e.Wins}W/{e.Losses}L ({e.WinRate}%WR)";
+        });
+
+        var embed = new EmbedBuilder()
+            .WithTitle("🏆 Battle Leaderboard")
+            .WithDescription(string.Join("\n", lines))
+            .WithColor(Color.Gold)
+            .Build();
+
+        await FollowupAsync(embed: embed);
     }
 
     [SlashCommand("forfeit", "Surrender your current match")]
     public async Task Forfeit()
     {
-        // Placeholder — will connect to GameManager in Phase 3
-        await RespondAsync("🏳️ You are not currently in a match.", ephemeral: true);
+        var session = _gameManager.Forfeit(Context.User.Id);
+        if (session == null)
+        {
+            await RespondAsync("🏳️ You are not currently in a match.", ephemeral: true);
+            return;
+        }
+
+        // Persist match result
+        var winner = session.Winner!;
+        var loser = session.GetOpponent(winner);
+        await _client.SaveMatchAsync(new HengcordTCGClient.SaveMatchRequest(
+            winner.DiscordId, loser.DiscordId,
+            session.TurnNumber, Math.Max(0, winner.CommanderHp)
+        ));
+
+        var embed = new EmbedBuilder()
+            .WithTitle("🏳️ Forfeit")
+            .WithDescription($"**{Context.User.Username}** surrendered. **{winner.Username}** wins!")
+            .WithColor(Color.DarkGrey)
+            .Build();
+
+        _gameManager.EndGame(session);
+        await RespondAsync(embed: embed);
     }
 }
