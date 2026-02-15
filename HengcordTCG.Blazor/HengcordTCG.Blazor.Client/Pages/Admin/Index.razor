@@ -344,21 +344,21 @@
 
 <!-- Add/Edit Card Dialog -->
 <Dialog @bind-Open="ShowCardDialog">
-    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+    <DialogContent class="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader class="flex-shrink-0">
             <DialogTitle class="text-slate-100">
                 @(IsEditingCard ? "Edit Card" : "Add New Card")
             </DialogTitle>
         </DialogHeader>
-        <div class="space-y-4 py-4">
+        <div class="flex-1 overflow-y-auto space-y-3 py-3 pr-1">
             <!-- Basic Info -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-4 gap-3">
                 <div class="col-span-2">
-                    <Label class="text-slate-400">Card Name</Label>
+                    <Label class="text-slate-400 text-xs">Card Name</Label>
                     <Input @bind-Value="EditingCard.Name" class="mt-1 bg-slate-950 border-slate-700" />
                 </div>
                 <div>
-                    <Label class="text-slate-400">Rarity</Label>
+                    <Label class="text-slate-400 text-xs">Rarity</Label>
                     <Select @bind-Value="EditingCardRarity" class="mt-1">
                         <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
                         <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
@@ -366,7 +366,7 @@
                     </Select>
                 </div>
                 <div>
-                    <Label class="text-slate-400">Card Type</Label>
+                    <Label class="text-slate-400 text-xs">Card Type</Label>
                     <Select @bind-Value="EditingCardType" class="mt-1">
                         <SelectItem Value="@nameof(CardType.Unit)">Unit</SelectItem>
                         <SelectItem Value="@nameof(CardType.Commander)">Commander</SelectItem>
@@ -377,12 +377,12 @@
 
             <!-- Image Upload -->
             <div>
-                <Label class="text-slate-400">Card Image</Label>
-                <div class="mt-1 flex items-center gap-3">
+                <Label class="text-slate-400 text-xs">Card Image</Label>
+                <div class="mt-1 flex items-center gap-2">
                     <div class="flex-1">
                         <InputFile OnChange="OnImageSelected" Accept=".png,.jpg,.jpeg,.gif,.webp"
                             class="block w-full text-sm text-slate-400 
-                                   file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0
+                                   file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0
                                    file:text-sm file:font-semibold file:bg-slate-800 file:text-slate-200
                                    hover:file:bg-slate-700 file:cursor-pointer" />
                     </div>
@@ -390,82 +390,85 @@
                     {
                         <div class="text-sm text-slate-400 flex items-center gap-2">
                             <LucideIcon Name="loader-2" Size="16" class="animate-spin" />
-                            Uploading...
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
                     {
                         <img src="@($"/api/images/{EditingCard.ImagePath}")" alt="Preview"
-                             class="w-16 h-16 object-cover rounded-lg border border-slate-700" />
+                             class="w-12 h-12 object-cover rounded-lg border border-slate-700" />
                     }
                 </div>
                 @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
                 {
-                    <p class="text-xs text-slate-500 mt-1">@EditingCard.ImagePath</p>
+                    <p class="text-xs text-slate-500 mt-0.5">@EditingCard.ImagePath</p>
                 }
             </div>
 
-            <!-- Collection Stats -->
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <Label class="text-slate-400">Attack</Label>
-                    <Input @bind-Value="EditingCardAttackStr" class="mt-1 bg-slate-950 border-slate-700" />
-                </div>
-                <div>
-                    <Label class="text-slate-400">Defense</Label>
-                    <Input @bind-Value="EditingCardDefenseStr" class="mt-1 bg-slate-950 border-slate-700" />
-                </div>
-            </div>
-
-            <!-- Game Stats Section -->
-            <div class="border-t border-slate-800 pt-4">
-                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+            <!-- Collection Stats + Battle Stats combined -->
+            <div class="border-t border-slate-800 pt-3">
+                <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
                     <LucideIcon Name="swords" Size="16" class="text-orange-400" />
-                    Battle Stats
+                    Stats
                 </h3>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-4 gap-3">
                     <div>
-                        <Label class="text-slate-400">💡 Light Cost</Label>
-                        <Input @bind-Value="EditingCardLightCostStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        <Label class="text-slate-400 text-xs">⚔️ Attack</Label>
+                        <Input @bind-Value="EditingCardAttackStr" class="mt-1 bg-slate-950 border-slate-700" />
                     </div>
                     <div>
-                        <Label class="text-slate-400">❤️ Health</Label>
+                        <Label class="text-slate-400 text-xs">🛡️ Defense</Label>
+                        <Input @bind-Value="EditingCardDefenseStr" class="mt-1 bg-slate-950 border-slate-700" />
+                    </div>
+                    <div>
+                        <Label class="text-slate-400 text-xs">
+                            ❤️ @(EditingCardType == "Commander" ? "Commander HP" : "Health")
+                        </Label>
                         <Input @bind-Value="EditingCardHealthStr" class="mt-1 bg-slate-950 border-slate-700" />
                     </div>
-                    <div>
-                        <Label class="text-slate-400">🎲 Die Size</Label>
-                        <Input @bind-Value="EditingCardDieSizeStr" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    <div>
-                        <Label class="text-slate-400">⚡ Speed</Label>
-                        <Input @bind-Value="EditingCardSpeedStr" Placeholder="Commander only" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    <div>
-                        <Label class="text-slate-400">🗡️ Counter-Strike</Label>
-                        <Input @bind-Value="EditingCardCounterStrikeStr" Placeholder="Commander only" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
+                    @if (EditingCardType is "Unit" or "Closer")
+                    {
+                        <div>
+                            <Label class="text-slate-400 text-xs">💡 Light Cost</Label>
+                            <Input @bind-Value="EditingCardLightCostStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        </div>
+                        <div>
+                            <Label class="text-slate-400 text-xs">🎲 Die Size</Label>
+                            <Input @bind-Value="EditingCardDieSizeStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        </div>
+                    }
+                    @if (EditingCardType == "Commander")
+                    {
+                        <div>
+                            <Label class="text-slate-400 text-xs">⚡ Speed</Label>
+                            <Input @bind-Value="EditingCardSpeedStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        </div>
+                        <div>
+                            <Label class="text-slate-400 text-xs">🗡️ Counter-Strike</Label>
+                            <Input @bind-Value="EditingCardCounterStrikeStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        </div>
+                    }
                 </div>
             </div>
 
             <!-- Ability -->
-            <div class="border-t border-slate-800 pt-4">
-                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+            <div class="border-t border-slate-800 pt-3">
+                <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
                     <LucideIcon Name="sparkles" Size="16" class="text-purple-400" />
                     Ability
                 </h3>
-                <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <Label class="text-slate-400">Ability Text</Label>
-                        <Input @bind-Value="EditingCard.AbilityText" Placeholder="Human-readable ability description" class="mt-1 bg-slate-950 border-slate-700" />
+                        <Label class="text-slate-400 text-xs">Ability Text</Label>
+                        <Input @bind-Value="EditingCard.AbilityText" Placeholder="Description" class="mt-1 bg-slate-950 border-slate-700" />
                     </div>
                     <div>
-                        <Label class="text-slate-400">Ability ID</Label>
+                        <Label class="text-slate-400 text-xs">Ability ID</Label>
                         <Input @bind-Value="EditingCard.AbilityId" Placeholder="e.g. heal_on_enter" class="mt-1 bg-slate-950 border-slate-700" />
                     </div>
                 </div>
             </div>
         </div>
-        <DialogFooter>
+        <DialogFooter class="flex-shrink-0 border-t border-slate-800 pt-3">
             <Button Variant="ButtonVariant.Outline" @onclick="() => ShowCardDialog = false">Cancel</Button>
             <Button @onclick="SaveCard" class="bg-emerald-500 hover:bg-emerald-600" disabled="@IsSaving">
                 @if (IsSaving)
