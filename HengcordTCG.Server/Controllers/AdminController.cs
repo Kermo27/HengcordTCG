@@ -47,7 +47,8 @@ public class AdminController : ControllerBase
         existing.LightCost = card.LightCost;
         existing.Health = card.Health;
         existing.Speed = card.Speed;
-        existing.DieSize = card.DieSize;
+        existing.MinDamage = card.MinDamage;
+        existing.MaxDamage = card.MaxDamage;
         existing.CounterStrike = card.CounterStrike;
         existing.AbilityText = card.AbilityText;
         existing.AbilityId = card.AbilityId;

@@ -164,7 +164,7 @@ public class GameCommands : InteractionModuleBase<SocketInteractionContext>
 
         private static string FormatCommanderInfo(Card commander)
         {
-            return $"**{commander.Name}** — ❤️ {commander.Health} HP | ⚡ {commander.Speed} SPD | 🗡️ d{commander.DieSize} | 🛡️ {commander.CounterStrike} Counter\n" +
+            return $"**{commander.Name}** — ❤️ {commander.Health} HP | ⚡ {commander.Speed} SPD | ⚔️ {commander.MinDamage}-{commander.MaxDamage} DMG | 🛡️ {commander.CounterStrike} Counter\n" +
                    (commander.AbilityText != null ? $"*{commander.AbilityText}*" : "");
         }
 
@@ -172,7 +172,7 @@ public class GameCommands : InteractionModuleBase<SocketInteractionContext>
         {
             if (cards.Count == 0) return "(empty)";
             return string.Join("\n", cards.Select(c =>
-                $"• **{c.Name}** — 💡 {c.LightCost} | 🎲 d{c.DieSize} | ❤️ {c.Health} HP"));
+                $"• **{c.Name}** — 💡 {c.LightCost} | ⚔️ {c.MinDamage}-{c.MaxDamage} DMG | ❤️ {c.Health} HP"));
         }
     }
 

@@ -46,9 +46,13 @@ public class Card
     [Range(0, 20)]
     public int Speed { get; set; }
 
-    /// <summary>Size of the attack die (e.g. 6 = d6, 8 = d8).</summary>
+    /// <summary>Minimum damage dealt by this card.</summary>
     [Range(0, 20)]
-    public int DieSize { get; set; }
+    public int MinDamage { get; set; }
+
+    /// <summary>Maximum damage dealt by this card.</summary>
+    [Range(0, 20)]
+    public int MaxDamage { get; set; }
 
     /// <summary>Commander-only: fixed damage dealt back when hit by an unopposed attack.</summary>
     [Range(0, 50)]

@@ -59,14 +59,14 @@ public static class GameRenderer
         if (player.Hand.Count > 0)
         {
             var handStr = string.Join("\n", player.Hand.Select((c, i) =>
-                $"`{i + 1}` **{c.Name}** — 💡{c.LightCost} | 🎲d{c.DieSize} | ❤️{c.Health}"));
+                $"`{i + 1}` **{c.Name}** — 💡{c.LightCost} | ⚔️{c.MinDamage}-{c.MaxDamage} | ❤️{c.Health}"));
             embed.AddField($"Main Deck ({player.Hand.Count})", handStr);
         }
 
         if (player.CloserDeck.Count > 0)
         {
             var closerStr = string.Join("\n", player.CloserDeck.Select((c, i) =>
-                $"`C{i + 1}` **{c.Name}** — 💡{c.LightCost} | 🎲d{c.DieSize} | ❤️{c.Health}"));
+                $"`C{i + 1}` **{c.Name}** — 💡{c.LightCost} | ⚔️{c.MinDamage}-{c.MaxDamage} | ❤️{c.Health}"));
             embed.AddField($"💥 Closers ({player.CloserDeck.Count})", closerStr);
         }
 

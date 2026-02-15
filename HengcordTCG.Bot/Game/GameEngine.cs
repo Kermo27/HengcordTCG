@@ -262,8 +262,8 @@ public static class GameEngine
             if (lane.Defender != null)
             {
                 // Clash — both roll attack dice
-                result.AttackerRoll = RollDie(lane.Attacker.Card.DieSize);
-                result.DefenderRoll = RollDie(lane.Defender.Card.DieSize);
+                result.AttackerRoll = RollDamage(lane.Attacker.Card.MinDamage, lane.Attacker.Card.MaxDamage);
+                result.DefenderRoll = RollDamage(lane.Defender.Card.MinDamage, lane.Defender.Card.MaxDamage);
 
                 if (result.AttackerRoll >= result.DefenderRoll)
                 {
@@ -271,7 +271,7 @@ public static class GameEngine
                     result.DamageDealt = result.AttackerRoll;
                     lane.Defender.CurrentHp -= result.DamageDealt;
                     result.AttackerWon = true;
-                    result.Description = $"Lane {i + 1}: {lane.Attacker.Card.Name} (🎲{result.AttackerRoll}) beats {lane.Defender.Card.Name} (🎲{result.DefenderRoll}) — {result.DamageDealt} dmg!";
+                    result.Description = $"Lane {i + 1}: {lane.Attacker.Card.Name} (⚔️{result.AttackerRoll}) beats {lane.Defender.Card.Name} (⚔️{result.DefenderRoll}) — {result.DamageDealt} dmg!";
                 }
                 else
                 {
@@ -279,14 +279,14 @@ public static class GameEngine
                     result.DamageDealt = result.DefenderRoll;
                     lane.Attacker.CurrentHp -= result.DamageDealt;
                     result.AttackerWon = false;
-                    result.Description = $"Lane {i + 1}: {lane.Defender.Card.Name} (🎲{result.DefenderRoll}) beats {lane.Attacker.Card.Name} (🎲{result.AttackerRoll}) — {result.DamageDealt} dmg!";
+                    result.Description = $"Lane {i + 1}: {lane.Defender.Card.Name} (⚔️{result.DefenderRoll}) beats {lane.Attacker.Card.Name} (⚔️{result.AttackerRoll}) — {result.DamageDealt} dmg!";
                 }
             }
             else
             {
                 // Unopposed — attacker hits Commander directly
                 result.WasUnopposed = true;
-                result.AttackerRoll = RollDie(lane.Attacker.Card.DieSize);
+                result.AttackerRoll = RollDamage(lane.Attacker.Card.MinDamage, lane.Attacker.Card.MaxDamage);
                 result.DamageDealt = result.AttackerRoll;
                 session.Defender.CommanderHp -= result.DamageDealt;
                 result.AttackerWon = true;
@@ -295,7 +295,7 @@ public static class GameEngine
                 result.CounterStrikeDamage = session.Defender.Commander.CounterStrike;
                 lane.Attacker.CurrentHp -= result.CounterStrikeDamage;
 
-                result.Description = $"Lane {i + 1}: {lane.Attacker.Card.Name} (🎲{result.AttackerRoll}) → Commander! {result.DamageDealt} dmg! Counter-strike: {result.CounterStrikeDamage} dmg back!";
+                result.Description = $"Lane {i + 1}: {lane.Attacker.Card.Name} (⚔️{result.AttackerRoll}) → Commander! {result.DamageDealt} dmg! Counter-strike: {result.CounterStrikeDamage} dmg back!";
             }
 
             results.Add(result);
@@ -394,10 +394,12 @@ public static class GameEngine
     // HELPERS
     // ──────────────────────────────────────────────
 
-    private static int RollDie(int dieSize)
+    private static int RollDamage(int min, int max)
     {
-        if (dieSize <= 0) return 0;
-        return Random.Shared.Next(1, dieSize + 1);
+        if (max <= 0) return 0;
+        if (min > max) min = max;
+        // Random.Next(min, max + 1)
+        return Random.Shared.Next(min, max + 1);
     }
 
     private static void ShuffleList<T>(List<T> list)

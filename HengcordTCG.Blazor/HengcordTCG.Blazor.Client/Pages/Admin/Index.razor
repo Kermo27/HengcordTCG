@@ -432,8 +432,12 @@
                             <Input @bind-Value="EditingCardLightCostStr" class="mt-1 bg-slate-950 border-slate-700" />
                         </div>
                         <div>
-                            <Label class="text-slate-400 text-xs">🎲 Die Size</Label>
-                            <Input @bind-Value="EditingCardDieSizeStr" class="mt-1 bg-slate-950 border-slate-700" />
+                            <Label class="text-slate-400 text-xs">Min Damage</Label>
+                            <Input @bind-Value="EditingCardMinDamageStr" class="mt-1 bg-slate-950 border-slate-700" />
+                        </div>
+                        <div>
+                            <Label class="text-slate-400 text-xs">Max Damage</Label>
+                            <Input @bind-Value="EditingCardMaxDamageStr" class="mt-1 bg-slate-950 border-slate-700" />
                         </div>
                     }
                     @if (EditingCardType == "Commander")
@@ -547,7 +551,8 @@
     private string EditingCardDefenseStr { get; set; } = "50";
     private string EditingCardLightCostStr { get; set; } = "0";
     private string EditingCardHealthStr { get; set; } = "0";
-    private string EditingCardDieSizeStr { get; set; } = "6";
+    private string EditingCardMinDamageStr { get; set; } = "0";
+    private string EditingCardMaxDamageStr { get; set; } = "0";
     private string EditingCardSpeedStr { get; set; } = "0";
     private string EditingCardCounterStrikeStr { get; set; } = "0";
 
@@ -628,7 +633,8 @@
         EditingCardDefenseStr = "50";
         EditingCardLightCostStr = "0";
         EditingCardHealthStr = "0";
-        EditingCardDieSizeStr = "6";
+        EditingCardMinDamageStr = "0";
+        EditingCardMaxDamageStr = "0";
         EditingCardSpeedStr = "0";
         EditingCardCounterStrikeStr = "0";
         ShowCardDialog = true;
@@ -649,7 +655,8 @@
             LightCost = card.LightCost,
             Health = card.Health,
             Speed = card.Speed,
-            DieSize = card.DieSize,
+            MinDamage = card.MinDamage,
+            MaxDamage = card.MaxDamage,
             CounterStrike = card.CounterStrike,
             AbilityText = card.AbilityText,
             AbilityId = card.AbilityId,
@@ -661,7 +668,8 @@
         EditingCardDefenseStr = card.Defense.ToString();
         EditingCardLightCostStr = card.LightCost.ToString();
         EditingCardHealthStr = card.Health.ToString();
-        EditingCardDieSizeStr = card.DieSize.ToString();
+        EditingCardMinDamageStr = card.MinDamage.ToString();
+        EditingCardMaxDamageStr = card.MaxDamage.ToString();
         EditingCardSpeedStr = card.Speed.ToString();
         EditingCardCounterStrikeStr = card.CounterStrike.ToString();
         ShowCardDialog = true;
@@ -722,7 +730,8 @@
         EditingCard.Defense = int.TryParse(EditingCardDefenseStr, out var def) ? def : 50;
         EditingCard.LightCost = int.TryParse(EditingCardLightCostStr, out var lc) ? lc : 0;
         EditingCard.Health = int.TryParse(EditingCardHealthStr, out var hp) ? hp : 0;
-        EditingCard.DieSize = int.TryParse(EditingCardDieSizeStr, out var ds) ? ds : 6;
+        EditingCard.MinDamage = int.TryParse(EditingCardMinDamageStr, out var min) ? min : 0;
+        EditingCard.MaxDamage = int.TryParse(EditingCardMaxDamageStr, out var max) ? max : 0;
         EditingCard.Speed = int.TryParse(EditingCardSpeedStr, out var spd) ? spd : 0;
         EditingCard.CounterStrike = int.TryParse(EditingCardCounterStrikeStr, out var cs) ? cs : 0;
 

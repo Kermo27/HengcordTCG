@@ -41,6 +41,7 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
             .WithDescription($"**Rarity:** {card.Rarity}")
             .AddField("⚔️ Attack", card.Attack.ToString(), inline: true)
             .AddField("🛡️ Defense", card.Defense.ToString(), inline: true)
+            .AddField("💥 Damage", $"{card.MinDamage}-{card.MaxDamage}", inline: true)
             .WithColor(rarityColor);
 
         if (card.ExclusivePackId.HasValue)
