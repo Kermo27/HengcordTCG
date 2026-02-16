@@ -1,8 +1,6 @@
-@inject ToastService Toast
-
 <div class="flex justify-between items-center">
     <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
-    <Button @onclick="OnAddPack" class="bg-emerald-500 hover:bg-emerald-600">
+    <Button @onclick="() => OnAddPack.InvokeAsync()" class="bg-emerald-500 hover:bg-emerald-600">
         <LucideIcon Name="plus" Size="18" class="mr-2" />
         Add Pack
     </Button>
@@ -47,10 +45,10 @@
                 </div>
             </CardContent>
             <CardFooter class="flex gap-2">
-                <Button @onclick="() => OnTogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 justify-start border-slate-700">
+                <Button @onclick="() => OnTogglePack.InvokeAsync(pack)" Variant="ButtonVariant.Outline" class="flex-1 justify-start border-slate-700">
                     @(pack.IsAvailable ? "Disable" : "Enable")
                 </Button>
-                <Button @onclick="() => OnEditPack(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
+                <Button @onclick="() => OnEditPack.InvokeAsync(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
                     <LucideIcon Name="pencil" Size="16" />
                 </Button>
             </CardFooter>

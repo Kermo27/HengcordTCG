@@ -1,5 +1,3 @@
-@inject ToastService Toast
-
 <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
 
 <div class="grid md:grid-cols-2 gap-6">
@@ -14,7 +12,7 @@
             </CardDescription>
         </CardHeader>
         <CardContent class="space-y-3">
-            <Button @onclick="OnFixInventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
+            <Button @onclick="() => OnFixInventory.InvokeAsync()" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
                 <LucideIcon Name="package-check" Size="18" class="mr-2" />
                 Fix Inventory Issues
             </Button>
