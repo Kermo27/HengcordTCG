@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Radzen;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Blazor.Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -28,11 +27,5 @@ builder.Services.AddAuthorizationCore(options =>
 builder.Services.AddScoped<HengcordTCGClient>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<WikiService>();
-
-// Radzen
-builder.Services.AddRadzenDialog();
-builder.Services.AddRadzenNotification();
-builder.Services.AddRadzenTooltip();
-builder.Services.AddRadzenPopup();
 
 await builder.Build().RunAsync();
