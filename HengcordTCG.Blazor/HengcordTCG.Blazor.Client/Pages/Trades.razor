@@ -3,7 +3,6 @@
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
 @inject ToastService Toast
-@inject NavigationManager Navigation
 
 <PageTitle>Trading - HengcordTCG</PageTitle>
 
@@ -16,7 +15,7 @@
         </Button>
     </div>
 
-    <Tabs @bind-Value="ActiveTab" class="w-full">
+    <Tabs @bind-Value="_activeTab" class="w-full">
         <TabsList class="bg-slate-900 border border-slate-800">
             <TabsTrigger Value="active" class="data-[state=active]:bg-slate-800">Active Trades</TabsTrigger>
             <TabsTrigger Value="my" class="data-[state=active]:bg-slate-800">My Trades</TabsTrigger>
@@ -24,49 +23,52 @@
         </TabsList>
 
         <TabsContent Value="active" class="mt-6">
-            <TradeComponents.ActiveTradesTab 
-                Trades="ActiveTrades"
-                CurrentUserId="CurrentUserId"
-                IsLoading="IsLoading"
-                OnCreateTrade="() => ShowCreateTrade = true"
-                OnAcceptTrade="AcceptTrade"
-                OnRejectTrade="RejectTrade" />
+            @if (!IsLoading && ActiveTrades.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var trade in ActiveTrades)
+                    {
+                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
+                    }
+                </div>
+            }
+            else
+            {
+                <EmptyState Icon="arrow-left-right" Title="No Active Trades" Description="There are no active trades at the moment." />
+            }
         </TabsContent>
 
         <TabsContent Value="my" class="mt-6">
-            <TradeComponents.MyTradesTab 
-                Trades="MyTrades"
-                CurrentUserId="CurrentUserId"
-                IsLoading="IsLoading"
-                OnCreateTrade="() => ShowCreateTrade = true"
-                OnCancelTrade="CancelTrade" />
+            @if (!IsLoading && MyTrades.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var trade in MyTrades)
+                    {
+                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
+                    }
+                </div>
+            }
+            else
+            {
+                <EmptyState Icon="package" Title="No Trades Yet" Description="You haven't created any trades yet." />
+            }
         </TabsContent>
 
         <TabsContent Value="history" class="mt-6">
-            <EmptyState 
-                Icon="history"
-                Title="No Trade History"
-                Description="Your completed trades will appear here." />
+            <EmptyState Icon="history" Title="No Trade History" Description="Your completed trades will appear here." />
         </TabsContent>
     </Tabs>
 </div>
 
-<TradeComponents.CreateTradeDialog 
-    IsOpen="ShowCreateTrade"
-    AvailableGold="CurrentGold"
-    CurrentUserId="CurrentUserId"
-    CurrentUsername="CurrentUsername"
-    OnTradeCreated="LoadData" />
-
 @code {
-    private string ActiveTab { get; set; } = "active";
-    private bool IsLoading { get; set; } = true;
+    private string _activeTab = "active";
+    private bool IsLoading = true;
     private ulong CurrentUserId { get; set; }
-    private string CurrentUsername { get; set; } = "";
     private long CurrentGold { get; set; }
 
     private List<Trade> ActiveTrades { get; set; } = new();
     private List<Trade> MyTrades { get; set; } = new();
+
     private bool ShowCreateTrade { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -83,7 +85,6 @@
             if (user != null)
             {
                 CurrentUserId = user.Id;
-                CurrentUsername = user.Username;
                 CurrentGold = user.Gold;
             }
 
@@ -98,48 +99,6 @@
         finally
         {
             IsLoading = false;
-        }
-    }
-
-    private async Task AcceptTrade(Trade trade)
-    {
-        var result = await Client.AcceptTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade accepted!");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
-        }
-    }
-
-    private async Task RejectTrade(Trade trade)
-    {
-        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade rejected");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
-        }
-    }
-
-    private async Task CancelTrade(Trade trade)
-    {
-        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade cancelled");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
         }
     }
 }
