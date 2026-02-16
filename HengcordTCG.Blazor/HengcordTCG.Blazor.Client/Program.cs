@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using BlazorBlueprint.Primitives.Extensions;
-using BlazorBlueprint.Components.Toast;
+using Radzen;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Blazor.Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -37,8 +36,10 @@ builder.Services.AddScoped<AuthService>();
 // Register Wiki Service
 builder.Services.AddScoped<WikiService>();
 
-// BlazorBlueprint
-builder.Services.AddBlazorBlueprintPrimitives();
-builder.Services.AddScoped<ToastService>();
+// Radzen Blazor
+builder.Services.AddRadzenDialog();
+builder.Services.AddRadzenNotification();
+builder.Services.AddRadzenTooltip();
+builder.Services.AddRadzenPopup();
 
 await builder.Build().RunAsync();
