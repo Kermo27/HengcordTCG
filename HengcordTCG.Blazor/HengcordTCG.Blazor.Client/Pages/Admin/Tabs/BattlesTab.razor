@@ -40,7 +40,7 @@ else
 }
 
 @code {
-    [Parameter] public List<LeaderboardEntry> Leaderboard { get; set; } = new();
+    [Parameter] public List<HengcordTCGClient.LeaderboardEntry> Leaderboard { get; set; } = new();
 
     private string GetRankClass(int rank) => rank switch
     {
