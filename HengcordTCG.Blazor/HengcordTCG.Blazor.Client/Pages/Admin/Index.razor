@@ -1,13 +1,6 @@
 @page "/admin"
 @using ModelCard = HengcordTCG.Shared.Models.Card
-@using LeaderboardEntry = HengcordTCG.Shared.DTOs.MatchResults.LeaderboardEntry
 @inject HengcordTCGClient Client
-@inject AuthService AuthService
-@inject ToastService Toast
-@inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JsRuntime
-@inject WikiService WikiService
 
 <PageTitle>Admin Panel - HengcordTCG</PageTitle>
 
@@ -114,7 +107,6 @@
         </TabsContent>
 
         <TabsContent Value="wiki" class="mt-6 space-y-6">
-            @* Wiki Tab content - kept inline for now *@
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-slate-100">Wiki Management</h2>
                 <Button @onclick="OpenAddWikiPage" class="bg-emerald-500 hover:bg-emerald-600">
@@ -122,7 +114,6 @@
                     Add Page
                 </Button>
             </div>
-            @* ... remaining wiki content *@
         </TabsContent>
     </Tabs>
 </div>
@@ -131,8 +122,8 @@
     private string _activeTab = "cards";
     private List<ModelCard> _allCards = new();
     private List<PackType> _allPacks = new();
-    private List<UserDetails> _users = new();
-    private List<LeaderboardEntry> _leaderboard = new();
+    private List<User> _users = new();
+    private List<HengcordTCGClient.LeaderboardEntry> _leaderboard = new();
     private CardType? _cardFilter;
     private bool _isLoading = true;
     private bool _showAddPack;
@@ -149,8 +140,8 @@
         {
             var cardsTask = Client.GetCardsAsync();
             var packsTask = Client.GetPacksAsync();
-            var usersTask = Client.GetAllUsersAsync();
-            var leaderboardTask = Client.GetLeaderboardAsync(10);
+            var usersTask = Client.GetUsersAsync();
+            var leaderboardTask = Client.GetLeaderboardAsync();
 
             await Task.WhenAll(cardsTask, packsTask, usersTask, leaderboardTask);
 
@@ -159,9 +150,8 @@
             _users = await usersTask;
             _leaderboard = await leaderboardTask;
         }
-        catch (Exception ex)
+        catch
         {
-            Toast.Error($"Failed to load data: {ex.Message}");
         }
         finally
         {
@@ -187,16 +177,16 @@
 
     private void OpenAddCard() { }
     private void OpenEditCard(ModelCard card) { }
-    private async Task DeleteCard(ModelCard card) { }
+    private Task DeleteCard(ModelCard card) => Task.CompletedTask;
 
     private void EditPack(PackType pack) { }
-    private async Task TogglePack(PackType pack) { }
+    private Task TogglePack(PackType pack) => Task.CompletedTask;
 
-    private void OpenGiveGold(UserDetails user) { }
-    private void OpenGiveCard(UserDetails user) { }
-    private async Task ToggleAdmin(UserDetails user) { }
+    private void OpenGiveGold(User user) { }
+    private void OpenGiveCard(User user) { }
+    private Task ToggleAdmin(User user) => Task.CompletedTask;
 
-    private async Task FixInventory() { }
+    private Task FixInventory() => Task.CompletedTask;
 
     private void OpenAddWikiPage() { }
 }
