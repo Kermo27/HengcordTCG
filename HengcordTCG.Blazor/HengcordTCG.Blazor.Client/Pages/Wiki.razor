@@ -88,6 +88,7 @@
 
     private void AddPageWithChildren(WikiPageItem page, int depth, List<WikiPageItem> result, List<WikiPageItem> allPages)
     {
+        page.Depth = depth;
         result.Add(page);
         
         var children = allPages

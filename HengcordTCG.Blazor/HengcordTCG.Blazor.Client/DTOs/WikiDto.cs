@@ -10,6 +10,7 @@ public class WikiPageItem
     public int? ParentId { get; set; }
     public int Order { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public int Depth { get; set; }
 }
 
 public class WikiPageTreeItem

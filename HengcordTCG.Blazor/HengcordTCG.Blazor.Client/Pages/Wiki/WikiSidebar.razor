@@ -6,8 +6,8 @@
     
     <div class="relative">
         <InputText @bind-Value="SearchQuery" 
-                   @oninput="OnSearch"
-                   placeholder="Szukaj..."
+                   @oninput="(e) => OnSearch.InvokeAsync(e)"
+                   placeholder="Search..."
                    class="w-full bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" />
     </div>
 </div>
@@ -15,7 +15,7 @@
 @if (SearchResults.Count > 0)
 {
     <div class="p-2">
-        <p class="text-xs text-slate-500 mb-2 px-2">Wyniki wyszukiwania:</p>
+        <p class="text-xs text-slate-500 mb-2 px-2">Search results:</p>
         @foreach (var result in SearchResults)
         {
             <a href="/wiki/@result.Slug" 
@@ -28,7 +28,7 @@
 else if (!string.IsNullOrEmpty(SearchQuery))
 {
     <div class="p-4 text-slate-400 text-sm">
-        Brak wyników dla "@SearchQuery"
+        No results for "@SearchQuery"
     </div>
 }
 else
@@ -36,8 +36,8 @@ else
     <div class="p-2">
         @foreach (var pageItem in FlatPages)
         {
-            <div>
-                @((MarkupString)GetPaddingHtml(pageItem.Depth))<a href="/wiki/@pageItem.Slug" 
+            <div style="padding-left: @(pageItem.Depth * 16)px">
+                <a href="/wiki/@pageItem.Slug" 
                    class="text-slate-300 hover:text-white">
                     @pageItem.Title
                 </a>
@@ -50,7 +50,5 @@ else
     [Parameter] public string SearchQuery { get; set; } = "";
     [Parameter] public List<WikiPageItem> SearchResults { get; set; } = new();
     [Parameter] public List<WikiPageItem> FlatPages { get; set; } = new();
-    [Parameter] public EventCallback<string> OnSearch { get; set; }
-
-    private string GetPaddingHtml(int depth) => depth > 0 ? new string('&nbsp;', depth * 4) : "";
+    [Parameter] public EventCallback<ChangeEventArgs> OnSearch { get; set; }
 }
