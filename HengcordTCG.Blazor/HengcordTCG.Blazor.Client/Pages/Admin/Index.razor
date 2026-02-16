@@ -24,11 +24,11 @@
             </TabsTrigger>
             <TabsTrigger Value="packs" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="package" Size="16" class="mr-2" />
-                Packs
+                Packs (@_allPacks.Count)
             </TabsTrigger>
             <TabsTrigger Value="users" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="users" Size="16" class="mr-2" />
-                Users
+                Users (@_users.Count)
             </TabsTrigger>
             <TabsTrigger Value="battles" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="swords" Size="16" class="mr-2" />
@@ -44,25 +44,21 @@
             </TabsTrigger>
         </TabsList>
 
+        <!-- Cards Tab -->
         <TabsContent Value="cards" class="mt-6 space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-slate-100">Manage Cards</h2>
-                <Button @onclick="OpenAddCard" class="bg-emerald-500 hover:bg-emerald-600">
+                <Button class="bg-emerald-500 hover:bg-emerald-600">
                     <LucideIcon Name="plus" Size="18" class="mr-2" />
                     Add Card
                 </Button>
             </div>
             
-            @if (_isLoading)
-            {
-                <div>Loading...</div>
-            }
-            else
+            @if (!_isLoading)
             {
                 <div class="flex gap-2 mb-4">
                     <Button @onclick="() => _cardFilter = null"
-                        Variant="@(_cardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
-                        class="@(_cardFilter == null ? "bg-slate-700" : "border-slate-700")">
+                        Variant="@(_cardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)">
                         All (@_allCards.Count)
                     </Button>
                     @foreach (var type in Enum.GetValues<CardType>())
@@ -84,27 +80,207 @@
             }
         </TabsContent>
 
+        <!-- Packs Tab -->
         <TabsContent Value="packs" class="mt-6 space-y-6">
-            <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
-            <p class="text-slate-400">@_allPacks.Count packs loaded</p>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
+                <Button class="bg-emerald-500 hover:bg-emerald-600">
+                    <LucideIcon Name="plus" Size="18" class="mr-2" />
+                    Add Pack
+                </Button>
+            </div>
+
+            @if (!_isLoading && _allPacks.Count > 0)
+            {
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach (var pack in _allPacks)
+                    {
+                        <Card class="border-slate-800 bg-slate-900/50">
+                            <CardHeader>
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <CardTitle class="text-slate-100">@pack.Name</CardTitle>
+                                        <CardDescription class="text-slate-400">
+                                            @(pack.IsAvailable ? "Available" : "Unavailable")
+                                        </CardDescription>
+                                    </div>
+                                    <Badge Variant="BadgeVariant.Outline" 
+                                        class="@(pack.IsAvailable ? "border-emerald-500 text-emerald-400" : "border-slate-500 text-slate-400")">
+                                        @(pack.IsAvailable ? "Active" : "Inactive")
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">Price</span>
+                                        <span class="text-amber-400 font-semibold">@pack.Price.ToString("N0") Gold</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">Legendary</span>
+                                        <span class="text-amber-400">@pack.ChanceLegendary%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">Rare</span>
+                                        <span class="text-purple-400">@pack.ChanceRare%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">Common</span>
+                                        <span class="text-slate-400">@pack.ChanceCommon%</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    }
+                </div>
+            }
         </TabsContent>
 
+        <!-- Users Tab -->
         <TabsContent Value="users" class="mt-6 space-y-6">
-            <h2 class="text-xl font-semibold text-slate-100">Users</h2>
-            <p class="text-slate-400">@_users.Count users loaded</p>
+            <h2 class="text-xl font-semibold text-slate-100">User Management</h2>
+
+            @if (!_isLoading && _users.Count > 0)
+            {
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardContent class="p-0">
+                        <div class="divide-y divide-slate-800">
+                            @foreach (var user in _users)
+                            {
+                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                                            @(user.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-slate-200">@user.Username</div>
+                                            <div class="text-sm text-slate-500">ID: @user.DiscordId</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="text-right">
+                                            <div class="text-amber-400 font-semibold">@user.Gold.ToString("N0") Gold</div>
+                                            @if (user.IsBotAdmin)
+                                            {
+                                                <Badge Variant="BadgeVariant.Outline" class="border-amber-500 text-amber-400">Admin</Badge>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </CardContent>
+                </Card>
+            }
         </TabsContent>
 
+        <!-- Battles Tab -->
         <TabsContent Value="battles" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Battle Leaderboard</h2>
-            <p class="text-slate-400">@_leaderboard.Count entries</p>
+
+            @if (_leaderboard.Count == 0)
+            {
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardContent class="p-8 text-center">
+                        <LucideIcon Name="swords" Size="48" class="mx-auto mb-4 text-slate-600" />
+                        <p class="text-slate-400">No battles played yet.</p>
+                    </CardContent>
+                </Card>
+            }
+            else
+            {
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardContent class="p-0">
+                        <div class="divide-y divide-slate-800">
+                            @for (int i = 0; i < _leaderboard.Count; i++)
+                            {
+                                var entry = _leaderboard[i];
+                                var rank = i;
+                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg @GetRankClass(rank)">
+                                            @GetRankDisplay(rank)
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-slate-200">@entry.Username</div>
+                                            <div class="text-sm text-slate-500">@entry.Wins W / @entry.Losses L</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold @(entry.WinRate >= 50 ? "text-emerald-400" : "text-slate-400")">
+                                            @entry.WinRate% WR
+                                        </div>
+                                        <div class="text-xs text-slate-500">@(entry.Wins + entry.Losses) games</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </CardContent>
+                </Card>
+            }
         </TabsContent>
 
+        <!-- Tools Tab -->
         <TabsContent Value="tools" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardHeader>
+                        <CardTitle class="text-slate-100 flex items-center gap-2">
+                            <LucideIcon Name="database" Size="20" class="text-blue-400" />
+                            Database Tools
+                        </CardTitle>
+                        <CardDescription class="text-slate-400">
+                            Maintenance and repair tools
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-3">
+                        <Button Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
+                            <LucideIcon Name="package-check" Size="18" class="mr-2" />
+                            Fix Inventory Issues
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card class="border-slate-800 bg-slate-900/50">
+                    <CardHeader>
+                        <CardTitle class="text-slate-100 flex items-center gap-2">
+                            <LucideIcon Name="bar-chart-3" Size="20" class="text-emerald-400" />
+                            Statistics
+                        </CardTitle>
+                        <CardDescription class="text-slate-400">
+                            Platform overview
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@_allCards.Count</div>
+                                <div class="text-xs text-slate-500">Total Cards</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@_allPacks.Count</div>
+                                <div class="text-xs text-slate-500">Pack Types</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@_users.Count</div>
+                                <div class="text-xs text-slate-500">Total Users</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-800 text-center">
+                                <div class="text-2xl font-bold text-slate-100">@_users.Count(u => u.IsBotAdmin)</div>
+                                <div class="text-xs text-slate-500">Admins</div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </TabsContent>
 
+        <!-- Wiki Tab -->
         <TabsContent Value="wiki" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Wiki Management</h2>
+            <p class="text-slate-400">Wiki management coming soon...</p>
         </TabsContent>
     </Tabs>
 </div>
@@ -146,5 +322,19 @@
         }
     }
 
-    private void OpenAddCard() { }
+    private string GetRankClass(int rank) => rank switch
+    {
+        0 => "bg-amber-500 text-white",
+        1 => "bg-slate-300 text-slate-900",
+        2 => "bg-amber-700 text-white",
+        _ => "bg-slate-800 text-slate-400"
+    };
+
+    private string GetRankDisplay(int rank) => rank switch
+    {
+        0 => "🥇",
+        1 => "🥈",
+        2 => "🥉",
+        _ => (rank + 1).ToString()
+    };
 }
