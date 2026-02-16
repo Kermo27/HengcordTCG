@@ -30,10 +30,10 @@
     private List<WikiPageItem> FlatPages { get; set; } = new();
     private List<WikiPageItem> AllPages { get; set; } = new();
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
-        await LoadPage();
         await LoadPages();
+        await LoadPage();
     }
 
     private async Task LoadPage()

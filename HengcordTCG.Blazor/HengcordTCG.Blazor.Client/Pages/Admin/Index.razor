@@ -138,17 +138,10 @@
         _isLoading = true;
         try
         {
-            var cardsTask = Client.GetCardsAsync();
-            var packsTask = Client.GetPacksAsync();
-            var usersTask = Client.GetUsersAsync();
-            var leaderboardTask = Client.GetLeaderboardAsync();
-
-            await Task.WhenAll(cardsTask, packsTask, usersTask, leaderboardTask);
-
-            _allCards = await cardsTask;
-            _allPacks = await packsTask;
-            _users = await usersTask;
-            _leaderboard = await leaderboardTask;
+            _allCards = await Client.GetCardsAsync();
+            _allPacks = await Client.GetPacksAsync();
+            _users = await Client.GetUsersAsync();
+            _leaderboard = await Client.GetLeaderboardAsync();
         }
         catch
         {
