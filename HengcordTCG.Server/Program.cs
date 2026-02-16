@@ -3,6 +3,7 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Services;
 using Scalar.AspNetCore;
 using HengcordTCG.Server.Middleware;
+using HengcordTCG.Server.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -76,6 +77,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TradeService>();
 builder.Services.AddScoped<ShopService>();
+builder.Services.AddScoped<WikiService>();
+builder.Services.AddScoped<WikiProposalService>();
 
 // Authentication & Discord OAuth
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
@@ -105,6 +108,26 @@ builder.Services.AddAuthentication(options =>
         RoleClaimType = ClaimTypes.Role,
         NameClaimType = ClaimTypes.NameIdentifier
     };
+    
+    // Handle authentication failures gracefully
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            // Log the error but don't throw
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(context.Exception, "JWT authentication failed");
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            // Return 401 instead of 500 when token is missing/invalid
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            return context.Response.WriteAsync("{\"message\":\"Authentication required\"}");
+        }
+    };
 })
 .AddDiscord(options =>
 {
@@ -130,7 +153,8 @@ builder.Services.AddAuthentication(options =>
             // This will be handled by the next request to sync the user
         }
     };
-});
+})
+.AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationOptions.DefaultScheme, null);
 
 builder.Services.AddAuthorization();
 

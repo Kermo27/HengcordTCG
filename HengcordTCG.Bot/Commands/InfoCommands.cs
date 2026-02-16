@@ -41,6 +41,7 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
             .WithDescription($"**Rarity:** {card.Rarity}")
             .AddField("⚔️ Attack", card.Attack.ToString(), inline: true)
             .AddField("🛡️ Defense", card.Defense.ToString(), inline: true)
+            .AddField("💥 Damage", $"{card.MinDamage}-{card.MaxDamage}", inline: true)
             .WithColor(rarityColor);
 
         if (card.ExclusivePackId.HasValue)
@@ -52,9 +53,9 @@ public class InfoCommands : InteractionModuleBase<SocketInteractionContext>
             embed.AddField("📦 Availability", "All packs (Global Pool)");
         }
 
-        if (!string.IsNullOrEmpty(card.ImageUrl))
+        if (!string.IsNullOrEmpty(card.ImagePath))
         {
-            embed.WithImageUrl(card.ImageUrl);
+            embed.WithImageUrl($"{_client.BaseUrl}/api/images/{card.ImagePath}");
         }
 
         await RespondAsync(embed: embed.Build());

@@ -3,7 +3,6 @@
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
 @inject ToastService Toast
-@inject NavigationManager Navigation
 
 <PageTitle>Trading - HengcordTCG</PageTitle>
 
@@ -16,8 +15,7 @@
         </Button>
     </div>
 
-    <!-- Trade Tabs -->
-    <Tabs @bind-Value="ActiveTab" class="w-full">
+    <Tabs @bind-Value="_activeTab" class="w-full">
         <TabsList class="bg-slate-900 border border-slate-800">
             <TabsTrigger Value="active" class="data-[state=active]:bg-slate-800">Active Trades</TabsTrigger>
             <TabsTrigger Value="my" class="data-[state=active]:bg-slate-800">My Trades</TabsTrigger>
@@ -25,186 +23,53 @@
         </TabsList>
 
         <TabsContent Value="active" class="mt-6">
-            @if (IsLoading)
-            {
-                <div class="space-y-4">
-                    @for (int i = 0; i < 3; i++)
-                    {
-                        <Skeleton class="h-32 rounded-lg" />
-                    }
-                </div>
-            }
-            else if (!ActiveTrades.Any())
-            {
-                <EmptyState 
-                    Icon="arrow-left-right"
-                    Title="No Active Trades"
-                    Description="There are no active trades at the moment. Be the first to create one!"
-                    ActionText="Create Trade"
-                    OnAction="() => ShowCreateTrade = true" />
-            }
-            else
+            @if (!IsLoading && ActiveTrades.Any())
             {
                 <div class="space-y-4">
                     @foreach (var trade in ActiveTrades)
                     {
-                        <TradeCard 
-                            Trade="trade" 
-                            CurrentUserId="CurrentUserId"
-                            OnAccept="() => AcceptTrade(trade)"
-                            OnReject="() => RejectTrade(trade)" />
+                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
                     }
                 </div>
+            }
+            else
+            {
+                <EmptyState Icon="arrow-left-right" Title="No Active Trades" Description="There are no active trades at the moment." />
             }
         </TabsContent>
 
         <TabsContent Value="my" class="mt-6">
-            @if (IsLoading)
-            {
-                <div class="space-y-4">
-                    @for (int i = 0; i < 3; i++)
-                    {
-                        <Skeleton class="h-32 rounded-lg" />
-                    }
-                </div>
-            }
-            else if (!MyTrades.Any())
-            {
-                <EmptyState 
-                    Icon="package"
-                    Title="No Trades Yet"
-                    Description="You haven't created any trades yet."
-                    ActionText="Create Your First Trade"
-                    OnAction="() => ShowCreateTrade = true" />
-            }
-            else
+            @if (!IsLoading && MyTrades.Any())
             {
                 <div class="space-y-4">
                     @foreach (var trade in MyTrades)
                     {
-                        <TradeCard 
-                            Trade="trade" 
-                            CurrentUserId="CurrentUserId"
-                            OnCancel="() => CancelTrade(trade)" />
+                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
                     }
                 </div>
+            }
+            else
+            {
+                <EmptyState Icon="package" Title="No Trades Yet" Description="You haven't created any trades yet." />
             }
         </TabsContent>
 
         <TabsContent Value="history" class="mt-6">
-            <EmptyState 
-                Icon="history"
-                Title="No Trade History"
-                Description="Your completed trades will appear here." />
+            <EmptyState Icon="history" Title="No Trade History" Description="Your completed trades will appear here." />
         </TabsContent>
     </Tabs>
 </div>
 
-<!-- Create Trade Dialog -->
-<Dialog @bind-Open="ShowCreateTrade">
-    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-            <DialogTitle class="text-slate-100">Create Trade</DialogTitle>
-            <DialogDescription class="text-slate-400">
-                Offer cards and gold in exchange for what you want
-            </DialogDescription>
-        </DialogHeader>
-        
-        <div class="grid md:grid-cols-2 gap-6 py-4">
-            <!-- Your Offer -->
-            <div class="space-y-4">
-                <h3 class="font-semibold text-slate-100 flex items-center">
-                    <LucideIcon Name="arrow-up-from-line" Size="18" class="mr-2 text-emerald-400" />
-                    You Offer
-                </h3>
-                
-                <div>
-                    <Label class="text-slate-400">Gold</Label>
-                    <div class="flex items-center gap-2 mt-1">
-                        <LucideIcon Name="coins" Size="18" class="text-amber-400" />
-                        <Input 
-                            @bind-Value="NewTrade.OfferGoldString"
-                            placeholder="0"
-                            class="bg-slate-950 border-slate-700" />
-                    </div>
-                    <p class="text-xs text-slate-500 mt-1">Available: @CurrentGold.ToString("N0")</p>
-                </div>
-
-                <div>
-                    <Label class="text-slate-400">Cards (comma-separated)</Label>
-                    <Textarea 
-                        @bind-Value="NewTrade.OfferCards"
-                        placeholder="Card1, Card2, Card3..."
-                        class="mt-1 bg-slate-950 border-slate-700 min-h-[100px]" />
-                </div>
-            </div>
-
-            <!-- Your Request -->
-            <div class="space-y-4">
-                <h3 class="font-semibold text-slate-100 flex items-center">
-                    <LucideIcon Name="arrow-down-to-line" Size="18" class="mr-2 text-purple-400" />
-                    You Want
-                </h3>
-                
-                <div>
-                    <Label class="text-slate-400">Target User ID</Label>
-                    <Input 
-                        @bind-Value="NewTrade.TargetId"
-                        placeholder="Discord User ID"
-                        class="mt-1 bg-slate-950 border-slate-700" />
-                </div>
-
-                <div>
-                    <Label class="text-slate-400">Gold</Label>
-                    <div class="flex items-center gap-2 mt-1">
-                        <LucideIcon Name="coins" Size="18" class="text-amber-400" />
-                        <Input 
-                            @bind-Value="NewTrade.RequestGoldString"
-                            placeholder="0"
-                            class="bg-slate-950 border-slate-700" />
-                    </div>
-                </div>
-
-                <div>
-                    <Label class="text-slate-400">Cards (comma-separated)</Label>
-                    <Textarea 
-                        @bind-Value="NewTrade.RequestCards"
-                        placeholder="Card1, Card2, Card3..."
-                        class="mt-1 bg-slate-950 border-slate-700 min-h-[100px]" />
-                </div>
-            </div>
-        </div>
-
-        <DialogFooter>
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowCreateTrade = false">Cancel</Button>
-            <Button 
-                @onclick="CreateTrade"
-                Disabled="IsCreating"
-                class="bg-gradient-to-r from-purple-500 to-pink-500">
-                @if (IsCreating)
-                {
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                }
-                <LucideIcon Name="arrow-left-right" Size="18" class="mr-2" />
-                Create Trade
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
-
 @code {
-    private string ActiveTab { get; set; } = "active";
-    private bool IsLoading { get; set; } = true;
+    private string _activeTab = "active";
+    private bool IsLoading = true;
     private ulong CurrentUserId { get; set; }
     private long CurrentGold { get; set; }
 
     private List<Trade> ActiveTrades { get; set; } = new();
     private List<Trade> MyTrades { get; set; } = new();
 
-    // Create Trade
     private bool ShowCreateTrade { get; set; }
-    private bool IsCreating { get; set; }
-    private NewTradeModel NewTrade { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,103 +100,5 @@
         {
             IsLoading = false;
         }
-    }
-
-    private async Task CreateTrade()
-    {
-        IsCreating = true;
-        try
-        {
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user == null || !ulong.TryParse(NewTrade.TargetId, out var targetId))
-            {
-                Toast.Error("Invalid target user");
-                return;
-            }
-
-            var request = new HengcordTCGClient.CreateTradeRequest(
-                user.Id,
-                user.Username,
-                targetId,
-                "Target User", // Would need to fetch username
-                NewTrade.OfferCards,
-                NewTrade.RequestCards
-            );
-
-            var result = await Client.CreateTradeAsync(request);
-            
-            if (result.Success)
-            {
-                Toast.Success("Trade created successfully!");
-                ShowCreateTrade = false;
-                NewTrade = new();
-                await LoadData();
-            }
-            else
-            {
-                Toast.Error(result.Message);
-            }
-        }
-        catch
-        {
-            Toast.Error("Failed to create trade");
-        }
-        finally
-        {
-            IsCreating = false;
-        }
-    }
-
-    private async Task AcceptTrade(Trade trade)
-    {
-        var result = await Client.AcceptTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade accepted!");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
-        }
-    }
-
-    private async Task RejectTrade(Trade trade)
-    {
-        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade rejected");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
-        }
-    }
-
-    private async Task CancelTrade(Trade trade)
-    {
-        var result = await Client.RejectTradeAsync(trade.Id, CurrentUserId);
-        if (result.Success)
-        {
-            Toast.Success("Trade cancelled");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error(result.Message);
-        }
-    }
-
-    private class NewTradeModel
-    {
-        public string TargetId { get; set; } = "";
-        public string OfferGoldString { get; set; } = "0";
-        public string RequestGoldString { get; set; } = "0";
-        public int OfferGold => int.TryParse(OfferGoldString, out var v) ? v : 0;
-        public int RequestGold => int.TryParse(RequestGoldString, out var v) ? v : 0;
-        public string OfferCards { get; set; } = "";
-        public string RequestCards { get; set; } = "";
     }
 }

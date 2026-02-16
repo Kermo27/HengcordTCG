@@ -24,7 +24,7 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
         [Summary("attack", "Attack value")] int attack,
         [Summary("defense", "Defense value")] int defense,
         [Summary("rarity", "Card rarity")] Rarity rarity = Rarity.Common,
-        [Summary("image", "Image URL (optional)")] string? imageUrl = null)
+        [Summary("image", "Image path (optional, e.g. cards/dragon.png)")] string? imagePath = null)
     {
         var card = new Card
         {
@@ -32,7 +32,7 @@ public class AdminCommands : InteractionModuleBase<SocketInteractionContext>
             Attack = attack,
             Defense = defense,
             Rarity = rarity,
-            ImageUrl = imageUrl,
+            ImagePath = imagePath,
             CreatedAt = DateTime.UtcNow
         };
 

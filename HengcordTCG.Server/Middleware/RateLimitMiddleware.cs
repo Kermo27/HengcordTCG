@@ -3,26 +3,23 @@ using System.Net;
 
 namespace HengcordTCG.Server.Middleware;
 
-public class RateLimitMiddleware
+public class RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<RateLimitMiddleware> _logger;
-    private static readonly ConcurrentDictionary<string, RateLimitEntry> _requestCounts = new();
-    private const int RequestsPerMinute = 60;
-    private const int RequestsPerHour = 1000;
-
-    public RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<RateLimitMiddleware> _logger = logger;
+    private static readonly ConcurrentDictionary<string, RateLimitEntry> RequestCounts = new();
+    private const int RequestsPerMinute = 120;
+    private const int RequestsPerHour = 5000;
 
     public async Task InvokeAsync(HttpContext context)
     {
         var identifier = GetClientIdentifier(context);
         var now = DateTime.UtcNow;
 
-        var entry = _requestCounts.GetOrAdd(identifier, _ => new RateLimitEntry());
+        var entry = RequestCounts.GetOrAdd(identifier, _ => new RateLimitEntry());
+
+        bool shouldReturn;
+        string? returnMessage;
 
         lock (entry)
         {
@@ -41,21 +38,30 @@ public class RateLimitMiddleware
             if (entry.HourlyCount >= RequestsPerHour)
             {
                 _logger.LogWarning("Rate limit exceeded (hourly) for client {Identifier}", identifier);
-                context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-                context.Response.WriteAsync("Rate limit exceeded. Try again later.");
-                return;
+                returnMessage = "Rate limit exceeded. Try again later.";
+                shouldReturn = true;
             }
-
-            if (entry.MinuteCount >= RequestsPerMinute)
+            else if (entry.MinuteCount >= RequestsPerMinute)
             {
                 _logger.LogWarning("Rate limit exceeded (per minute) for client {Identifier}", identifier);
-                context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-                context.Response.WriteAsync("Rate limit exceeded. Try again in a minute.");
-                return;
+                returnMessage = "Rate limit exceeded. Try again in a minute.";
+                shouldReturn = true;
             }
+            else
+            {
+                entry.MinuteCount++;
+                entry.HourlyCount++;
+                shouldReturn = false;
+                returnMessage = null;
+            }
+        }
 
-            entry.MinuteCount++;
-            entry.HourlyCount++;
+        if (shouldReturn)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($"{{\"message\":\"{returnMessage}\"}}");
+            return;
         }
 
         await _next(context);

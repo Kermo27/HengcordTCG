@@ -103,10 +103,7 @@
     {
         if (!firstRender) return;
 
-        // Initialize auth state from localStorage
-        await AuthService.InitializeAsync();
-
-        // Handle OAuth callback token
+        // Handle OAuth callback token FIRST (before checking localStorage)
         if (!string.IsNullOrEmpty(_pendingToken))
         {
             // Store the JWT token
@@ -139,6 +136,9 @@
             Toast.Error("Authentication failed. Please try again.");
             return;
         }
+
+        // Initialize auth state from localStorage (for returning users)
+        await AuthService.InitializeAsync();
 
         // Check if already authenticated
         var isAlreadyAuth = await AuthService.CheckAuthStatusAsync();

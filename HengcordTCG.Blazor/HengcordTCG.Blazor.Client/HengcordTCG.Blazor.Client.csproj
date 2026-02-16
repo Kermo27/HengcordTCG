@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.*" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.*" />
     <PackageReference Include="BlazorBlueprint.Components" Version="2.*" />

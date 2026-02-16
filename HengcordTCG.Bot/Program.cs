@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using HengcordTCG.Bot.Handlers;
+using HengcordTCG.Bot.Game;
 using HengcordTCG.Bot.Services;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Services;
@@ -36,8 +38,21 @@ var host = Host.CreateDefaultBuilder(args)
         {
             client.BaseAddress = new Uri(serverUrl);
             client.DefaultRequestHeaders.Add("X-API-Key", botApiKey);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() =>
+        {
+            var handler = new HttpClientHandler();
+            // Bypass SSL certificate validation for localhost (development)
+            if (serverUrl.Contains("localhost"))
+            {
+                handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+            return handler;
         });
 
+        // Game system
+        services.AddSingleton<GameManager>();
+        services.AddTransient<GameButtonHandler>();
         
         services.AddHostedService<BotService>();
     })

@@ -8,6 +8,8 @@ public class HengcordTCGClient
 {
     private readonly HttpClient _http;
 
+    public string BaseUrl => _http.BaseAddress?.ToString().TrimEnd('/') ?? "";
+
     public HengcordTCGClient(HttpClient http)
     {
         _http = http;
@@ -163,6 +165,30 @@ public class HengcordTCGClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> UpdateCardAsync(Card card)
+    {
+        var response = await _http.PutAsJsonAsync($"api/admin/update-card/{card.Id}", card);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<string?> UploadImageAsync(Stream fileStream, string fileName, string folder = "cards")
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StreamContent(fileStream), "file", fileName);
+        var response = await _http.PostAsync($"api/images/upload?folder={folder}", content);
+        if (!response.IsSuccessStatusCode) return null;
+        var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+        return result?.Path;
+    }
+
+    public record UploadResult(string Path);
+
+    public async Task<List<User>> GetUsersAsync()
+    {
+        try { return await _http.GetFromJsonAsync<List<User>>("api/users") ?? new(); }
+        catch { return new(); }
+    }
+
     public async Task<bool> RemoveCardAsync(string name)
     {
         var response = await _http.DeleteAsync($"api/admin/remove-card/{Uri.EscapeDataString(name)}");
@@ -223,5 +249,69 @@ public class HengcordTCGClient
     {
         var response = await _http.PostAsync($"api/admin/remove-admin/{discordId}", null);
         return response.IsSuccessStatusCode;
+    }
+
+    // --- Decks ---
+    public async Task<Deck?> GetDeckAsync(ulong discordId)
+    {
+        try { return await _http.GetFromJsonAsync<Deck>($"api/decks/{discordId}"); }
+        catch { return null; }
+    }
+
+    public record SaveDeckRequest(
+        ulong DiscordId,
+        string? Name,
+        int CommanderId,
+        List<int> MainDeckCardIds,
+        List<int> CloserCardIds
+    );
+
+    public record SaveDeckResponse(string Message);
+
+    public async Task<(bool Success, string Message)> SaveDeckAsync(SaveDeckRequest request)
+    {
+        var response = await _http.PostAsJsonAsync("api/decks/save", request);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<SaveDeckResponse>();
+            return (true, result?.Message ?? "Deck saved!");
+        }
+        var error = await response.Content.ReadAsStringAsync();
+        return (false, error);
+    }
+
+    // --- Match Results ---
+    public record SaveMatchRequest(ulong WinnerDiscordId, ulong LoserDiscordId, int Turns, int WinnerHpRemaining);
+
+    public async Task<bool> SaveMatchAsync(SaveMatchRequest request)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync("api/matchresults", request);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public record PlayerStatsResponse(
+        int Wins, int Losses, int TotalGames, double WinRate,
+        int BestHpRemaining, int ShortestWin,
+        List<RecentMatchInfo> RecentMatches
+    );
+
+    public record RecentMatchInfo(string OpponentName, bool Won, int Turns, int HpRemaining, DateTime FinishedAt);
+
+    public async Task<PlayerStatsResponse?> GetPlayerStatsAsync(ulong discordId)
+    {
+        try { return await _http.GetFromJsonAsync<PlayerStatsResponse>($"api/matchresults/stats/{discordId}"); }
+        catch { return null; }
+    }
+
+    public record LeaderboardEntry(string Username, ulong DiscordId, int Wins, int Losses, double WinRate);
+
+    public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(int top = 10)
+    {
+        try { return await _http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/matchresults/leaderboard?top={top}") ?? new(); }
+        catch { return new(); }
     }
 }

@@ -23,7 +23,21 @@ namespace HengcordTCG.Shared.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AbilityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AbilityText")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Attack")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CardType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CounterStrike")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
@@ -35,8 +49,21 @@ namespace HengcordTCG.Shared.Migrations
                     b.Property<int?>("ExclusivePackId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<int>("Health")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("LightCost")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxDamage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinDamage")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -46,11 +73,99 @@ namespace HengcordTCG.Shared.Migrations
                     b.Property<int>("Rarity")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Speed")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExclusivePackId");
 
                     b.ToTable("Cards");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.Deck", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommanderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommanderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Decks");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.DeckCard", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DeckId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Slot")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("DeckId");
+
+                    b.ToTable("DeckCards");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.MatchResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("FinishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LoserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Turns")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WinnerHpRemaining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WinnerId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoserId");
+
+                    b.HasIndex("WinnerId");
+
+                    b.ToTable("MatchResults");
                 });
 
             modelBuilder.Entity("HengcordTCG.Shared.Models.PackType", b =>
@@ -187,6 +302,145 @@ namespace HengcordTCG.Shared.Migrations
                     b.ToTable("UserCards");
                 });
 
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChangeDescription")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EditedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<ulong>("EditedBy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WikiPageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WikiPageId");
+
+                    b.ToTable("WikiHistories");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiPage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("WikiPages");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiProposal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<ulong?>("ProcessedBy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("SubmittedBy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WikiPageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WikiPageId");
+
+                    b.ToTable("WikiProposals");
+                });
+
             modelBuilder.Entity("HengcordTCG.Shared.Models.Card", b =>
                 {
                     b.HasOne("HengcordTCG.Shared.Models.PackType", "ExclusivePack")
@@ -194,6 +448,63 @@ namespace HengcordTCG.Shared.Migrations
                         .HasForeignKey("ExclusivePackId");
 
                     b.Navigation("ExclusivePack");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.Deck", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.Card", "Commander")
+                        .WithMany()
+                        .HasForeignKey("CommanderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HengcordTCG.Shared.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Commander");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.DeckCard", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.Card", "Card")
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HengcordTCG.Shared.Models.Deck", "Deck")
+                        .WithMany("DeckCards")
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+
+                    b.Navigation("Deck");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.MatchResult", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.User", "Loser")
+                        .WithMany()
+                        .HasForeignKey("LoserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HengcordTCG.Shared.Models.User", "Winner")
+                        .WithMany()
+                        .HasForeignKey("WinnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Loser");
+
+                    b.Navigation("Winner");
                 });
 
             modelBuilder.Entity("HengcordTCG.Shared.Models.Trade", b =>
@@ -234,6 +545,42 @@ namespace HengcordTCG.Shared.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiHistory", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.WikiPage", "WikiPage")
+                        .WithMany()
+                        .HasForeignKey("WikiPageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WikiPage");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiPage", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.WikiPage", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiProposal", b =>
+                {
+                    b.HasOne("HengcordTCG.Shared.Models.WikiPage", "WikiPage")
+                        .WithMany()
+                        .HasForeignKey("WikiPageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("WikiPage");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.Deck", b =>
+                {
+                    b.Navigation("DeckCards");
+                });
+
             modelBuilder.Entity("HengcordTCG.Shared.Models.PackType", b =>
                 {
                     b.Navigation("ExclusiveCards");
@@ -242,6 +589,11 @@ namespace HengcordTCG.Shared.Migrations
             modelBuilder.Entity("HengcordTCG.Shared.Models.User", b =>
                 {
                     b.Navigation("UserCards");
+                });
+
+            modelBuilder.Entity("HengcordTCG.Shared.Models.WikiPage", b =>
+                {
+                    b.Navigation("Children");
                 });
 #pragma warning restore 612, 618
         }

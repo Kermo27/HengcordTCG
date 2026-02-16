@@ -34,7 +34,7 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
 
         foreach (var card in result.cards)
         {
-            embed.AddField($"{card.Name} ({card.Rarity})", $"ATK: {card.Attack} DEF: {card.Defense}", inline: true);
+            embed.AddField($"{card.Name} ({card.Rarity})", $"ATK: {card.Attack} DEF: {card.Defense} DMG: {card.MinDamage}-{card.MaxDamage}", inline: true);
         }
 
         await RespondAsync(embed: embed.Build());
@@ -147,12 +147,13 @@ public class ShopCommands : InteractionModuleBase<SocketInteractionContext>
             .WithDescription($"**Rarity:** {card.Rarity}\n**Count:** {userCard.Count}\n⏳ Expires: <t:{expirySeconds}:R>")
             .AddField("⚔️ Attack", card.Attack.ToString(), inline: true)
             .AddField("🛡️ Defense", card.Defense.ToString(), inline: true)
+            .AddField("💥 Damage", $"{card.MinDamage}-{card.MaxDamage}", inline: true)
             .WithFooter($"Card {page + 1}/{sortedCollection.Count}")
             .WithColor(GetRarityColor(card.Rarity));
 
-        if (!string.IsNullOrEmpty(card.ImageUrl))
+        if (!string.IsNullOrEmpty(card.ImagePath))
         {
-            embed.WithImageUrl(card.ImageUrl);
+            embed.WithImageUrl($"{_client.BaseUrl}/api/images/{card.ImagePath}");
         }
         
         var components = new ComponentBuilder()

@@ -115,9 +115,9 @@
             </DialogHeader>
             <div class="py-4">
                 <div class="aspect-[3/4] rounded-lg overflow-hidden bg-slate-800 mb-4">
-                    @if (!string.IsNullOrEmpty(SelectedCard.ImageUrl))
+                    @if (!string.IsNullOrEmpty(SelectedCard.ImagePath))
                     {
-                        <img src="@SelectedCard.ImageUrl" alt="@SelectedCard.Name" 
+                        <img src="/api/images/@SelectedCard.ImagePath" alt="@SelectedCard.Name" 
                             class="w-full h-full object-cover" />
                     }
                     else

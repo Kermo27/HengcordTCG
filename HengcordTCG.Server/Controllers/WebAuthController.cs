@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using HengcordTCG.Shared.Data;
 using Microsoft.EntityFrameworkCore;
+using HengcordTCG.Server.Authentication;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -37,7 +38,7 @@ public class WebAuthController : ControllerBase
         });
     }
 
-    [HttpGet("logout")]
+    [HttpGet("api/auth/logout")]
     [AllowAnonymous]
     public async Task<IActionResult> Logout([FromQuery] string? returnUrl = null)
     {
@@ -97,14 +98,26 @@ public class WebAuthController : ControllerBase
     }
 
     [HttpGet("api/auth/me")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
     public IActionResult Me()
     {
+        try
+        {
         var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
         var name = User.Identity?.Name;
         var avatarHash = User.FindFirst("urn:discord:avatar")?.Value;
         var isAdmin = User.HasClaim("is_admin", "true");
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        // Debug: log all claims
+        var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        
+        // Try to get from different claim types
+        if (string.IsNullOrEmpty(userId))
+            userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            userId = User.FindFirst("nameid")?.Value;
+            
         var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "role").Select(c => c.Value).ToList();
 
         // Build full avatar URL from Discord CDN
@@ -132,13 +145,19 @@ public class WebAuthController : ControllerBase
 
         return Ok(new
         {
-            isAuthenticated,
-            name,
-            avatarUrl,
-            isAdmin,
-            userId,
-            roles
+            IsAuthenticated = isAuthenticated,
+            Name = name,
+            AvatarUrl = avatarUrl,
+            IsAdmin = isAdmin,
+            UserId = userId,
+            Roles = roles,
+            DebugClaims = allClaims
         });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+        }
     }
 
     [HttpGet("api/auth/token")]
@@ -168,34 +187,5 @@ public class WebAuthController : ControllerBase
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
             IsAdmin = User.HasClaim("is_admin", "true")
         });
-    }
-
-    [HttpGet("api/auth/discord")]
-    [AllowAnonymous]
-    public IActionResult DiscordLogin([FromQuery] string? returnUrl = null)
-    {
-        var fallback = _config["ClientUrl"] ?? "/";
-        var redirect = string.IsNullOrWhiteSpace(returnUrl) ? fallback : returnUrl;
-
-        var props = new AuthenticationProperties
-        {
-            RedirectUri = "/api/auth/callback?returnUrl=" + Uri.EscapeDataString(redirect)
-        };
-        return Challenge(props, "Discord");
-    }
-
-    [HttpGet("api/auth/debug-admin")]
-    [AllowAnonymous]
-    public async Task<IActionResult> DebugAdmin()
-    {
-        var discordIdStr = Request.Query["discordId"].ToString();
-        if (!string.IsNullOrEmpty(discordIdStr) && ulong.TryParse(discordIdStr, out var discordId))
-        {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
-            return Ok(new { discordId, found = user != null, isAdmin = user?.IsBotAdmin ?? false });
-        }
-        
-        var allUsers = await _db.Users.Select(u => new { u.DiscordId, u.Username, u.IsBotAdmin }).Take(10).ToListAsync();
-        return Ok(new { message = "Provide discordId query param", users = allUsers });
     }
 }

@@ -9,16 +9,13 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Configure HttpClient for API communication
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156";
-var apiKey = builder.Configuration["ApiKey"] ?? throw new InvalidOperationException("ApiKey is required");
 
 builder.Services.AddScoped(sp =>
 {
-    // In Blazor WebAssembly, the browser handles cookies automatically
     var http = new HttpClient
     {
         BaseAddress = new Uri(apiBaseUrl)
     };
-    http.DefaultRequestHeaders.Add("X-API-Key", apiKey);
     return http;
 });
 
@@ -36,6 +33,9 @@ builder.Services.AddScoped<HengcordTCGClient>();
 
 // Register Auth Service
 builder.Services.AddScoped<AuthService>();
+
+// Register Wiki Service
+builder.Services.AddScoped<WikiService>();
 
 // BlazorBlueprint
 builder.Services.AddBlazorBlueprintPrimitives();

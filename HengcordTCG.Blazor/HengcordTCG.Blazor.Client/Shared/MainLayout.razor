@@ -48,6 +48,10 @@
                         <LucideIcon Name="arrow-left-right" Size="18" class="mr-2" />
                         Trades
                     </NavLink>
+                    <NavLink href="/wiki" class="nav-link" ActiveClass="nav-link-active">
+                        <LucideIcon Name="book-open" Size="18" class="mr-2" />
+                        Wiki
+                    </NavLink>
                     <AuthorizeView Roles="Admin">
                         <NavLink href="/admin" class="nav-link text-amber-400" ActiveClass="nav-link-active text-amber-400">
                             <LucideIcon Name="shield" Size="18" class="mr-2" />
@@ -148,6 +152,10 @@
                     <a href="/trades" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/trades")">
                         <LucideIcon Name="arrow-left-right" Size="20" class="mr-3" />
                         Trades
+                    </a>
+                    <a href="/wiki" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/wiki")">
+                        <LucideIcon Name="book-open" Size="20" class="mr-3" />
+                        Wiki
                     </a>
                     <AuthorizeView Roles="Admin">
                         <div class="pt-2 mt-2 border-t border-slate-800">

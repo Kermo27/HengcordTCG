@@ -31,6 +31,32 @@ public class AdminController : ControllerBase
         return Ok(card);
     }
 
+    [HttpPut("update-card/{id}")]
+    public async Task<ActionResult> UpdateCard(int id, [FromBody] Card card)
+    {
+        var existing = await _context.Cards.FindAsync(id);
+        if (existing == null) return NotFound("Card not found");
+
+        existing.Name = card.Name;
+        existing.Attack = card.Attack;
+        existing.Defense = card.Defense;
+        existing.Rarity = card.Rarity;
+        existing.ImagePath = card.ImagePath;
+        existing.ExclusivePackId = card.ExclusivePackId;
+        existing.CardType = card.CardType;
+        existing.LightCost = card.LightCost;
+        existing.Health = card.Health;
+        existing.Speed = card.Speed;
+        existing.MinDamage = card.MinDamage;
+        existing.MaxDamage = card.MaxDamage;
+        existing.CounterStrike = card.CounterStrike;
+        existing.AbilityText = card.AbilityText;
+        existing.AbilityId = card.AbilityId;
+
+        await _context.SaveChangesAsync();
+        return Ok(existing);
+    }
+
     [HttpDelete("remove-card/{name}")]
     public async Task<ActionResult> RemoveCard(string name)
     {
