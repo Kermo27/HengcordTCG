@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
+using HengcordTCG.Shared.DTOs.MatchResults;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -16,13 +17,6 @@ public class MatchResultsController : ControllerBase
     {
         _context = context;
     }
-
-    public record SaveMatchRequest(
-        ulong WinnerDiscordId,
-        ulong LoserDiscordId,
-        int Turns,
-        int WinnerHpRemaining
-    );
 
     [HttpPost]
     public async Task<ActionResult> SaveMatch([FromBody] SaveMatchRequest request)
@@ -47,24 +41,6 @@ public class MatchResultsController : ControllerBase
         return Ok(new { id = result.Id });
     }
 
-    public record PlayerStatsResponse(
-        int Wins,
-        int Losses,
-        int TotalGames,
-        double WinRate,
-        int BestHpRemaining,
-        int ShortestWin,
-        List<RecentMatchInfo> RecentMatches
-    );
-
-    public record RecentMatchInfo(
-        string OpponentName,
-        bool Won,
-        int Turns,
-        int HpRemaining,
-        DateTime FinishedAt
-    );
-
     [HttpGet("stats/{discordId}")]
     [AllowAnonymous]
     public async Task<ActionResult<PlayerStatsResponse>> GetPlayerStats(ulong discordId)
@@ -83,7 +59,6 @@ public class MatchResultsController : ControllerBase
         var totalGames = wins.Count + losses.Count;
         var winRate = totalGames > 0 ? (double)wins.Count / totalGames * 100 : 0;
 
-        // Recent matches (last 10)
         var recentMatches = await _context.MatchResults
             .Where(m => m.WinnerId == user.Id || m.LoserId == user.Id)
             .OrderByDescending(m => m.FinishedAt)
@@ -115,14 +90,6 @@ public class MatchResultsController : ControllerBase
             recentInfo
         ));
     }
-
-    public record LeaderboardEntry(
-        string Username,
-        ulong DiscordId,
-        int Wins,
-        int Losses,
-        double WinRate
-    );
 
     [HttpGet("leaderboard")]
     [AllowAnonymous]

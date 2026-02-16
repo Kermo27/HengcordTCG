@@ -6,6 +6,7 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Services;
 using HengcordTCG.Server.Authentication;
+using HengcordTCG.Shared.DTOs.Trades;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -43,12 +44,6 @@ public class TradesController : ControllerBase
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
     }
-
-    public record CreateTradeRequest(
-        ulong InitiatorId, string InitiatorName,
-        ulong TargetId, string TargetName,
-        string Offer, string Request
-    );
 
     [HttpPost("create")]
     public async Task<ActionResult> CreateTrade([FromBody] CreateTradeRequest req)

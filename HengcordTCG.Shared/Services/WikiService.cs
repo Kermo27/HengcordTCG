@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
-using HengcordTCG.Server.DTOs.Wiki;
+using HengcordTCG.Shared.DTOs.Wiki;
 
-namespace HengcordTCG.Server.Services;
+namespace HengcordTCG.Shared.Services;
 
 public class WikiService
 {

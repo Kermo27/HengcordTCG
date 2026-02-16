@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using HengcordTCG.Server.DTOs.Wiki;
-using HengcordTCG.Server.Services;
+using HengcordTCG.Shared.DTOs.Wiki;
+using HengcordTCG.Shared.Services;
 using System.Security.Claims;
 using HengcordTCG.Server.Authentication;
 

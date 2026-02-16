@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
+using HengcordTCG.Shared.DTOs.Decks;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -32,27 +33,17 @@ public class DecksController : ControllerBase
         return Ok(deck);
     }
 
-    public record SaveDeckRequest(
-        ulong DiscordId,
-        string? Name,
-        int CommanderId,
-        List<int> MainDeckCardIds,
-        List<int> CloserCardIds
-    );
-
     [HttpPost("save")]
     public async Task<ActionResult> SaveDeck([FromBody] SaveDeckRequest request)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == request.DiscordId);
         if (user == null) return NotFound("User not found");
 
-        // Validate commander
         var commander = await _context.Cards.FindAsync(request.CommanderId);
         if (commander == null) return BadRequest("Commander card not found");
         if (commander.CardType != CardType.Commander)
             return BadRequest($"'{commander.Name}' is not a Commander card");
 
-        // Validate main deck (9 units)
         if (request.MainDeckCardIds.Count != 9)
             return BadRequest($"Main deck must have exactly 9 cards (got {request.MainDeckCardIds.Count})");
 
@@ -64,7 +55,6 @@ public class DecksController : ControllerBase
         if (invalidMain.Any())
             return BadRequest($"Main deck cards must be Units. Invalid: {string.Join(", ", invalidMain.Select(c => c.Name))}");
 
-        // Validate closers (3 closers)
         if (request.CloserCardIds.Count != 3)
             return BadRequest($"Closer deck must have exactly 3 cards (got {request.CloserCardIds.Count})");
 
@@ -76,7 +66,6 @@ public class DecksController : ControllerBase
         if (invalidCloser.Any())
             return BadRequest($"Closer deck cards must be Closers. Invalid: {string.Join(", ", invalidCloser.Select(c => c.Name))}");
 
-        // Verify ownership
         var userCards = await _context.UserCards
             .Where(uc => uc.UserId == user.Id)
             .ToListAsync();
@@ -85,7 +74,6 @@ public class DecksController : ControllerBase
         allCardIds.AddRange(request.MainDeckCardIds);
         allCardIds.AddRange(request.CloserCardIds);
 
-        // Count how many of each card is needed
         var needed = allCardIds.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
         foreach (var (cardId, count) in needed)
         {
@@ -97,7 +85,6 @@ public class DecksController : ControllerBase
             }
         }
 
-        // Save deck (upsert)
         var existingDeck = await _context.Decks
             .Include(d => d.DeckCards)
             .FirstOrDefaultAsync(d => d.UserId == user.Id);
