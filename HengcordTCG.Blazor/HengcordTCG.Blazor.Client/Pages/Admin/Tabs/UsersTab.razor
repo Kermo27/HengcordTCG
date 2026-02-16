@@ -1,0 +1,79 @@
+@inject ToastService Toast
+
+<div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold text-slate-100">User Management</h2>
+    <div class="flex gap-2">
+        <div class="relative">
+            <LucideIcon Name="search" Size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Input @bind-Value="SearchQuery" Placeholder="Search users..." class="pl-10 bg-slate-950 border-slate-700 w-64" />
+        </div>
+    </div>
+</div>
+
+<Card class="border-slate-800 bg-slate-900/50">
+    <CardContent class="p-0">
+        <div class="divide-y divide-slate-800">
+            @foreach (var user in FilteredUsers)
+            {
+                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                            @(user.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                        </div>
+                        <div>
+                            <div class="font-medium text-slate-200">@user.Username</div>
+                            <div class="text-sm text-slate-500">ID: @user.DiscordId</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="text-amber-400 font-semibold">@user.Gold.ToString("N0") Gold</div>
+                            @if (user.IsBotAdmin)
+                            {
+                                <Badge Variant="BadgeVariant.Outline" class="border-amber-500 text-amber-400">Admin</Badge>
+                            }
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger>
+                                <Button Size="ButtonSize.Icon" Variant="ButtonVariant.Ghost">
+                                    <LucideIcon Name="more-vertical" Size="16" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem @onclick="() => OnGiveGold.InvokeAsync(user)">
+                                    <LucideIcon Name="coins" Size="16" class="mr-2" />
+                                    Give Gold
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @onclick="() => OnGiveCard.InvokeAsync(user)">
+                                    <LucideIcon Name="image" Size="16" class="mr-2" />
+                                    Give Card
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem @onclick="() => OnToggleAdmin.InvokeAsync(user)" class="@(user.IsBotAdmin ? "text-red-400" : "text-emerald-400")">
+                                    <LucideIcon Name="@(user.IsBotAdmin ? "user-minus" : "user-plus")" Size="16" class="mr-2" />
+                                    @(user.IsBotAdmin ? "Remove Admin" : "Make Admin")
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+            }
+        </div>
+    </CardContent>
+</Card>
+
+@code {
+    [Parameter] public List<UserDetails> Users { get; set; } = new();
+    [Parameter] public EventCallback<UserDetails> OnGiveGold { get; set; }
+    [Parameter] public EventCallback<UserDetails> OnGiveCard { get; set; }
+    [Parameter] public EventCallback<UserDetails> OnToggleAdmin { get; set; }
+
+    private string SearchQuery = "";
+
+    private List<UserDetails> FilteredUsers => string.IsNullOrWhiteSpace(SearchQuery)
+        ? Users
+        : Users.Where(u => 
+            u.Username?.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+            u.DiscordId.ToString().Contains(SearchQuery)
+        ).ToList();
+}

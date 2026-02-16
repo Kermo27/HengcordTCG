@@ -1,0 +1,66 @@
+@inject ToastService Toast
+
+<div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
+    <Button @onclick="OnAddPack" class="bg-emerald-500 hover:bg-emerald-600">
+        <LucideIcon Name="plus" Size="18" class="mr-2" />
+        Add Pack
+    </Button>
+</div>
+
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    @foreach (var pack in Packs)
+    {
+        <Card class="border-slate-800 bg-slate-900/50">
+            <CardHeader>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <CardTitle class="text-slate-100">@pack.Name</CardTitle>
+                        <CardDescription class="text-slate-400">
+                            @(pack.IsAvailable ? "Available" : "Unavailable")
+                        </CardDescription>
+                    </div>
+                    <Badge Variant="BadgeVariant.Outline" 
+                        class="@(pack.IsAvailable ? "border-emerald-500 text-emerald-400" : "border-slate-500 text-slate-400")">
+                        @(pack.IsAvailable ? "Active" : "Inactive")
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Price</span>
+                        <span class="text-amber-400 font-semibold">@pack.Price.ToString("N0") Gold</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Legendary</span>
+                        <span class="text-amber-400">@pack.ChanceLegendary%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Rare</span>
+                        <span class="text-purple-400">@pack.ChanceRare%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Common</span>
+                        <span class="text-slate-400">@pack.ChanceCommon%</span>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter class="flex gap-2">
+                <Button @onclick="() => OnTogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 justify-start border-slate-700">
+                    @(pack.IsAvailable ? "Disable" : "Enable")
+                </Button>
+                <Button @onclick="() => OnEditPack(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
+                    <LucideIcon Name="pencil" Size="16" />
+                </Button>
+            </CardFooter>
+        </Card>
+    }
+</div>
+
+@code {
+    [Parameter] public List<PackType> Packs { get; set; } = new();
+    [Parameter] public EventCallback OnAddPack { get; set; }
+    [Parameter] public EventCallback<PackType> OnTogglePack { get; set; }
+    [Parameter] public EventCallback<PackType> OnEditPack { get; set; }
+}
