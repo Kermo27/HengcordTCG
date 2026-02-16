@@ -10,15 +10,17 @@
 
 <div class="flex h-[calc(100vh-4rem)]">
     <WikiComponents.WikiSidebar 
-        SearchQuery="SearchQuery"
-        SearchResults="SearchResults"
-        FlatPages="FlatPages"
-        OnSearch="OnSearch" />
+        SearchQuery="@SearchQuery"
+        SearchResults="@SearchResults"
+        FlatPages="@FlatPages"
+        OnSearch="@OnSearch" />
 
     <div class="flex-1 overflow-y-auto">
-        <WikiComponents.WikiContent Page="Page" />
+        <WikiComponents.WikiContent Page="@Page" />
     </div>
 </div>
+
+<!-- Debug: @AllPages.Count pages, @FlatPages.Count flat -->
 
 @code {
     [Parameter]
@@ -54,9 +56,9 @@
             AllPages = await WikiService.GetPagesAsync();
             FlatPages = BuildFlatList(AllPages);
         }
-        catch
+        catch (Exception ex)
         {
-            Toast.Error("Failed to load wiki pages");
+            Toast.Error("Failed to load wiki pages: " + ex.Message);
         }
     }
 
