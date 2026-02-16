@@ -22,7 +22,6 @@ public class AuthService
 
     public async Task<UserInfo?> InitializeAsync()
     {
-        // Load token from localStorage on startup
         var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenKey);
         if (!string.IsNullOrEmpty(token))
         {
@@ -30,7 +29,6 @@ public class AuthService
             _http.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            // Fetch user info and update auth state
             var user = await GetCurrentUserAsync();
             if (user != null)
             {
@@ -39,7 +37,6 @@ public class AuthService
             }
             else
             {
-                // Token is invalid, clear it
                 await LogoutAsync();
             }
         }
@@ -48,8 +45,6 @@ public class AuthService
 
     public string GetDiscordLoginUrl()
     {
-        // The Server handles Discord OAuth
-        // Redirect to the server's auth endpoint with return URL back to Blazor
         var serverUrl = _http.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7156";
         var blazorUrl = "https://localhost:5001";
         var returnUrl = Uri.EscapeDataString($"{blazorUrl}/login");
@@ -59,10 +54,8 @@ public class AuthService
     public async Task SetTokenAsync(string token)
     {
         _jwtToken = token;
-        // Add JWT to HttpClient default headers for subsequent requests
         _http.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-        // Persist to localStorage
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenKey, token);
     }
 
@@ -87,13 +80,14 @@ public class AuthService
                 if (padding != 4) payload += new string('=', padding);
                 
                 var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-                // JwtSecurityTokenHandler serializes ClaimTypes.Role as the full URI
-                if (json.Contains("\"role\":\"Admin\"") || json.Contains("\"role\": \"Admin\"")
-                    || json.Contains("claims/role\":\"Admin\"") || json.Contains("claims/role\": \"Admin\"")
-                    || json.Contains("\"is_admin\":\"true\"") || json.Contains("\"is_admin\": \"true\""))
-                {
+                
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                
+                if (root.TryGetProperty("role", out var role) && role.GetString() == "Admin")
                     return true;
-                }
+                if (root.TryGetProperty("is_admin", out var isAdmin) && isAdmin.GetString() == "true")
+                    return true;
             }
         }
         catch { }
@@ -104,21 +98,27 @@ public class AuthService
     {
         try
         {
-            // Simple JWT parsing - split by . and decode payload
             var parts = token.Split('.');
             if (parts.Length >= 2)
             {
                 var payload = parts[1];
-                // Add padding if needed
                 var padding = 4 - payload.Length % 4;
                 if (padding != 4) payload += new string('=', padding);
                 
                 var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-                // Find nameid claim - look for "nameid":"12345"
-                var match = System.Text.RegularExpressions.Regex.Match(json, @"""nameid"""""":\s*""""""""""(\d+)""""""");
-                if (match.Success && ulong.TryParse(match.Groups[1].Value, out var id))
+                
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                
+                if (root.TryGetProperty("sub", out var sub))
                 {
-                    return id;
+                    if (ulong.TryParse(sub.GetString(), out var id))
+                        return id;
+                }
+                if (root.TryGetProperty("nameid", out var nameid))
+                {
+                    if (ulong.TryParse(nameid.GetString(), out var id))
+                        return id;
                 }
             }
         }
@@ -130,7 +130,6 @@ public class AuthService
     {
         try
         {
-            // If we have a JWT token, validate it by calling the API
             if (!string.IsNullOrEmpty(_jwtToken))
             {
                 var response = await _http.GetAsync("api/auth/me");
@@ -139,10 +138,10 @@ public class AuthService
                     var authInfo = await response.Content.ReadFromJsonAsync<AuthInfo>();
                     if (authInfo?.IsAuthenticated == true)
                     {
-                        // Extract user ID from JWT token payload (simple base64 decode)
-                        var userId = ExtractUserIdFromToken(_jwtToken);
+                        var userId = !string.IsNullOrEmpty(authInfo.UserId) && ulong.TryParse(authInfo.UserId, out var parsedId) 
+                            ? parsedId 
+                            : ExtractUserIdFromToken(_jwtToken);
                         
-                        // Fetch user details (including gold) from users API
                         long gold = 0;
                         try
                         {
@@ -156,14 +155,14 @@ public class AuthService
                                 }
                             }
                         }
-                        catch { /* Ignore errors, use defaults */ }
+                        catch { }
                         
                         var user = new UserInfo
                         {
                             Id = userId,
                             Username = authInfo.Name ?? "Unknown",
                             AvatarUrl = authInfo.AvatarUrl,
-                            IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken),
+                            IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken ?? ""),
                             Gold = gold
                         };
                         _authStateProvider.SetAuthenticated(user);
@@ -203,19 +202,16 @@ public class AuthService
                 var authInfo = await response.Content.ReadFromJsonAsync<AuthInfo>();
                 if (authInfo?.IsAuthenticated == true)
                 {
-                    // Use user ID from server response (more reliable than JWT parsing)
                     ulong userId = 0;
                     if (!string.IsNullOrEmpty(authInfo.UserId) && ulong.TryParse(authInfo.UserId, out var parsedId))
                     {
                         userId = parsedId;
                     }
-                    // Fallback to JWT parsing if server doesn't return user ID
                     else if (!string.IsNullOrEmpty(_jwtToken))
                     {
                         userId = ExtractUserIdFromToken(_jwtToken);
                     }
                     
-                    // Fetch user details (including gold) from users API
                     long gold = 0;
                     DateTime? lastDaily = null;
                     try
@@ -231,14 +227,14 @@ public class AuthService
                             }
                         }
                     }
-                    catch { /* Ignore errors, use defaults */ }
+                    catch { }
                     
                     return new UserInfo
                     {
                         Id = userId,
                         Username = authInfo.Name ?? "Unknown",
                         AvatarUrl = authInfo.AvatarUrl,
-                        IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken),
+                        IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken ?? ""),
                         Gold = gold,
                         LastDaily = lastDaily
                     };
@@ -248,6 +244,8 @@ public class AuthService
         catch { }
         return null;
     }
+
+    public UserInfo? GetCurrentUser() => _authStateProvider.GetCurrentUser();
 }
 
 public class UserInfo

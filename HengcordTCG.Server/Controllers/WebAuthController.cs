@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using HengcordTCG.Shared.Data;
 using Microsoft.EntityFrameworkCore;
+using HengcordTCG.Server.Authentication;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -37,7 +38,7 @@ public class WebAuthController : ControllerBase
         });
     }
 
-    [HttpGet("logout")]
+    [HttpGet("api/auth/logout")]
     [AllowAnonymous]
     public async Task<IActionResult> Logout([FromQuery] string? returnUrl = null)
     {
@@ -97,14 +98,26 @@ public class WebAuthController : ControllerBase
     }
 
     [HttpGet("api/auth/me")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
     public IActionResult Me()
     {
+        try
+        {
         var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
         var name = User.Identity?.Name;
         var avatarHash = User.FindFirst("urn:discord:avatar")?.Value;
         var isAdmin = User.HasClaim("is_admin", "true");
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        // Debug: log all claims
+        var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        
+        // Try to get from different claim types
+        if (string.IsNullOrEmpty(userId))
+            userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            userId = User.FindFirst("nameid")?.Value;
+            
         var roles = User.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "role").Select(c => c.Value).ToList();
 
         // Build full avatar URL from Discord CDN
@@ -132,13 +145,19 @@ public class WebAuthController : ControllerBase
 
         return Ok(new
         {
-            isAuthenticated,
-            name,
-            avatarUrl,
-            isAdmin,
-            userId,
-            roles
+            IsAuthenticated = isAuthenticated,
+            Name = name,
+            AvatarUrl = avatarUrl,
+            IsAdmin = isAdmin,
+            UserId = userId,
+            Roles = roles,
+            DebugClaims = allClaims
         });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+        }
     }
 
     [HttpGet("api/auth/token")]
@@ -184,18 +203,37 @@ public class WebAuthController : ControllerBase
         return Challenge(props, "Discord");
     }
 
-    [HttpGet("api/auth/debug-admin")]
+    [HttpGet("api/auth/debug-claims")]
     [AllowAnonymous]
-    public async Task<IActionResult> DebugAdmin()
+    public IActionResult DebugClaims()
     {
-        var discordIdStr = Request.Query["discordId"].ToString();
-        if (!string.IsNullOrEmpty(discordIdStr) && ulong.TryParse(discordIdStr, out var discordId))
+        var claims = User.Claims.Select(c => new { type = c.Type, value = c.Value }).ToList();
+        var nameIdentifier = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var sub = User.FindFirst("sub")?.Value;
+        return Ok(new { claims, nameIdentifier, sub });
+    }
+
+    [HttpGet("api/auth/debug-token")]
+    [AllowAnonymous]
+    public IActionResult DebugToken([FromQuery] string? token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return BadRequest("Token required");
+
+        try
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
-            return Ok(new { discordId, found = user != null, isAdmin = user?.IsBotAdmin ?? false });
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            
+            var claims = jwtToken.Claims.Select(c => new { type = c.Type, value = c.Value }).ToList();
+            var sub = jwtToken.Subject;
+            var nameIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "nameid");
+            
+            return Ok(new { subject = sub, nameId = nameIdClaim?.Value, claims });
         }
-        
-        var allUsers = await _db.Users.Select(u => new { u.DiscordId, u.Username, u.IsBotAdmin }).Take(10).ToListAsync();
-        return Ok(new { message = "Provide discordId query param", users = allUsers });
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }

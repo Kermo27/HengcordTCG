@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -37,6 +38,16 @@ var host = Host.CreateDefaultBuilder(args)
         {
             client.BaseAddress = new Uri(serverUrl);
             client.DefaultRequestHeaders.Add("X-API-Key", botApiKey);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() =>
+        {
+            var handler = new HttpClientHandler();
+            // Bypass SSL certificate validation for localhost (development)
+            if (serverUrl.Contains("localhost"))
+            {
+                handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+            return handler;
         });
 
         // Game system

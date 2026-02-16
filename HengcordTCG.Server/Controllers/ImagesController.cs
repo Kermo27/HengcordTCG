@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
@@ -15,6 +18,7 @@ public class ImagesController : ControllerBase
     }
 
     [HttpGet("{**path}")]
+    [AllowAnonymous]
     public IActionResult GetImage(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -42,6 +46,7 @@ public class ImagesController : ControllerBase
     }
 
     [HttpPost("upload")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
     public async Task<IActionResult> UploadImage(IFormFile file, [FromQuery] string? folder = "cards")
     {

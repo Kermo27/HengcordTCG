@@ -5,12 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Server.Extensions;
+using HengcordTCG.Server.Authentication;
 
 namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
 public class CollectionsController : ControllerBase
 {
     private readonly AppDbContext _context;

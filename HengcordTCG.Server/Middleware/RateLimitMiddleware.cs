@@ -8,8 +8,8 @@ public class RateLimitMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitMiddleware> _logger;
     private static readonly ConcurrentDictionary<string, RateLimitEntry> _requestCounts = new();
-    private const int RequestsPerMinute = 60;
-    private const int RequestsPerHour = 1000;
+    private const int RequestsPerMinute = 120;
+    private const int RequestsPerHour = 5000;
 
     public RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddleware> logger)
     {
@@ -42,7 +42,8 @@ public class RateLimitMiddleware
             {
                 _logger.LogWarning("Rate limit exceeded (hourly) for client {Identifier}", identifier);
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-                context.Response.WriteAsync("Rate limit exceeded. Try again later.");
+                context.Response.ContentType = "application/json";
+                context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again later.\"}");
                 return;
             }
 
@@ -50,7 +51,8 @@ public class RateLimitMiddleware
             {
                 _logger.LogWarning("Rate limit exceeded (per minute) for client {Identifier}", identifier);
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-                context.Response.WriteAsync("Rate limit exceeded. Try again in a minute.");
+                context.Response.ContentType = "application/json";
+                context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again in a minute.\"}");
                 return;
             }
 

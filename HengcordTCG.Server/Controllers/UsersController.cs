@@ -6,12 +6,12 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Services;
 using HengcordTCG.Server.Extensions;
+using HengcordTCG.Server.Authentication;
 
 namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -24,12 +24,14 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<User>>> GetUsers()
     {
         return await _context.Users.ToListAsync();
     }
 
     [HttpGet("{discordId}")]
+    [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
     public async Task<ActionResult<User>> GetUserByDiscordId(ulong discordId)
     {
         try

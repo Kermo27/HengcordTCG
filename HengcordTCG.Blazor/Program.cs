@@ -2,6 +2,7 @@ using HengcordTCG.Blazor;
 using HengcordTCG.Blazor.Client.Services;
 using HengcordTCG.Shared.Clients;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using BlazorBlueprint.Primitives.Extensions;
 using BlazorBlueprint.Components.Toast;
 
@@ -17,7 +18,12 @@ builder.Services.AddBlazorBlueprintPrimitives();
 builder.Services.AddScoped<ToastService>();
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7156";
-var apiKey = builder.Configuration["ApiKey"] ?? "dev-key";
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 builder.Services.AddScoped(sp =>
 {
@@ -31,7 +37,6 @@ builder.Services.AddScoped(sp =>
     {
         BaseAddress = new Uri(apiBaseUrl)
     };
-    http.DefaultRequestHeaders.Add("X-API-Key", apiKey);
     return http;
 });
 

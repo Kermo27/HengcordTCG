@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 
@@ -65,6 +66,7 @@ public class MatchResultsController : ControllerBase
     );
 
     [HttpGet("stats/{discordId}")]
+    [AllowAnonymous]
     public async Task<ActionResult<PlayerStatsResponse>> GetPlayerStats(ulong discordId)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
@@ -123,6 +125,7 @@ public class MatchResultsController : ControllerBase
     );
 
     [HttpGet("leaderboard")]
+    [AllowAnonymous]
     public async Task<ActionResult<List<LeaderboardEntry>>> GetLeaderboard([FromQuery] int top = 10)
     {
         var allMatches = await _context.MatchResults

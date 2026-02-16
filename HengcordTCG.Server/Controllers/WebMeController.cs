@@ -1,6 +1,7 @@
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Services;
 using HengcordTCG.Server.Extensions;
+using HengcordTCG.Server.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,7 @@ namespace HengcordTCG.Server.Controllers;
 
 [ApiController]
 [Route("me")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
 public class WebMeController : ControllerBase
 {
     private readonly AppDbContext _db;
