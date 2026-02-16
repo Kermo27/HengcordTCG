@@ -1,0 +1,40 @@
+@inject ToastService Toast
+
+@if (IsLoading)
+{
+    <div class="space-y-4">
+        @for (int i = 0; i < 3; i++)
+        {
+            <Skeleton class="h-32 rounded-lg" />
+        }
+    </div>
+}
+else if (!Trades.Any())
+{
+    <EmptyState 
+        Icon="package"
+        Title="No Trades Yet"
+        Description="You haven't created any trades yet."
+        ActionText="Create Your First Trade"
+        OnAction="OnCreateTrade" />
+}
+else
+{
+    <div class="space-y-4">
+        @foreach (var trade in Trades)
+        {
+            <TradeCard 
+                Trade="trade" 
+                CurrentUserId="CurrentUserId"
+                OnCancel="() => OnCancelTrade.InvokeAsync(trade)" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public List<Trade> Trades { get; set; } = new();
+    [Parameter] public ulong CurrentUserId { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnCreateTrade { get; set; }
+    [Parameter] public EventCallback<Trade> OnCancelTrade { get; set; }
+}

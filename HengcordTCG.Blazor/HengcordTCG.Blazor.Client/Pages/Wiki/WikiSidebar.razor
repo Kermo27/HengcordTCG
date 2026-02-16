@@ -1,0 +1,56 @@
+<div class="p-4 border-b border-slate-800">
+    <div class="flex items-center gap-2 mb-3">
+        <LucideIcon Name="book-open" Size="20" class="text-amber-400" />
+        <h2 class="text-lg font-semibold text-slate-100">Wiki</h2>
+    </div>
+    
+    <div class="relative">
+        <InputText @bind-Value="SearchQuery" 
+                   @oninput="OnSearch"
+                   placeholder="Szukaj..."
+                   class="w-full bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" />
+    </div>
+</div>
+
+@if (SearchResults.Count > 0)
+{
+    <div class="p-2">
+        <p class="text-xs text-slate-500 mb-2 px-2">Wyniki wyszukiwania:</p>
+        @foreach (var result in SearchResults)
+        {
+            <a href="/wiki/@result.Slug" 
+               class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                @result.Title
+            </a>
+        }
+    </div>
+}
+else if (!string.IsNullOrEmpty(SearchQuery))
+{
+    <div class="p-4 text-slate-400 text-sm">
+        Brak wyników dla "@SearchQuery"
+    </div>
+}
+else
+{
+    <div class="p-2">
+        @foreach (var pageItem in FlatPages)
+        {
+            <div>
+                @((MarkupString)GetPaddingHtml(pageItem.Depth))<a href="/wiki/@pageItem.Slug" 
+                   class="text-slate-300 hover:text-white">
+                    @pageItem.Title
+                </a>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string SearchQuery { get; set; } = "";
+    [Parameter] public List<WikiPageItem> SearchResults { get; set; } = new();
+    [Parameter] public List<WikiPageItem> FlatPages { get; set; } = new();
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private string GetPaddingHtml(int depth) => depth > 0 ? new string('&nbsp;', depth * 4) : "";
+}

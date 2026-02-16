@@ -1,0 +1,51 @@
+@using Markdig
+
+@if (Page == null)
+{
+    <div class="flex items-center justify-center h-full">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
+    </div>
+}
+else
+{
+    <div class="max-w-4xl mx-auto p-8">
+        @if (!string.IsNullOrEmpty(Page.ParentTitle))
+        {
+            <nav class="flex items-center gap-2 text-sm text-slate-400 mb-4">
+                <a href="/wiki/@Page.ParentSlug" class="hover:text-white">@Page.ParentTitle</a>
+                <LucideIcon Name="chevron-right" Size="14" />
+                <span class="text-slate-200">@Page.Title</span>
+            </nav>
+        }
+
+        <h1 class="text-4xl font-bold text-slate-100 mb-6">@Page.Title</h1>
+
+        <div class="prose prose-invert max-w-none">
+            @((MarkupString)RenderMarkdown(Page.Content))
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-800 text-sm text-slate-500">
+            Ostatnia aktualizacja: @Page.UpdatedAt.ToString("dd MMMM yyyy HH:mm")
+        </div>
+    </div>
+}
+else
+{
+    <div class="flex items-center justify-center h-full">
+        <div class="text-center">
+            <LucideIcon Name="file-question" Size="48" class="mx-auto mb-4 text-slate-600" />
+            <p class="text-slate-400">Strona nie została znaleziona</p>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public WikiPageDetail? Page { get; set; }
+
+    private string RenderMarkdown(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        var pipeline = new MarkdownPipelineBuilder().Build();
+        return Markdown.ToHtml(content, pipeline);
+    }
+}

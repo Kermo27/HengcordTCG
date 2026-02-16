@@ -1,7 +1,6 @@
 @page "/wiki"
 @page "/wiki/{Slug}"
 @using HengcordTCG.Blazor.Client.DTOs
-@using Markdig
 @inject WikiService WikiService
 @inject NavigationManager Navigation
 @inject AuthService AuthService
@@ -10,296 +9,94 @@
 <PageTitle>Wiki - HengcordTCG</PageTitle>
 
 <div class="flex h-[calc(100vh-4rem)]">
-    <!-- Sidebar -->
-    <div class="w-64 border-r border-slate-800 bg-slate-900/50 overflow-y-auto">
-        <div class="p-4 border-b border-slate-800">
-            <div class="flex items-center gap-2 mb-3">
-                <LucideIcon Name="book-open" Size="20" class="text-amber-400" />
-                <h2 class="text-lg font-semibold text-slate-100">Wiki</h2>
-            </div>
-            
-            <div class="relative">
-                <InputText @bind-Value="SearchQuery" 
-                           @oninput="OnSearch"
-                           placeholder="Szukaj..."
-                           class="w-full bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" />
-            </div>
-        </div>
+    <Wiki.WikiSidebar 
+        SearchQuery="SearchQuery"
+        SearchResults="SearchResults"
+        FlatPages="FlatPages"
+        OnSearch="OnSearch" />
 
-        @if (SearchResults.Count > 0)
-        {
-            <div class="p-2">
-                <p class="text-xs text-slate-500 mb-2 px-2">Wyniki wyszukiwania:</p>
-                @foreach (var result in SearchResults)
-                {
-                    <a href="/wiki/@result.Slug" 
-                       class="block px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                        @result.Title
-                    </a>
-                }
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(SearchQuery))
-        {
-            <div class="p-4 text-slate-400 text-sm">
-                Brak wyników dla "@SearchQuery"
-            </div>
-        }
-        else
-        {
-            <div class="p-2">
-                @foreach (var pageItem in FlatPages)
-                {
-                    <div>
-                        @((MarkupString)GetPaddingHtml(pageItem.Depth))<a href="/wiki/@pageItem.Slug" 
-                           class="text-slate-300 hover:text-white">
-                            @pageItem.Title
-                        </a>
-                    </div>
-                }
-            </div>
-        }
-    </div>
-
-    <!-- Content -->
     <div class="flex-1 overflow-y-auto">
-        @if (IsLoading)
-        {
-            <div class="flex items-center justify-center h-full">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400"></div>
-            </div>
-        }
-        else if (Page != null)
-        {
-            <div class="max-w-4xl mx-auto p-8">
-                <!-- Breadcrumb -->
-                @if (!string.IsNullOrEmpty(Page.ParentTitle))
-                {
-                    <nav class="flex items-center gap-2 text-sm text-slate-400 mb-4">
-                        <a href="/wiki/@Page.ParentSlug" class="hover:text-white">@Page.ParentTitle</a>
-                        <LucideIcon Name="chevron-right" Size="14" />
-                        <span class="text-slate-200">@Page.Title</span>
-                    </nav>
-                }
-
-                <!-- Header -->
-                <div class="flex items-start justify-between mb-6">
-                    <div>
-                        <h1 class="text-3xl font-bold text-slate-100">@Page.Title</h1>
-                        <p class="text-sm text-slate-400 mt-1">
-                            Ostatnia aktualizacja: @Page.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
-                        </p>
-                    </div>
-                    
-                    <div class="flex gap-2">
-                    @if (isAuthenticated)
-                    {
-                        <Button @onclick="() => ShowProposalModal = true" Variant="ButtonVariant.Outline" size="ButtonSize.Small">
-                            <LucideIcon Name="lightbulb" Size="16" class="mr-1" />
-                            Zaproponuj zmianę
-                        </Button>
-                    }
-                </div>
-                </div>
-
-                <!-- Content -->
-                <div class="prose prose-invert max-w-none">
-                    @((MarkupString)RenderMarkdown(Page.Content))
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="flex flex-col items-center justify-center h-full text-slate-400">
-                <LucideIcon Name="file-question" Size="48" class="mb-4" />
-                <p class="text-lg">Strona nie została znaleziona</p>
-                <Button @onclick="GoToWikiHome" class="mt-4">
-                    Wróć do strony głównej wiki
-                </Button>
-            </div>
-        }
+        <Wiki.WikiContent Page="Page" />
     </div>
 </div>
-
-@if (ShowProposalModal)
-{
-    <Dialog @bind-Open="ShowProposalModal">
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle class="text-slate-100">Zaproponuj zmianę</DialogTitle>
-            </DialogHeader>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Typ propozycji</label>
-                    <Select @bind-Value="ProposalType" class="w-full">
-                        <SelectItem Value="ProposalType.Edit">Edycja istniejącej strony</SelectItem>
-                        <SelectItem Value="ProposalType.NewPage">Nowa podstrona</SelectItem>
-                        <SelectItem Value="ProposalType.Delete">Usunięcie strony</SelectItem>
-                    </Select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Tytuł</label>
-                    <InputText @bind-Value="ProposalTitle" class="w-full" />
-                </div>
-
-                @if (ProposalType != ProposalType.Delete)
-                {
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Treść (Markdown)</label>
-                        <textarea @bind="ProposalContent" 
-                                  rows="10" 
-                                  class="w-full bg-slate-800 border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm" 
-                                  placeholder="Treść w formacie Markdown..."></textarea>
-                    </div>
-                }
-
-                <div class="flex justify-end gap-2 pt-4">
-                    <Button @onclick="() => ShowProposalModal = false" Variant="ButtonVariant.Ghost">
-                        Anuluj
-                    </Button>
-                    <Button @onclick="SubmitProposal">
-                        Wyślij propozycję
-                    </Button>
-                </div>
-            </div>
-        </DialogContent>
-    </Dialog>
-}
 
 @code {
     [Parameter]
     public string? Slug { get; set; }
 
-    private List<WikiPageTreeItem> Tree = new();
-    private List<FlatPage> FlatPages = new();
-    private WikiPageDetail? Page;
-    private bool IsLoading = true;
-    private string SearchQuery = "";
-    private List<WikiPageItem> SearchResults = new();
-    private bool isAuthenticated;
-    private UserInfo? currentUser;
+    private WikiPageDetail? Page { get; set; }
+    private string SearchQuery { get; set; } = "";
+    private List<WikiPageItem> SearchResults { get; set; } = new();
+    private List<WikiPageItem> FlatPages { get; set; } = new();
+    private List<WikiPageItem> AllPages { get; set; } = new();
 
-    private bool ShowProposalModal;
-    private ProposalType ProposalType = ProposalType.Edit;
-    private string ProposalTitle = "";
-    private string ProposalContent = "";
-
-    private void GoToWikiHome()
+    protected override async Task OnParametersSetAsync()
     {
-        Navigation.NavigateTo("/wiki");
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadTree();
-        isAuthenticated = await AuthService.CheckAuthStatusAsync();
-        currentUser = AuthService.GetCurrentUser();
-        
-        if (!string.IsNullOrEmpty(Slug))
-        {
-            await LoadPage();
-        }
-        IsLoading = false;
-    }
-
-    private async Task LoadTree()
-    {
-        Tree = await WikiService.GetTreeAsync();
-        FlatPages = new();
-        BuildFlatList(Tree, 0);
-    }
-
-    private void BuildFlatList(List<WikiPageTreeItem> items, int depth)
-    {
-        foreach (var item in items)
-        {
-            FlatPages.Add(new FlatPage { Title = item.Title, Slug = item.Slug, Depth = depth });
-            if (item.Children.Count > 0)
-            {
-                BuildFlatList(item.Children, depth + 1);
-            }
-        }
-    }
-
-    private class FlatPage
-    {
-        public string Title { get; set; } = "";
-        public string Slug { get; set; } = "";
-        public int Depth { get; set; }
-    }
-
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .Build();
-
-    private string GetPadding(int depth)
-    {
-        return new string(' ', depth * 4);
-    }
-
-    private string GetPaddingHtml(int depth)
-    {
-        return new string(' ', depth * 4);
-    }
-
-    private string RenderMarkdown(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return "";
-        return Markdown.ToHtml(content, MarkdownPipeline);
+        await LoadPage();
+        await LoadPages();
     }
 
     private async Task LoadPage()
     {
-        if (string.IsNullOrEmpty(Slug)) return;
-        Page = await WikiService.GetPageAsync(Slug);
-        if (Page != null)
+        if (string.IsNullOrEmpty(Slug))
         {
-            ProposalTitle = Page.Title;
-            ProposalContent = Page.Content;
+            Page = null;
+            return;
+        }
+
+        Page = await WikiService.GetPageAsync(Slug);
+    }
+
+    private async Task LoadPages()
+    {
+        try
+        {
+            AllPages = await WikiService.GetPagesAsync();
+            FlatPages = BuildFlatList(AllPages);
+        }
+        catch
+        {
+            Toast.Error("Failed to load wiki pages");
         }
     }
 
     private async Task OnSearch(ChangeEventArgs e)
     {
         SearchQuery = e.Value?.ToString() ?? "";
-        if (string.IsNullOrEmpty(SearchQuery))
+        
+        if (string.IsNullOrWhiteSpace(SearchQuery))
         {
             SearchResults = new();
             return;
         }
+
         SearchResults = await WikiService.SearchAsync(SearchQuery);
     }
 
-    private async Task SubmitProposal()
+    private List<WikiPageItem> BuildFlatList(List<WikiPageItem> pages)
     {
-        if (string.IsNullOrWhiteSpace(ProposalTitle))
+        var result = new List<WikiPageItem>();
+        var rootPages = pages.Where(p => p.ParentId == null).OrderBy(p => p.Order);
+        
+        foreach (var page in rootPages)
         {
-            Toast.Error("Tytuł jest wymagany");
-            return;
+            AddPageWithChildren(page, 0, result, pages);
         }
-
-        try
-        {
-            var request = new CreateProposalRequest
-            {
-                WikiPageId = ProposalType == ProposalType.Edit ? Page?.Id : null,
-                Type = ProposalType,
-                Title = ProposalTitle,
-                Content = ProposalContent,
-                ParentId = ProposalType == ProposalType.NewPage ? Page?.Id : null,
-                Order = 0
-            };
-            
-            await WikiService.CreateProposalAsync(request);
-            Toast.Success("Propozycja została wysłana do zatwierdzenia");
-            ShowProposalModal = false;
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Błąd: {ex.Message}");
-        }
+        
+        return result;
     }
 
-    public UserInfo? GetCurrentUser() => currentUser;
+    private void AddPageWithChildren(WikiPageItem page, int depth, List<WikiPageItem> result, List<WikiPageItem> allPages)
+    {
+        result.Add(page);
+        
+        var children = allPages
+            .Where(p => p.ParentId == page.Id)
+            .OrderBy(p => p.Order);
+            
+        foreach (var child in children)
+        {
+            AddPageWithChildren(child, depth + 1, result, allPages);
+        }
+    }
 }
