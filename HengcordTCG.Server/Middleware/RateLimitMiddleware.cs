@@ -43,7 +43,7 @@ public class RateLimitMiddleware
                 _logger.LogWarning("Rate limit exceeded (hourly) for client {Identifier}", identifier);
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
                 context.Response.ContentType = "application/json";
-                context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again later.\"}");
+                await context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again later.\"}");
                 return;
             }
 
@@ -52,7 +52,7 @@ public class RateLimitMiddleware
                 _logger.LogWarning("Rate limit exceeded (per minute) for client {Identifier}", identifier);
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
                 context.Response.ContentType = "application/json";
-                context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again in a minute.\"}");
+                await context.Response.WriteAsync("{\"message\":\"Rate limit exceeded. Try again in a minute.\"}");
                 return;
             }
 

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Server.Authentication;
-using System.Security.Claims;
 
 namespace HengcordTCG.Server.Controllers;
 
