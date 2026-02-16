@@ -1,0 +1,43 @@
+<div class="w-full border-b border-slate-700">
+    <nav class="flex space-x-1">
+        @foreach (var item in Items)
+        {
+            <button 
+                class="@GetTabClass(item.Value)"
+                @onclick="() => SelectItem(item.Value)">
+                @if (!string.IsNullOrEmpty(item.Icon))
+                {
+                    <i class="fa fa-@item.Icon mr-2"></i>
+                }
+                @item.Text
+            </button>
+        }
+    </nav>
+</div>
+
+@code {
+    [Parameter] public List<TabItem> Items { get; set; } = new();
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private async Task SelectItem(string value)
+    {
+        Value = value;
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    private string GetTabClass(string value)
+    {
+        var isActive = Value == value;
+        return isActive 
+            ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium"
+            : "px-4 py-2 text-slate-400 hover:text-slate-200 transition-colors";
+    }
+
+    public class TabItem
+    {
+        public string Text { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string? Icon { get; set; }
+    }
+}

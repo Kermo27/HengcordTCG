@@ -1,0 +1,51 @@
+<button 
+    type="@Type"
+    disabled="@Disabled"
+    class="inline-flex items-center justify-center rounded-lg font-medium transition-colors @GetVariantClasses() @GetSizeClasses() @GetDisabledClass()"
+    @onclick="OnClick">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <i class="fa @GetIconClass()"></i>
+    }
+    @if (ChildContent != null)
+    {
+        @ChildContent
+    }
+    else if (!string.IsNullOrEmpty(Text))
+    {
+        @Text
+    }
+</button>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string Variant { get; set; } = "primary";
+    [Parameter] public string Size { get; set; } = "md";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+
+    private string GetVariantClasses() => Variant switch
+    {
+        "primary" => "bg-amber-500 hover:bg-amber-600 text-white",
+        "secondary" => "bg-slate-700 hover:bg-slate-600 text-white",
+        "danger" => "bg-red-600 hover:bg-red-700 text-white",
+        "success" => "bg-emerald-600 hover:bg-emerald-700 text-white",
+        "ghost" => "bg-transparent hover:bg-slate-800 text-slate-300",
+        "outline" => "border border-slate-600 hover:bg-slate-800 text-slate-300",
+        _ => "bg-amber-500 hover:bg-amber-600 text-white"
+    };
+
+    private string GetSizeClasses() => Size switch
+    {
+        "sm" => "px-3 py-1.5 text-sm",
+        "lg" => "px-6 py-3 text-lg",
+        _ => "px-4 py-2"
+    };
+
+    private string GetDisabledClass() => Disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer";
+
+    private string GetIconClass() => $"fa-{Icon} mr-2";
+}
