@@ -1,3 +1,5 @@
+using HengcordTCG.Shared.Models;
+
 namespace HengcordTCG.Shared.DTOs.Wiki;
 
 public class WikiPageDto
