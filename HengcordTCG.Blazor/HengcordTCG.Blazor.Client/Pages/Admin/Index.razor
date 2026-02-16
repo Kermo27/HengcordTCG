@@ -1,5 +1,6 @@
 @page "/admin"
 @using ModelCard = HengcordTCG.Shared.Models.Card
+@using HengcordTCG.Shared.Models
 @inject HengcordTCGClient Client
 
 <PageTitle>Admin Panel - HengcordTCG</PageTitle>
@@ -19,7 +20,7 @@
         <TabsList class="bg-slate-900 border border-slate-800">
             <TabsTrigger Value="cards" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="images" Size="16" class="mr-2" />
-                Cards
+                Cards (@_allCards.Count)
             </TabsTrigger>
             <TabsTrigger Value="packs" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="package" Size="16" class="mr-2" />
@@ -51,74 +52,46 @@
                     Add Card
                 </Button>
             </div>
-            <div class="flex gap-2">
-                <Button @onclick="() => _cardFilter = null"
-                    Variant="@(_cardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
-                    class="@(_cardFilter == null ? "bg-slate-700" : "border-slate-700")">
-                    All (@_allCards.Count)
-                </Button>
-                @foreach (var type in Enum.GetValues<CardType>())
-                {
-                    var t = type;
-                    <Button @onclick="() => _cardFilter = t"
-                        Variant="@(_cardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)"
-                        class="@(_cardFilter == t ? GetCardTypeColor(t) : "border-slate-700")">
-                        @GetCardTypeIcon(t) @t (@_allCards.Count(c => c.CardType == t))
-                    </Button>
-                }
-            </div>
-            <AdminTabs.CardsTab 
-                AllCards="_allCards" 
-                CardFilter="_cardFilter" 
-                IsLoading="_isLoading"
-                OnEditCard="OpenEditCard"
-                OnDeleteCard="DeleteCard"
-                OnAddCard="OpenAddCard" />
+            
+            @if (_isLoading)
+            {
+                <div>Loading...</div>
+            }
+            else
+            {
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    @foreach (var card in _allCards)
+                    {
+                        <CardComponent Card="card" />
+                    }
+                </div>
+            }
         </TabsContent>
 
         <TabsContent Value="packs" class="mt-6 space-y-6">
-            <AdminTabs.PacksTab 
-                Packs="_allPacks"
-                OnAddPack="() => _showAddPack = true"
-                OnTogglePack="TogglePack"
-                OnEditPack="EditPack" />
+            <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
+            <p class="text-slate-400">@_allPacks.Count packs loaded</p>
         </TabsContent>
 
         <TabsContent Value="users" class="mt-6 space-y-6">
-            <AdminTabs.UsersTab 
-                Users="_users"
-                OnGiveGold="OpenGiveGold"
-                OnGiveCard="OpenGiveCard"
-                OnToggleAdmin="ToggleAdmin" />
+            <h2 class="text-xl font-semibold text-slate-100">Users</h2>
+            <p class="text-slate-400">@_users.Count users loaded</p>
         </TabsContent>
 
         <TabsContent Value="battles" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Battle Leaderboard</h2>
-            <AdminTabs.BattlesTab Leaderboard="_leaderboard" />
+            <p class="text-slate-400">@_leaderboard.Count entries</p>
         </TabsContent>
 
         <TabsContent Value="tools" class="mt-6 space-y-6">
-            <AdminTabs.ToolsTab 
-                CardCount="_allCards.Count"
-                PackCount="_allPacks.Count"
-                UserCount="_users.Count"
-                AdminCount="_users.Count(u => u.IsBotAdmin)"
-                OnFixInventory="FixInventory" />
+            <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
         </TabsContent>
 
         <TabsContent Value="wiki" class="mt-6 space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-slate-100">Wiki Management</h2>
-                <Button @onclick="OpenAddWikiPage" class="bg-emerald-500 hover:bg-emerald-600">
-                    <LucideIcon Name="plus" Size="18" class="mr-2" />
-                    Add Page
-                </Button>
-            </div>
+            <h2 class="text-xl font-semibold text-slate-100">Wiki Management</h2>
         </TabsContent>
     </Tabs>
 </div>
-
-<!-- Debug: @_allCards.Count cards, @_allPacks.Count packs, @_users.Count users -->
 
 @code {
     private string _activeTab = "cards";
@@ -126,9 +99,7 @@
     private List<PackType> _allPacks = new();
     private List<User> _users = new();
     private List<HengcordTCGClient.LeaderboardEntry> _leaderboard = new();
-    private CardType? _cardFilter;
     private bool _isLoading = true;
-    private bool _showAddPack;
 
     protected override async Task OnInitializedAsync()
     {
@@ -154,34 +125,5 @@
         }
     }
 
-    private string GetCardTypeColor(CardType type) => type switch
-    {
-        CardType.Commander => "bg-amber-500",
-        CardType.Unit => "bg-blue-500",
-        CardType.Closer => "bg-red-500",
-        _ => "bg-slate-500"
-    };
-
-    private string GetCardTypeIcon(CardType type) => type switch
-    {
-        CardType.Commander => "👑",
-        CardType.Unit => "⚔️",
-        CardType.Closer => "🎯",
-        _ => ""
-    };
-
     private void OpenAddCard() { }
-    private void OpenEditCard(ModelCard card) { }
-    private Task DeleteCard(ModelCard card) => Task.CompletedTask;
-
-    private void EditPack(PackType pack) { }
-    private Task TogglePack(PackType pack) => Task.CompletedTask;
-
-    private void OpenGiveGold(User user) { }
-    private void OpenGiveCard(User user) { }
-    private Task ToggleAdmin(User user) => Task.CompletedTask;
-
-    private Task FixInventory() => Task.CompletedTask;
-
-    private void OpenAddWikiPage() { }
 }
