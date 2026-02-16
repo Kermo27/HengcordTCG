@@ -1,11 +1,12 @@
 @page "/admin"
 @using ModelCard = HengcordTCG.Shared.Models.Card
+@using LeaderboardEntry = HengcordTCG.Shared.DTOs.MatchResults.LeaderboardEntry
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
 @inject ToastService Toast
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 @inject WikiService WikiService
 
 <PageTitle>Admin Panel - HengcordTCG</PageTitle>
@@ -21,7 +22,7 @@
         </div>
     </div>
 
-    <Tabs @bind-Value="ActiveTab" class="w-full">
+    <Tabs @bind-Value="_activeTab" class="w-full">
         <TabsList class="bg-slate-900 border border-slate-800">
             <TabsTrigger Value="cards" class="data-[state=active]:bg-slate-800">
                 <LucideIcon Name="images" Size="16" class="mr-2" />
@@ -58,25 +59,25 @@
                 </Button>
             </div>
             <div class="flex gap-2">
-                <Button @onclick="() => CardFilter = null"
-                    Variant="@(CardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
-                    class="@(CardFilter == null ? "bg-slate-700" : "border-slate-700")">
-                    All (@AllCards.Count)
+                <Button @onclick="() => _cardFilter = null"
+                    Variant="@(_cardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
+                    class="@(_cardFilter == null ? "bg-slate-700" : "border-slate-700")">
+                    All (@_allCards.Count)
                 </Button>
                 @foreach (var type in Enum.GetValues<CardType>())
                 {
                     var t = type;
-                    <Button @onclick="() => CardFilter = t"
-                        Variant="@(CardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)"
-                        class="@(CardFilter == t ? GetCardTypeColor(t) : "border-slate-700")">
-                        @GetCardTypeIcon(t) @t (@AllCards.Count(c => c.CardType == t))
+                    <Button @onclick="() => _cardFilter = t"
+                        Variant="@(_cardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)"
+                        class="@(_cardFilter == t ? GetCardTypeColor(t) : "border-slate-700")">
+                        @GetCardTypeIcon(t) @t (@_allCards.Count(c => c.CardType == t))
                     </Button>
                 }
             </div>
             <AdminTabs.CardsTab 
-                AllCards="AllCards" 
-                CardFilter="CardFilter" 
-                IsLoading="IsLoading"
+                AllCards="_allCards" 
+                CardFilter="_cardFilter" 
+                IsLoading="_isLoading"
                 OnEditCard="OpenEditCard"
                 OnDeleteCard="DeleteCard"
                 OnAddCard="OpenAddCard" />
@@ -84,15 +85,15 @@
 
         <TabsContent Value="packs" class="mt-6 space-y-6">
             <AdminTabs.PacksTab 
-                Packs="AllPacks"
-                OnAddPack="() => ShowAddPack = true"
+                Packs="_allPacks"
+                OnAddPack="() => _showAddPack = true"
                 OnTogglePack="TogglePack"
                 OnEditPack="EditPack" />
         </TabsContent>
 
         <TabsContent Value="users" class="mt-6 space-y-6">
             <AdminTabs.UsersTab 
-                Users="Users"
+                Users="_users"
                 OnGiveGold="OpenGiveGold"
                 OnGiveCard="OpenGiveCard"
                 OnToggleAdmin="ToggleAdmin" />
@@ -100,15 +101,15 @@
 
         <TabsContent Value="battles" class="mt-6 space-y-6">
             <h2 class="text-xl font-semibold text-slate-100">Battle Leaderboard</h2>
-            <AdminTabs.BattlesTab Leaderboard="Leaderboard" />
+            <AdminTabs.BattlesTab Leaderboard="_leaderboard" />
         </TabsContent>
 
         <TabsContent Value="tools" class="mt-6 space-y-6">
             <AdminTabs.ToolsTab 
-                CardCount="AllCards.Count"
-                PackCount="AllPacks.Count"
-                UserCount="Users.Count"
-                AdminCount="Users.Count(u => u.IsBotAdmin)"
+                CardCount="_allCards.Count"
+                PackCount="_allPacks.Count"
+                UserCount="_users.Count"
+                AdminCount="_users.Count(u => u.IsBotAdmin)"
                 OnFixInventory="FixInventory" />
         </TabsContent>
 
@@ -127,13 +128,75 @@
 </div>
 
 @code {
-    private string ActiveTab = "cards";
-    private List<ModelCard> AllCards = new();
-    private List<PackType> AllPacks = new();
-    private List<UserDetails> Users = new();
-    private List<LeaderboardEntry> Leaderboard = new();
-    private CardType? CardFilter;
-    private bool IsLoading = true;
-    private bool ShowAddPack;
-    // ... remaining fields
+    private string _activeTab = "cards";
+    private List<ModelCard> _allCards = new();
+    private List<PackType> _allPacks = new();
+    private List<UserDetails> _users = new();
+    private List<LeaderboardEntry> _leaderboard = new();
+    private CardType? _cardFilter;
+    private bool _isLoading = true;
+    private bool _showAddPack;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var cardsTask = Client.GetCardsAsync();
+            var packsTask = Client.GetPacksAsync();
+            var usersTask = Client.GetAllUsersAsync();
+            var leaderboardTask = Client.GetLeaderboardAsync(10);
+
+            await Task.WhenAll(cardsTask, packsTask, usersTask, leaderboardTask);
+
+            _allCards = await cardsTask;
+            _allPacks = await packsTask;
+            _users = await usersTask;
+            _leaderboard = await leaderboardTask;
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"Failed to load data: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetCardTypeColor(CardType type) => type switch
+    {
+        CardType.Commander => "bg-amber-500",
+        CardType.Unit => "bg-blue-500",
+        CardType.Closer => "bg-red-500",
+        _ => "bg-slate-500"
+    };
+
+    private string GetCardTypeIcon(CardType type) => type switch
+    {
+        CardType.Commander => "👑",
+        CardType.Unit => "⚔️",
+        CardType.Closer => "🎯",
+        _ => ""
+    };
+
+    private void OpenAddCard() { }
+    private void OpenEditCard(ModelCard card) { }
+    private async Task DeleteCard(ModelCard card) { }
+
+    private void EditPack(PackType pack) { }
+    private async Task TogglePack(PackType pack) { }
+
+    private void OpenGiveGold(UserDetails user) { }
+    private void OpenGiveCard(UserDetails user) { }
+    private async Task ToggleAdmin(UserDetails user) { }
+
+    private async Task FixInventory() { }
+
+    private void OpenAddWikiPage() { }
 }
