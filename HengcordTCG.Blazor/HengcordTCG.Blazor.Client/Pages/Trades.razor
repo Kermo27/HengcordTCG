@@ -24,7 +24,7 @@
         </TabsList>
 
         <TabsContent Value="active" class="mt-6">
-            <Trades.ActiveTradesTab 
+            <TradeComponents.ActiveTradesTab 
                 Trades="ActiveTrades"
                 CurrentUserId="CurrentUserId"
                 IsLoading="IsLoading"
@@ -34,7 +34,7 @@
         </TabsContent>
 
         <TabsContent Value="my" class="mt-6">
-            <Trades.MyTradesTab 
+            <TradeComponents.MyTradesTab 
                 Trades="MyTrades"
                 CurrentUserId="CurrentUserId"
                 IsLoading="IsLoading"
@@ -51,7 +51,7 @@
     </Tabs>
 </div>
 
-<Trades.CreateTradeDialog 
+<TradeComponents.CreateTradeDialog 
     IsOpen="ShowCreateTrade"
     AvailableGold="CurrentGold"
     CurrentUserId="CurrentUserId"

@@ -9,14 +9,14 @@
 <PageTitle>Wiki - HengcordTCG</PageTitle>
 
 <div class="flex h-[calc(100vh-4rem)]">
-    <Wiki.WikiSidebar 
+    <WikiComponents.WikiSidebar 
         SearchQuery="SearchQuery"
         SearchResults="SearchResults"
         FlatPages="FlatPages"
         OnSearch="OnSearch" />
 
     <div class="flex-1 overflow-y-auto">
-        <Wiki.WikiContent Page="Page" />
+        <WikiComponents.WikiContent Page="Page" />
     </div>
 </div>
 
