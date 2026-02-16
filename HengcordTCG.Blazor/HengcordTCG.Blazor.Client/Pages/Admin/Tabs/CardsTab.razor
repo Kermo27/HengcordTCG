@@ -1,16 +1,13 @@
 @using ModelCard = HengcordTCG.Shared.Models.Card
 
-@inject HengcordTCGClient Client
-@inject AuthService AuthService
-@inject ToastService Toast
-
 @if (IsLoading)
 {
-    <div>Loading...</div>
-}
-else if (FilteredCards.Count == 0)
-{
-    <div>No cards - FilteredCards: @FilteredCards.Count, AllCards: @AllCards.Count</div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        @for (int i = 0; i < 8; i++)
+        {
+            <Skeleton class="aspect-[3/4] rounded-lg" />
+        }
+    </div>
 }
 else
 {
