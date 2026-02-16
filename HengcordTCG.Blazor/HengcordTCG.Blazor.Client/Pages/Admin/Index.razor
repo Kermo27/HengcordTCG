@@ -59,8 +59,24 @@
             }
             else
             {
+                <div class="flex gap-2 mb-4">
+                    <Button @onclick="() => _cardFilter = null"
+                        Variant="@(_cardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
+                        class="@(_cardFilter == null ? "bg-slate-700" : "border-slate-700")">
+                        All (@_allCards.Count)
+                    </Button>
+                    @foreach (var type in Enum.GetValues<CardType>())
+                    {
+                        var t = type;
+                        <Button @onclick="() => _cardFilter = t"
+                            Variant="@(_cardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)">
+                            @t (@_allCards.Count(c => c.CardType == t))
+                        </Button>
+                    }
+                </div>
+
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    @foreach (var card in _allCards)
+                    @foreach (var card in GetFilteredCards())
                     {
                         <CardComponent Card="card" />
                     }
@@ -100,6 +116,11 @@
     private List<User> _users = new();
     private List<HengcordTCGClient.LeaderboardEntry> _leaderboard = new();
     private bool _isLoading = true;
+    private CardType? _cardFilter;
+
+    private List<ModelCard> GetFilteredCards() => _cardFilter.HasValue 
+        ? _allCards.Where(c => c.CardType == _cardFilter.Value).ToList() 
+        : _allCards;
 
     protected override async Task OnInitializedAsync()
     {
