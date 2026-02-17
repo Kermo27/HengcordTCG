@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using HengcordTCG.Shared.Models;
+using HengcordTCG.Shared.DTOs.Wiki;
 
 namespace HengcordTCG.Shared.Clients;
 
@@ -70,6 +71,16 @@ public class HengcordTCGClient
         {
             var content = new StringContent("", Encoding.UTF8, "application/json");
             var response = await _http.PostAsync($"api/users/{discordId}/daily?username={Uri.EscapeDataString(username)}", content);
+            return await response.Content.ReadFromJsonAsync<DailyResponse>() ?? new DailyResponse(false, 0, null);
+        }
+        catch { return new DailyResponse(false, 0, null); }
+    }
+
+    public async Task<DailyResponse> ClaimDailyWebAsync()
+    {
+        try
+        {
+            var response = await _http.PostAsync("me/daily", null);
             return await response.Content.ReadFromJsonAsync<DailyResponse>() ?? new DailyResponse(false, 0, null);
         }
         catch { return new DailyResponse(false, 0, null); }
@@ -227,6 +238,18 @@ public class HengcordTCGClient
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> UpdatePackAsync(PackType pack)
+    {
+        var response = await _http.PutAsJsonAsync($"api/admin/update-pack/{pack.Id}", pack);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RemovePackAsync(int packId)
+    {
+        var response = await _http.DeleteAsync($"api/admin/remove-pack/{packId}");
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> GiveCardAsync(ulong discordId, string cardName, int amount)
     {
         var response = await _http.PostAsync($"api/admin/give-card?discordId={discordId}&cardName={Uri.EscapeDataString(cardName)}&amount={amount}", null);
@@ -313,5 +336,30 @@ public class HengcordTCGClient
     {
         try { return await _http.GetFromJsonAsync<List<LeaderboardEntry>>($"api/matchresults/leaderboard?top={top}") ?? new(); }
         catch { return new(); }
+    }
+
+    // --- Wiki Proposals ---
+    public async Task<List<WikiProposalListDto>> GetWikiProposalsAsync()
+    {
+        try { return await _http.GetFromJsonAsync<List<WikiProposalListDto>>("api/wiki/proposals") ?? new(); }
+        catch { return new(); }
+    }
+
+    public async Task<bool> ApproveWikiProposalAsync(int proposalId)
+    {
+        var response = await _http.PostAsync($"api/wiki/proposals/{proposalId}/approve", null);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RejectWikiProposalAsync(int proposalId, string reason)
+    {
+        var response = await _http.PostAsJsonAsync($"api/wiki/proposals/{proposalId}/reject", new { Reason = reason });
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> CreateWikiPageAsync(string title, string slug, string content)
+    {
+        var response = await _http.PostAsJsonAsync("api/wiki", new { Title = title, Slug = slug, Content = content });
+        return response.IsSuccessStatusCode;
     }
 }

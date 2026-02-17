@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using HengcordTCG.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Server.Authentication;
+using HengcordTCG.Shared.Services;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -18,11 +19,13 @@ public class WebAuthController : ControllerBase
 {
     private readonly IConfiguration _config;
     private readonly AppDbContext _db;
+    private readonly UserService _userService;
 
-    public WebAuthController(IConfiguration config, AppDbContext db)
+    public WebAuthController(IConfiguration config, AppDbContext db, UserService userService)
     {
         _config = config;
         _db = db;
+        _userService = userService;
     }
 
     [HttpGet("login")]
@@ -60,11 +63,28 @@ public class WebAuthController : ControllerBase
         var claims = User.Claims.ToList();
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
 
-        // Check if user is admin from database and add claim
+        // Add Discord username as Name claim
+        var discordUsername = User.FindFirst("urn:discord:username")?.Value;
+        if (string.IsNullOrEmpty(discordUsername))
+        {
+            discordUsername = User.FindFirst("urn:discord:global_name")?.Value;
+        }
+        if (string.IsNullOrEmpty(discordUsername))
+        {
+            discordUsername = User.FindFirst(ClaimTypes.Name)?.Value;
+        }
+        if (!string.IsNullOrEmpty(discordUsername))
+        {
+            claims.Add(new Claim(ClaimTypes.Name, discordUsername));
+        }
+
+// Check if user is admin from database and add claim
         var discordIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!string.IsNullOrEmpty(discordIdStr) && ulong.TryParse(discordIdStr, out var discordId))
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            // Get or create user in database
+            var user = await _userService.GetOrCreateUserAsync(discordId, discordUsername ?? $"User_{discordId}");
+            
             if (user?.IsBotAdmin == true)
             {
                 claims.Add(new Claim("is_admin", "true"));
@@ -99,15 +119,32 @@ public class WebAuthController : ControllerBase
 
     [HttpGet("api/auth/me")]
     [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{ApiKeyAuthenticationOptions.DefaultScheme}")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        try
-        {
+        try {
         var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-        var name = User.Identity?.Name;
+        var name = User.FindFirst("urn:discord:username")?.Value;
+        if (string.IsNullOrEmpty(name))
+        {
+            name = User.FindFirst("urn:discord:global_name")?.Value;
+        }
+        if (string.IsNullOrEmpty(name))
+        {
+            name = User.Identity?.Name;
+        }
         var avatarHash = User.FindFirst("urn:discord:avatar")?.Value;
         var isAdmin = User.HasClaim("is_admin", "true");
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        // If name is null/empty, get username from database
+        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(userId) && ulong.TryParse(userId, out var discordId))
+        {
+            var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            if (dbUser != null)
+            {
+                name = dbUser.Username;
+            }
+        }
         
         // Debug: log all claims
         var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();

@@ -1,20 +1,18 @@
 <div class="flex flex-col items-center justify-center py-16 text-center">
     <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-        <LucideIcon Name="@Icon" Size="40" class="text-slate-600" />
+        <i class="fa fa-box-open text-slate-600 text-4xl"></i>
     </div>
     <h3 class="text-xl font-semibold text-slate-300 mb-2">@Title</h3>
     <p class="text-slate-500 max-w-md mb-6">@Description</p>
     @if (!string.IsNullOrEmpty(ActionText) && OnAction.HasDelegate)
     {
-        <Button @onclick="OnAction" class="bg-gradient-to-r from-amber-500 to-orange-500">
-            <LucideIcon Name="plus" Size="18" class="mr-2" />
-            @ActionText
-        </Button>
+        <button @onclick="OnAction" class="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 rounded-lg text-white font-medium">
+            <i class="fa fa-plus mr-2"></i> @ActionText
+        </button>
     }
 </div>
 
 @code {
-    [Parameter] public string Icon { get; set; } = "package-open";
     [Parameter] public string Title { get; set; } = "No items found";
     [Parameter] public string Description { get; set; } = "";
     [Parameter] public string? ActionText { get; set; }

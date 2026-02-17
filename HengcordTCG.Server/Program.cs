@@ -7,6 +7,7 @@ using HengcordTCG.Server.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -137,20 +138,45 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("identify");
     options.SaveTokens = true;
     
-    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+    options.ClaimActions.MapJsonKey("urn:discord:username", "username");
+    options.ClaimActions.MapJsonKey("urn:discord:global_name", "global_name");
     options.ClaimActions.MapJsonKey("urn:discord:avatar", "avatar");
     options.ClaimActions.MapJsonKey("urn:discord:discriminator", "discriminator");
     
     options.Events.OnCreatingTicket = async context =>
     {
-        // Ensure user is synced to database
         var discordId = context.Identity?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var username = context.Identity?.FindFirst(ClaimTypes.Name)?.Value;
         
-        if (!string.IsNullOrEmpty(discordId) && !string.IsNullOrEmpty(username))
+        var accessToken = context.Properties?.Items.FirstOrDefault(x => x.Key == ".Token.access_token").Value;
+        
+        if (!string.IsNullOrEmpty(discordId) && !string.IsNullOrEmpty(accessToken))
         {
-            // This will be handled by the next request to sync the user
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                var response = await httpClient.GetAsync("https://discord.com/api/users/@me");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+                    var root = json.RootElement;
+                    
+                    if (root.TryGetProperty("global_name", out var globalName) && globalName.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    {
+                        context.Identity?.AddClaim(new Claim("urn:discord:global_name", globalName.GetString()!));
+                    }
+                    if (root.TryGetProperty("username", out var username) && username.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    {
+                        context.Identity?.AddClaim(new Claim("urn:discord:username", username.GetString()!));
+                    }
+                    if (root.TryGetProperty("avatar", out var avatar) && avatar.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    {
+                        context.Identity?.AddClaim(new Claim("urn:discord:avatar", avatar.GetString()!));
+                    }
+                }
+            }
+            catch { }
         }
     };
 })

@@ -1,4 +1,5 @@
 @implements IDisposable
+@inherits LayoutComponentBase
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -38,6 +39,9 @@
                 <NavLink href="/shop" class="@NavLinkClass("/shop")">
                     <i class="fa fa-shopping-bag mr-2"></i> Shop
                 </NavLink>
+                <NavLink href="/deck" class="@NavLinkClass("/deck")">
+                    <i class="fa fa-layer-group mr-2"></i> Deck
+                </NavLink>
                 <NavLink href="/trades" class="@NavLinkClass("/trades")">
                     <i class="fa fa-arrow-right-arrow-left mr-2"></i> Trades
                 </NavLink>
@@ -45,8 +49,8 @@
                     <i class="fa fa-book-open mr-2"></i> Wiki
                 </NavLink>
                 <AuthorizeView Roles="Admin">
-                    <NavLink href="/admin" class="@NavLinkClass("/admin") text-amber-400">
-                        <i class="fa fa-shield mr-2"></i> Admin
+                    <NavLink href="/admin" class="@NavLinkClass("/admin")" Match="NavLinkMatch.All">
+                        <i class="fa fa-shield mr-2 text-amber-400"></i> <span class="text-amber-400">Admin</span>
                     </NavLink>
                 </AuthorizeView>
             </nav>
@@ -68,9 +72,16 @@
                     <Authorized>
                         <div class="relative">
                             <button @onclick="ToggleUserMenu" class="flex items-center gap-2">
-                                <div class="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
-                                    @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                                </div>
+                                @if (!string.IsNullOrEmpty(AvatarUrl))
+                                {
+                                    <img src="@AvatarUrl" alt="@Username" class="h-9 w-9 rounded-full object-cover" />
+                                }
+                                else
+                                {
+                                    <div class="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
+                                        @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                    </div>
+                                }
                             </button>
                             @if (ShowUserMenu)
                             {
@@ -82,6 +93,9 @@
                                     <div class="p-1">
                                         <a href="/collection" @onclick="() => ShowUserMenu = false" class="flex items-center px-3 py-2 text-slate-300 hover:bg-slate-800 rounded">
                                             <i class="fa fa-layer-group mr-2 w-4"></i> My Collection
+                                        </a>
+                                        <a href="/deck" @onclick="() => ShowUserMenu = false" class="flex items-center px-3 py-2 text-slate-300 hover:bg-slate-800 rounded">
+                                            <i class="fa fa-layer-group mr-2 w-4"></i> Deck Builder
                                         </a>
                                         <button @onclick="Logout" class="w-full flex items-center px-3 py-2 text-red-400 hover:bg-slate-800 rounded">
                                             <i class="fa fa-sign-out-alt mr-2 w-4"></i> Log out
@@ -109,23 +123,27 @@
     <!-- Mobile Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur">
         <div class="flex items-center justify-around h-16">
-            <a href="/" class="bottom-nav-item @BottomNavClass("/")">
+            <a href="/" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/")">
                 <i class="fa fa-home text-xl"></i>
                 <span class="text-xs">Home</span>
             </a>
-            <a href="/collection" class="bottom-nav-item @BottomNavClass("/collection")">
+            <a href="/collection" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/collection")">
                 <i class="fa fa-layer-group text-xl"></i>
                 <span class="text-xs">Collection</span>
             </a>
-            <a href="/shop" class="bottom-nav-item @BottomNavClass("/shop")">
+            <a href="/shop" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/shop")">
                 <i class="fa fa-shopping-bag text-xl"></i>
                 <span class="text-xs">Shop</span>
             </a>
-            <a href="/trades" class="bottom-nav-item @BottomNavClass("/trades")">
+            <a href="/deck" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/deck")">
+                <i class="fa fa-layer-group text-xl"></i>
+                <span class="text-xs">Deck</span>
+            </a>
+            <a href="/trades" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/trades")">
                 <i class="fa fa-arrow-right-arrow-left text-xl"></i>
                 <span class="text-xs">Trades</span>
             </a>
-            <a href="/gallery" class="bottom-nav-item @BottomNavClass("/gallery")">
+            <a href="/gallery" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/gallery")">
                 <i class="fa fa-images text-xl"></i>
                 <span class="text-xs">Gallery</span>
             </a>
@@ -133,23 +151,9 @@
     </nav>
 </div>
 
-<style>
-    .nav-link {
-        @apply px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors;
-    }
-    .nav-link-active {
-        @apply text-amber-400 bg-slate-800;
-    }
-    .bottom-nav-item {
-        @apply flex flex-col items-center justify-center w-16 text-slate-500 transition-colors;
-    }
-    .bottom-nav-item-active {
-        @apply text-amber-400;
-    }
-</style>
-
 @code {
     private string? Username { get; set; }
+    private string? AvatarUrl { get; set; }
     private long Gold { get; set; }
     private bool ShowUserMenu { get; set; }
     private string CurrentPath => new Uri(Navigation.Uri).AbsolutePath;
@@ -163,6 +167,7 @@
             {
                 Username = user.Username;
                 Gold = user.Gold;
+                AvatarUrl = user.AvatarUrl;
                 StateHasChanged();
             }
         }
@@ -184,15 +189,27 @@
         Navigation.NavigateTo("/");
     }
 
-    private string NavLinkClass(string path) => 
-        CurrentPath == path || CurrentPath.StartsWith(path) 
-            ? "nav-link-active" 
-            : "nav-link";
+    private string NavLinkClass(string path)
+    {
+        if (path == "/")
+            return CurrentPath == "/" 
+                ? "px-3 py-2 rounded-lg text-amber-400 bg-slate-800" 
+                : "px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors";
+        
+        return CurrentPath == path || CurrentPath.StartsWith(path + "/") 
+            ? "px-3 py-2 rounded-lg text-amber-400 bg-slate-800" 
+            : "px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors";
+    }
 
-    private string BottomNavClass(string path) => 
-        CurrentPath == path || CurrentPath.StartsWith(path) 
-            ? "bottom-nav-item-active" 
-            : "";
+    private string BottomNavClass(string path)
+    {
+        if (path == "/")
+            return CurrentPath == "/" ? "text-amber-400" : "text-slate-500";
+        
+        return CurrentPath == path || CurrentPath.StartsWith(path + "/") 
+            ? "text-amber-400" 
+            : "text-slate-500";
+    }
 
     public void Dispose()
     {

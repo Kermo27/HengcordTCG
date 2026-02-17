@@ -9,17 +9,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <link href="css/app.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@6/css/all.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
     <HeadOutlet />
 </head>
-<body class="dark-theme">
+<body>
     <Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 
-    <div id="blazor-error-ui">
-        An error has occurred. This application may no longer respond until reloaded.
-        <a href="">Reload</a>
+    <div id="blazor-error-ui" class="bg-slate-900 text-white p-4 fixed bottom-0 left-0 right-0 hidden">
+        An error has occurred. <a href="/" class="underline">Reload</a>
     </div>
 
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        window.insertAtCursor = function(textarea, beforeText, afterText) {
+            if (!textarea) return { value: '' };
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            const selectedText = value.substring(start, end);
+            
+            const newText = value.substring(0, start) + beforeText + selectedText + (afterText || '') + value.substring(end);
+            textarea.value = newText;
+            
+            const newCursorPos = start + beforeText.length + selectedText.length + (afterText ? afterText.length : 0);
+            textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+            textarea.focus();
+            
+            return { value: newText };
+        };
+    </script>
 </body>
 </html>

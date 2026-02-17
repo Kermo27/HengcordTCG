@@ -12,24 +12,24 @@
         else
         {
             <div class="w-full h-full bg-gradient-to-br @GetRarityGradient() flex items-center justify-center">
-                <LucideIcon Name="image" Size="48" class="text-white/30" />
+                <i class="fa fa-image text-white/30 text-4xl"></i>
             </div>
         }
         
         <!-- Rarity Badge -->
         <div class="absolute top-2 right-2">
-            <Badge Variant="BadgeVariant.Outline" Class="@(GetRarityBadgeClass() + " text-xs font-bold")">
+            <span class="@GetRarityBadgeClass() text-xs font-bold px-2 py-1 rounded">
                 @Card.Rarity
-            </Badge>
+            </span>
         </div>
 
         <!-- Count Badge -->
         @if (Count > 1)
         {
             <div class="absolute top-2 left-2">
-                <Badge Class="bg-slate-900/80 text-white border-0">
+                <span class="bg-slate-900/80 text-white border-0 px-2 py-1 rounded text-xs">
                     x@Count
-                </Badge>
+                </span>
             </div>
         }
 
@@ -38,11 +38,11 @@
             <h3 class="font-semibold text-white text-sm truncate">@Card.Name</h3>
             <div class="flex items-center gap-3 mt-1 text-xs">
                 <span class="flex items-center text-red-400">
-                    <LucideIcon Name="sword" Size="12" class="mr-1" />
+                    <i class="fa fa-khanda mr-1"></i>
                     @Card.Attack
                 </span>
                 <span class="flex items-center text-blue-400">
-                    <LucideIcon Name="shield" Size="12" class="mr-1" />
+                    <i class="fa fa-shield-halved mr-1"></i>
                     @Card.Defense
                 </span>
             </div>
@@ -84,8 +84,8 @@
 
     private string GetRarityBadgeClass() => Card.Rarity switch
     {
-        Rarity.Legendary => "border-amber-500 text-amber-400 bg-amber-950/80",
-        Rarity.Rare => "border-purple-500 text-purple-400 bg-purple-950/80",
-        _ => "border-slate-500 text-slate-400 bg-slate-950/80"
+        Rarity.Legendary => "border border-amber-500 text-amber-400 bg-amber-950/80",
+        Rarity.Rare => "border border-purple-500 text-purple-400 bg-purple-950/80",
+        _ => "border border-slate-500 text-slate-400 bg-slate-950/80"
     };
 }

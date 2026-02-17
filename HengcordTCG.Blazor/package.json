@@ -1,0 +1,22 @@
+{
+  "name": "hengcordtcg.blazor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "css": "npx @tailwindcss/cli -i ./wwwroot/css/app-input.css -o ./wwwroot/css/app.css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/vite": "^4.1.18",
+    "tailwindcss": "^4.1.18"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0"
+  }
+}

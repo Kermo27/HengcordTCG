@@ -199,4 +199,32 @@ public class AdminController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new { packName, isAvailable = pack.IsAvailable });
     }
+
+    [HttpPut("update-pack/{id}")]
+    public async Task<ActionResult> UpdatePack(int id, [FromBody] PackType packUpdate)
+    {
+        var pack = await _context.PackTypes.FindAsync(id);
+        if (pack == null) return NotFound("Paczka nie istnieje.");
+
+        pack.Name = packUpdate.Name;
+        pack.Price = packUpdate.Price;
+        pack.ChanceCommon = packUpdate.ChanceCommon;
+        pack.ChanceRare = packUpdate.ChanceRare;
+        pack.ChanceLegendary = packUpdate.ChanceLegendary;
+        pack.IsAvailable = packUpdate.IsAvailable;
+
+        await _context.SaveChangesAsync();
+        return Ok(pack);
+    }
+
+    [HttpDelete("remove-pack/{id}")]
+    public async Task<ActionResult> RemovePack(int id)
+    {
+        var pack = await _context.PackTypes.FindAsync(id);
+        if (pack == null) return NotFound("Paczka nie istnieje.");
+        
+        _context.PackTypes.Remove(pack);
+        await _context.SaveChangesAsync();
+        return Ok();
+    }
 }
