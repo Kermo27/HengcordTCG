@@ -19,7 +19,7 @@
 [Rr]elease/
 
 # Data and SQLite
-data/
+/data/
 *.db
 *.db-shm
 *.db-wal
