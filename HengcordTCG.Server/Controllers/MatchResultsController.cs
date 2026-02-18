@@ -19,6 +19,7 @@ public class MatchResultsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult> SaveMatch([FromBody] SaveMatchRequest request)
     {
         var winner = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == request.WinnerDiscordId);

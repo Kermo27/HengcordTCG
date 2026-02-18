@@ -4,6 +4,7 @@ using HengcordTCG.Shared.Services;
 using Scalar.AspNetCore;
 using HengcordTCG.Server.Middleware;
 using HengcordTCG.Server.Authentication;
+using HengcordTCG.Server.Validators;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddValidatorsFromAssemblyContaining<CardValidator>();
 builder.Services.AddOpenApi();
 
 // Database Configuration - support both relative and absolute paths
@@ -110,19 +113,25 @@ builder.Services.AddAuthentication(options =>
         NameClaimType = ClaimTypes.NameIdentifier
     };
     
-    // Handle authentication failures gracefully
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            // Read token from cookie if not present in Authorization header
+            if (string.IsNullOrEmpty(context.Token))
+            {
+                context.Token = context.Request.Cookies["auth_token"];
+            }
+            return Task.CompletedTask;
+        },
         OnAuthenticationFailed = context =>
         {
-            // Log the error but don't throw
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogWarning(context.Exception, "JWT authentication failed");
             return Task.CompletedTask;
         },
         OnChallenge = context =>
         {
-            // Return 401 instead of 500 when token is missing/invalid
             context.HandleResponse();
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.ContentType = "application/json";

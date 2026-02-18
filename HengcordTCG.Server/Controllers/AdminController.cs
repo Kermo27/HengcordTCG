@@ -24,7 +24,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> AddCard(Card card)
     {
         var existing = await _context.Cards.FirstOrDefaultAsync(c => c.Name == card.Name);
-        if (existing != null) return BadRequest("Karta już istnieje.");
+        if (existing != null) return BadRequest("Card already exists.");
         
         _context.Cards.Add(card);
         await _context.SaveChangesAsync();
@@ -61,7 +61,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> RemoveCard(string name)
     {
         var card = await _context.Cards.FirstOrDefaultAsync(c => c.Name == name);
-        if (card == null) return NotFound("Nie znaleziono karty.");
+        if (card == null) return NotFound("Card not found.");
         
         _context.Cards.Remove(card);
         await _context.SaveChangesAsync();
@@ -112,7 +112,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> SetCardPack([FromQuery] string cardName, [FromQuery] string packName)
     {
         var card = await _context.Cards.FirstOrDefaultAsync(c => c.Name == cardName);
-        if (card == null) return NotFound("Karta nie istnieje.");
+        if (card == null) return NotFound("Card does not exist.");
 
         if (packName.ToLower() == "null")
         {
@@ -121,7 +121,7 @@ public class AdminController : ControllerBase
         else
         {
             var pack = await _context.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-            if (pack == null) return NotFound("Paczka nie istnieje.");
+            if (pack == null) return NotFound("Pack does not exist.");
             card.ExclusivePackId = pack.Id;
         }
 
@@ -193,7 +193,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> TogglePack(string packName)
     {
         var pack = await _context.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-        if (pack == null) return NotFound("Paczka nie istnieje.");
+        if (pack == null) return NotFound("Pack not found.");
         
         pack.IsAvailable = !pack.IsAvailable;
         await _context.SaveChangesAsync();
@@ -204,7 +204,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> UpdatePack(int id, [FromBody] PackType packUpdate)
     {
         var pack = await _context.PackTypes.FindAsync(id);
-        if (pack == null) return NotFound("Paczka nie istnieje.");
+        if (pack == null) return NotFound("Pack not found.");
 
         pack.Name = packUpdate.Name;
         pack.Price = packUpdate.Price;
@@ -221,7 +221,7 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> RemovePack(int id)
     {
         var pack = await _context.PackTypes.FindAsync(id);
-        if (pack == null) return NotFound("Paczka nie istnieje.");
+        if (pack == null) return NotFound("Pack not found.");
         
         _context.PackTypes.Remove(pack);
         await _context.SaveChangesAsync();

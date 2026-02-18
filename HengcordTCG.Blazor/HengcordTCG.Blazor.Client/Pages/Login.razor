@@ -37,28 +37,11 @@
     protected override async Task OnInitializedAsync()
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        var query = uri.Query;
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         
-        if (!string.IsNullOrEmpty(query) && query.Contains("token="))
-        {
-            var tokenStart = query.IndexOf("token=") + 6;
-            var token = query.Substring(tokenStart).Split('&')[0];
-            token = Uri.UnescapeDataString(token);
-
-            if (!string.IsNullOrEmpty(token))
-            {
-                await AuthService.SetTokenAsync(token);
-                var user = await AuthService.GetCurrentUserAsync();
-                if (user != null)
-                {
-                    Navigation.NavigateTo("/");
-                    return;
-                }
-            }
-        }
-
-        var jwtToken = AuthService.GetToken();
-        if (!string.IsNullOrEmpty(jwtToken))
+        // Handle new cookie-based auth (success=true in URL)
+        var success = query["success"];
+        if (success == "true")
         {
             var user = await AuthService.GetCurrentUserAsync();
             if (user != null)
@@ -66,6 +49,27 @@
                 Navigation.NavigateTo("/");
                 return;
             }
+        }
+        
+        // Handle legacy token-based auth (for backward compatibility)
+        var token = query["token"];
+        if (!string.IsNullOrEmpty(token))
+        {
+            await AuthService.SetTokenAsync(token);
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+
+        // Check if already authenticated
+        var existingUser = await AuthService.GetCurrentUserAsync();
+        if (existingUser != null)
+        {
+            Navigation.NavigateTo("/");
+            return;
         }
 
         IsProcessing = false;
