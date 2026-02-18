@@ -17,8 +17,25 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
-    - name: Build
+    - name: Build Server
       run: dotnet publish HengcordTCG.Server -c Release -o publish --no-self-contained
+    
+    - name: Build Blazor
+      run: dotnet publish HengcordTCG.Blazor/HengcordTCG.Blazor.Client -c Release -o blazor-publish
+    
+    - name: Generate Blazor appsettings
+      run: |
+        cat > blazor-publish/wwwroot/appsettings.Production.json << 'EOF'
+        {
+          "ApiBaseUrl": "https://api.leiheng.org",
+          "ApiKey": "${{ secrets.WEB_API_KEY }}"
+        }
+        EOF
+    
+    - name: Copy Blazor to Server wwwroot
+      run: |
+        rm -rf publish/wwwroot
+        cp -r blazor-publish/wwwroot publish/
     
     - name: Deploy to VPS
       uses: appleboy/scp-action@v0.1.4
@@ -30,10 +47,44 @@ jobs:
         target: "/var/hengcordtcg"
         strip_components: 1
     
-    - name: Restart service
+    - name: Configure and restart service
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
-        script: systemctl restart hengcordtcg
+        script: |
+          # Create data directory
+          mkdir -p /var/hengcordtcg/data
+          
+          # Generate systemd service with secrets
+          cat > /etc/systemd/system/hengcordtcg.service << 'EOF'
+          [Unit]
+          Description=HengcordTCG Server
+          After=network.target
+
+          [Service]
+          Type=exec
+          WorkingDirectory=/var/hengcordtcg
+          ExecStart=/root/.dotnet/dotnet HengcordTCG.Server.dll
+          Restart=always
+          RestartSec=5
+          Environment=ASPNETCORE_URLS=http://localhost:5000
+          Environment=ASPNETCORE_ENVIRONMENT=Production
+          Environment=HENGCORD_DATA_DIR=/var/hengcordtcg/data
+          Environment=HENGCORD_Discord__ClientId=${{ secrets.DISCORD_CLIENT_ID }}
+          Environment=HENGCORD_Discord__ClientSecret=${{ secrets.DISCORD_CLIENT_SECRET }}
+          Environment=HENGCORD_Jwt__Secret=${{ secrets.JWT_SECRET }}
+          Environment=HENGCORD_ApiKeys__0=${{ secrets.BOT_API_KEY }}
+          Environment=HENGCORD_ApiKeys__1=${{ secrets.WEB_API_KEY }}
+          Environment=HENGCORD_ClientUrl=https://tcg.leiheng.org
+          Environment=HENGCORD_Cors__AllowedOrigins__0=https://tcg.leiheng.org
+          Environment=HENGCORD_Cors__AllowedOrigins__1=https://api.leiheng.org
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Reload and restart
+          systemctl daemon-reload
+          systemctl restart hengcordtcg

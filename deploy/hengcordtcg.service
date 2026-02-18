@@ -10,6 +10,7 @@ Restart=always
 RestartSec=5
 Environment=ASPNETCORE_URLS=http://localhost:5000
 Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=HENGCORD_DATA_DIR=/var/hengcordtcg/data
 
 [Install]
 WantedBy=multi-user.target
