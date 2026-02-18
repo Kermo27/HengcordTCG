@@ -348,7 +348,7 @@
                         <input type="number" @bind="_cardForm.Health" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-400 text-sm mb-1">Light Cost</label>
                         <input type="number" @bind="_cardForm.LightCost" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
@@ -357,10 +357,18 @@
                         <label class="block text-slate-400 text-sm mb-1">Speed</label>
                         <input type="number" @bind="_cardForm.Speed" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
                     </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Image Path</label>
-                        <input @bind="_cardForm.ImagePath" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="cards/name.png" />
-                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Card Image</label>
+                    <InputFile OnChange="HandleCardImageUpload" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
+                    @if (!string.IsNullOrEmpty(_cardForm.ImagePath))
+                    {
+                        <div class="mt-2 flex items-center gap-3">
+                            <img src="@($"/api/images/{_cardForm.ImagePath}")" alt="Preview" class="w-16 h-16 object-cover rounded-lg border border-slate-700" />
+                            <span class="text-slate-500 text-sm">@_cardForm.ImagePath</span>
+                            <button type="button" @onclick='() => _cardForm.ImagePath = ""' class="text-red-400 hover:text-red-300 text-sm">Remove</button>
+                        </div>
+                    }
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -847,6 +855,19 @@
 
         CloseCardModal();
         await LoadData();
+    }
+
+    private async Task HandleCardImageUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null || file.Size == 0) return;
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        var path = await Client.UploadImageAsync(stream, file.Name, "cards");
+        if (!string.IsNullOrEmpty(path))
+        {
+            _cardForm.ImagePath = path;
+        }
     }
 
     private void ConfirmDeleteCard(Card card)
