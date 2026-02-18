@@ -1,0 +1,99 @@
+@using Markdig
+@inject IJSRuntime JS
+
+<div class="markdown-editor">
+    <div class="markdown-toolbar">
+        <button type="button" @onclick="InsertBold" title="Bold" class="toolbar-btn">
+            <i class="fa fa-bold"></i>
+        </button>
+        <button type="button" @onclick="InsertItalic" title="Italic" class="toolbar-btn">
+            <i class="fa fa-italic"></i>
+        </button>
+        <button type="button" @onclick="InsertHeading" title="Heading" class="toolbar-btn">
+            <i class="fa fa-heading"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" @onclick="InsertLink" title="Link" class="toolbar-btn">
+            <i class="fa fa-link"></i>
+        </button>
+        <button type="button" @onclick="InsertImage" title="Image" class="toolbar-btn">
+            <i class="fa fa-image"></i>
+        </button>
+        <button type="button" @onclick="InsertCode" title="Code" class="toolbar-btn">
+            <i class="fa fa-code"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" @onclick="InsertList" title="List" class="toolbar-btn">
+            <i class="fa fa-list-ul"></i>
+        </button>
+        <button type="button" @onclick="InsertOrderedList" title="Numbered List" class="toolbar-btn">
+            <i class="fa fa-list-ol"></i>
+        </button>
+        <button type="button" @onclick="InsertQuote" title="Quote" class="toolbar-btn">
+            <i class="fa fa-quote-left"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button type="button" @onclick="TogglePreview" title="Toggle Preview" class="toolbar-btn @(ShowPreview ? "active" : "")">
+            <i class="fa fa-eye"></i>
+        </button>
+    </div>
+    
+    <div class="markdown-content">
+        <textarea @bind="Value"
+                  @bind:event="oninput"
+                  @ref="_textareaRef"
+                  class="markdown-textarea"
+                  placeholder="@Placeholder"></textarea>
+        
+        @if (ShowPreview)
+        {
+            <div class="markdown-preview prose prose-invert max-w-none">
+                @((MarkupString)RenderedHtml)
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Write your markdown here...";
+    [Parameter] public bool ShowPreview { get; set; } = true;
+
+    private ElementReference _textareaRef;
+
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAutoLinks()
+        .UseTaskLists()
+        .UseGridTables()
+        .Build();
+
+    private string RenderedHtml => string.IsNullOrEmpty(Value) ? "" : Markdown.ToHtml(Value, Pipeline);
+
+    private async Task TogglePreview()
+    {
+        ShowPreview = !ShowPreview;
+    }
+
+    private async Task InsertBold() => await InsertAtCursor("**", "**");
+    private async Task InsertItalic() => await InsertAtCursor("*", "*");
+    private async Task InsertHeading() => await InsertAtCursor("## ");
+    private async Task InsertLink() => await InsertAtCursor("[", "](url)");
+    private async Task InsertImage() => await InsertAtCursor("![alt text](image-url)");
+    private async Task InsertCode() => await InsertAtCursor("`", "`");
+    private async Task InsertList() => await InsertAtCursor("- ");
+    private async Task InsertOrderedList() => await InsertAtCursor("1. ");
+    private async Task InsertQuote() => await InsertAtCursor("> ");
+
+    private async Task InsertAtCursor(string text, string afterText = "")
+    {
+        var result = await JS.InvokeAsync<InsertResult>("insertAtCursor", _textareaRef, text, afterText);
+        Value = result.Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private class InsertResult
+    {
+        public string Value { get; set; } = "";
+    }
+}

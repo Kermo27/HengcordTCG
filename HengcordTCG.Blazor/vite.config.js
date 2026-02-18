@@ -1,0 +1,16 @@
+import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  plugins: [
+    tailwindcss()
+  ],
+  build: {
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        assetFileNames: 'css/app.css'
+      }
+    }
+  }
+});

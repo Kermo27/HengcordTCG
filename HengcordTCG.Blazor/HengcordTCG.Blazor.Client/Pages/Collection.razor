@@ -1,52 +1,39 @@
 @page "/collection"
 @attribute [Authorize]
-@using HengcordTCG.Shared.Models
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
-@inject ToastService Toast
 
 <PageTitle>My Collection - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <PageHeader Title="My Collection" Section="Collection" Subtitle="@($"{FilteredCards.Count} cards collected")" />
-    <div class="flex items-center gap-3 mb-6">
-        <div class="flex items-center space-x-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20">
-            <LucideIcon Name="coins" Size="18" class="text-amber-400" />
-            <span class="text-amber-400 font-semibold">@Gold.ToString("N0")</span>
-        </div>
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">My Collection</h1>
+        <p class="text-slate-400">@FilteredCards.Count cards collected</p>
     </div>
 
     <!-- Filters -->
-    <Card class="border-slate-800 bg-slate-900/50 mb-6">
-        <CardContent class="p-4">
-            <div class="flex flex-col md:flex-row gap-4">
-                <div class="flex-1">
-                    <div class="relative">
-                        <LucideIcon Name="search" Size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <Input 
-                            Placeholder="Search cards..."
-                            @bind-Value="SearchQuery"
-                            @bind-Value:after="ApplyFilters"
-                            class="pl-10 bg-slate-950 border-slate-700" />
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <Select @bind-Value="SelectedRarity" @bind-Value:after="ApplyFilters">
-                        <SelectItem Value="@string.Empty">All Rarities</SelectItem>
-                        <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
-                        <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
-                        <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
-                    </Select>
-                    <Select @bind-Value="SortBy" @bind-Value:after="ApplyFilters">
-                        <SelectItem Value="@("newest")">Newest First</SelectItem>
-                        <SelectItem Value="@("oldest")">Oldest First</SelectItem>
-                        <SelectItem Value="@("rarity")">Rarity</SelectItem>
-                        <SelectItem Value="@("name")">Name</SelectItem>
-                    </Select>
-                </div>
+    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <input type="text" placeholder="Search cards..." 
+                    @bind="SearchQuery"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500">
             </div>
-        </CardContent>
-    </Card>
+            <div class="flex gap-2">
+                <button @onclick="() => FilterType = null" 
+                    class="px-4 py-2 rounded-lg @GetFilterClass(null)">
+                    All (@Cards.Count)
+                </button>
+                @foreach (var type in Enum.GetValues<CardType>())
+                {
+                    <button @onclick="() => FilterType = type"
+                        class="px-4 py-2 rounded-lg @GetFilterClass(type)">
+                        @type (@Cards.Count(c => c.Card.CardType == type))
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
 
     <!-- Cards Grid -->
     @if (IsLoading)
@@ -54,109 +41,61 @@
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @for (int i = 0; i < 10; i++)
             {
-                <Skeleton class="aspect-[3/4] rounded-lg" />
+                <div class="aspect-[3/4] bg-slate-800 rounded-xl animate-pulse"></div>
             }
         </div>
     }
     else if (FilteredCards.Count == 0)
     {
-        <div class="flex flex-col items-center justify-center py-16 text-center">
-            <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-                <LucideIcon Name="package-open" Size="40" class="text-slate-600" />
-            </div>
-            <h3 class="text-xl font-semibold text-slate-300 mb-2">No cards found</h3>
-            <p class="text-slate-500 max-w-md">
-                @(string.IsNullOrEmpty(SearchQuery) && string.IsNullOrEmpty(SelectedRarity) 
-                    ? "Your collection is empty. Visit the shop to buy card packs!" 
-                    : "No cards match your filters. Try adjusting your search.")
-            </p>
-            @if (string.IsNullOrEmpty(SearchQuery) && string.IsNullOrEmpty(SelectedRarity))
-            {
-                <Button @onclick="@(() => Navigation.NavigateTo("/shop"))" 
-                    class="mt-6 bg-gradient-to-r from-emerald-500 to-teal-500">
-                    <LucideIcon Name="shopping-bag" Size="18" class="mr-2" />
-                    Visit Shop
-                </Button>
-            }
+        <div class="text-center py-16">
+            <i class="fa fa-box text-6xl text-slate-600 mb-4 block"></i>
+            <p class="text-slate-400">No cards found</p>
         </div>
     }
     else
     {
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            @foreach (var card in FilteredCards)
+            @foreach (var userCard in FilteredCards)
             {
-                <CardComponent 
-                    Card="card.Card" 
-                    Count="card.Count"
-                    OnClick="() => ShowCardDetails(card)" />
+                <div class="relative group">
+                    <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 @GetBorderClass(userCard.Card.Rarity)">
+                        @if (!string.IsNullOrEmpty(userCard.Card.ImagePath))
+                        {
+                            <img src="/api/images/@userCard.Card.ImagePath" alt="@userCard.Card.Name" class="w-full h-full object-cover">
+                        }
+                        else
+                        {
+                            <div class="w-full h-full bg-gradient-to-br @GetGradientClass(userCard.Card.Rarity) flex items-center justify-center">
+                                <i class="fa fa-image text-white opacity-30 text-4xl"></i>
+                            </div>
+                        }
+                        @if (userCard.Count > 1)
+                        {
+                            <div class="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-1 rounded text-sm font-bold">
+                                x@(userCard.Count)
+                            </div>
+                        }
+                    </div>
+                    <div class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                        <p class="text-white text-sm font-medium truncate">@userCard.Card.Name</p>
+                    </div>
+                </div>
             }
         </div>
     }
 </div>
 
-<!-- Card Details Dialog -->
-<Dialog @bind-Open="DetailsOpen">
-    @if (SelectedCard != null)
-    {
-        <DialogContent class="max-w-md">
-            <DialogHeader>
-                <DialogTitle class="text-slate-100">@SelectedCard.Card.Name</DialogTitle>
-                <DialogDescription class="text-slate-400">
-                    @SelectedCard.Card.Rarity • Owned: @SelectedCard.Count
-                </DialogDescription>
-            </DialogHeader>
-            <div class="py-4">
-                <div class="aspect-[3/4] rounded-lg overflow-hidden bg-slate-800 mb-4">
-                    @if (!string.IsNullOrEmpty(SelectedCard.Card.ImagePath))
-                    {
-                        <img src="/api/images/@SelectedCard.Card.ImagePath" alt="@SelectedCard.Card.Name" 
-                            class="w-full h-full object-cover" />
-                    }
-                    else
-                    {
-                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br @GetRarityGradient(SelectedCard.Card.Rarity)">
-                            <LucideIcon Name="image" Size="64" class="text-white/50" />
-                        </div>
-                    }
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="text-center p-3 rounded-lg bg-slate-800">
-                        <div class="text-2xl font-bold text-red-400">@SelectedCard.Card.Attack</div>
-                        <div class="text-xs text-slate-500 uppercase">Attack</div>
-                    </div>
-                    <div class="text-center p-3 rounded-lg bg-slate-800">
-                        <div class="text-2xl font-bold text-blue-400">@SelectedCard.Card.Defense</div>
-                        <div class="text-xs text-slate-500 uppercase">Defense</div>
-                    </div>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button Variant="ButtonVariant.Outline" @onclick="() => DetailsOpen = false">Close</Button>
-                <Button @onclick="@(() => Navigation.NavigateTo($"/trades?offer={SelectedCard.Card.Name}"))">
-                    <LucideIcon Name="arrow-left-right" Size="16" class="mr-2" />
-                    Trade
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    }
-</Dialog>
-
 @code {
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    private List<UserCard> Cards { get; set; } = new();
+    private string SearchQuery = "";
+    private CardType? FilterType;
+    private bool IsLoading = true;
 
-    private List<UserCard> UserCards { get; set; } = new();
-    private List<UserCard> FilteredCards { get; set; } = new();
-    private bool IsLoading { get; set; } = true;
-    private long Gold { get; set; }
-
-    // Filters
-    private string SearchQuery { get; set; } = "";
-    private string SelectedRarity { get; set; } = "";
-    private string SortBy { get; set; } = "newest";
-
-    // Dialog
-    private bool DetailsOpen { get; set; }
-    private UserCard? SelectedCard { get; set; }
+    private List<UserCard> FilteredCards => Cards
+        .Where(c => (FilterType == null || c.Card.CardType == FilterType) &&
+            (string.IsNullOrEmpty(SearchQuery) || c.Card.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)))
+        .OrderBy(c => c.Card.Name)
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,14 +110,8 @@
             var user = await AuthService.GetCurrentUserAsync();
             if (user != null)
             {
-                Gold = user.Gold;
-                UserCards = await Client.GetCollectionAsync(user.Id);
-                ApplyFilters();
+                Cards = await Client.GetCollectionAsync(user.Id);
             }
-        }
-        catch
-        {
-            Toast.Error("Failed to load collection");
         }
         finally
         {
@@ -186,48 +119,21 @@
         }
     }
 
-    private void ApplyFilters()
+    private string GetFilterClass(CardType? type) => FilterType == type 
+        ? "bg-amber-500 text-white" 
+        : "bg-slate-800 text-slate-300 hover:bg-slate-700";
+
+    private string GetBorderClass(Rarity rarity) => rarity switch
     {
-        var query = UserCards.AsEnumerable();
+        Rarity.Legendary => "border-amber-500/50 shadow-lg shadow-amber-500/20",
+        Rarity.Rare => "border-purple-500/50 shadow-lg shadow-purple-500/20",
+        _ => "border-slate-700/50"
+    };
 
-        // Search
-        if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            query = query.Where(c => c.Card.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
-        }
-
-        // Rarity filter
-        if (!string.IsNullOrEmpty(SelectedRarity))
-        {
-            if (Enum.TryParse<Rarity>(SelectedRarity, out var rarity))
-            {
-                query = query.Where(c => c.Card.Rarity == rarity);
-            }
-        }
-
-        // Sort
-        query = SortBy switch
-        {
-            "newest" => query.OrderByDescending(c => c.ObtainedAt),
-            "oldest" => query.OrderBy(c => c.ObtainedAt),
-            "rarity" => query.OrderByDescending(c => c.Card.Rarity).ThenBy(c => c.Card.Name),
-            "name" => query.OrderBy(c => c.Card.Name),
-            _ => query
-        };
-
-        FilteredCards = query.ToList();
-    }
-
-    private void ShowCardDetails(UserCard card)
+    private string GetGradientClass(Rarity rarity) => rarity switch
     {
-        SelectedCard = card;
-        DetailsOpen = true;
-    }
-
-    private string GetRarityGradient(Rarity rarity) => rarity switch
-    {
-        Rarity.Legendary => "from-amber-500 to-orange-600",
-        Rarity.Rare => "from-blue-500 to-purple-600",
-        _ => "from-slate-500 to-slate-600"
+        Rarity.Legendary => "from-amber-600 to-orange-700",
+        Rarity.Rare => "from-purple-600 to-blue-700",
+        _ => "from-slate-600 to-slate-700"
     };
 }

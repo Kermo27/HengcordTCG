@@ -1,307 +1,180 @@
-@inherits LayoutComponentBase
 @implements IDisposable
+@inherits LayoutComponentBase
 @inject AuthService AuthService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<div class="relative min-h-screen flex flex-col bg-slate-950 text-slate-50">
-        <!-- Header -->
-        <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
-            <div class="container flex h-16 items-center">
-                <!-- Mobile Menu Button -->
-                <Button @onclick="ToggleMobileMenu" Variant="ButtonVariant.Ghost" class="md:hidden mr-2 p-2 text-slate-400 hover:text-white">
-                    <LucideIcon Name="menu" Size="24" />
-                </Button>
+<div class="min-h-screen flex flex-col bg-slate-950 text-slate-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+        <div class="container flex h-16 items-center">
+            <!-- Mobile Menu Button -->
+            <button @onclick="ToggleMobileMenu" class="md:hidden mr-2 p-2 text-slate-400 hover:text-white">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
 
-                <!-- Logo -->
-                <div class="mr-4 flex">
-                    <a href="/" class="mr-6 flex items-center space-x-2 group">
-                        <div class="relative">
-                            <LucideIcon Name="sparkles" Size="28" class="text-amber-400 group-hover:text-amber-300 transition-colors" />
-                        </div>
-                        <span class="font-bold text-xl bg-gradient-to-r from-amber-400 to-purple-500 bg-clip-text text-transparent">
-                            HengcordTCG
-                        </span>
-                    </a>
-                </div>
-
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex items-center space-x-1">
-                    <NavLink href="/" Match="NavLinkMatch.All" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="home" Size="18" class="mr-2" />
-                        Home
-                    </NavLink>
-                    <NavLink href="/collection" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="layers" Size="18" class="mr-2" />
-                        Collection
-                    </NavLink>
-                    <NavLink href="/gallery" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="images" Size="18" class="mr-2" />
-                        Gallery
-                    </NavLink>
-                    <NavLink href="/shop" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="shopping-bag" Size="18" class="mr-2" />
-                        Shop
-                    </NavLink>
-                    <NavLink href="/trades" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="arrow-left-right" Size="18" class="mr-2" />
-                        Trades
-                    </NavLink>
-                    <NavLink href="/wiki" class="nav-link" ActiveClass="nav-link-active">
-                        <LucideIcon Name="book-open" Size="18" class="mr-2" />
-                        Wiki
-                    </NavLink>
-                    <AuthorizeView Roles="Admin">
-                        <NavLink href="/admin" class="nav-link text-amber-400" ActiveClass="nav-link-active text-amber-400">
-                            <LucideIcon Name="shield" Size="18" class="mr-2" />
-                            Admin
-                        </NavLink>
-                    </AuthorizeView>
-                </nav>
-
-                <!-- Right side -->
-                <div class="flex flex-1 items-center justify-end space-x-4">
-                    <!-- Gold Display -->
-                    <AuthorizeView>
-                        <Authorized>
-                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                                <LucideIcon Name="coins" Size="16" class="text-amber-400" />
-                                <span class="text-amber-400 font-semibold">@Gold.ToString("N0")</span>
-                            </div>
-                        </Authorized>
-                    </AuthorizeView>
-
-                    <!-- User Menu -->
-                    <AuthorizeView>
-                        <Authorized>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger>
-                                    <Avatar class="h-9 w-9 cursor-pointer ring-2 ring-slate-700 hover:ring-slate-500 transition-all">
-                                        @if (!string.IsNullOrEmpty(AvatarUrl))
-                                        {
-                                            <AvatarImage Source="@AvatarUrl" Alt="@Username" />
-                                        }
-                                        <AvatarFallback class="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm">
-                                            @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent class="w-56">
-                                    <DropdownMenuLabel class="font-normal">
-                                        <div class="flex flex-col space-y-1">
-                                            <p class="text-sm font-medium">@Username</p>
-                                            <p class="text-xs text-muted-foreground">@Gold.ToString("N0") Gold</p>
-                                        </div>
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem @onclick="GoToProfile">
-                                        <LucideIcon Name="user" Size="16" class="mr-2" />
-                                        Profile
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem @onclick="GoToCollection">
-                                        <LucideIcon Name="layers" Size="16" class="mr-2" />
-                                        My Collection
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem @onclick="Logout" class="text-red-400 focus:text-red-400">
-                                        <LucideIcon Name="log-out" Size="16" class="mr-2" />
-                                        Log out
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </Authorized>
-                        <NotAuthorized>
-                            <Button @onclick="Login" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
-                                <LucideIcon Name="log-in" Size="18" class="mr-2" />
-                                Login with Discord
-                            </Button>
-                        </NotAuthorized>
-                    </AuthorizeView>
-                </div>
+            <!-- Logo -->
+            <div class="mr-4 flex">
+                <a href="/" class="mr-6 flex items-center space-x-2 group">
+                    <div class="relative">
+                        <i class="fa fa-sparkles text-amber-400 text-2xl"></i>
+                    </div>
+                    <span class="font-bold text-xl bg-gradient-to-r from-amber-400 to-purple-500 bg-clip-text text-transparent">
+                        HengcordTCG
+                    </span>
+                </a>
             </div>
-        </header>
 
-        <!-- Mobile Side Menu -->
-        <Sheet @bind-Open="IsMobileMenuOpen" Side="BlazorBlueprint.Primitives.Sheet.SheetSide.Left">
-            <SheetContent class="w-72 bg-slate-950 border-slate-800 p-0">
-                <SheetHeader class="p-6 border-b border-slate-800">
-                    <SheetTitle class="text-left">
-                        <span class="font-bold text-lg bg-gradient-to-r from-amber-400 to-purple-500 bg-clip-text text-transparent">
-                            HengcordTCG
-                        </span>
-                    </SheetTitle>
-                </SheetHeader>
-                <nav class="flex flex-col p-4 space-y-1">
-                    <a href="/" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/", true)">
-                        <LucideIcon Name="home" Size="20" class="mr-3" />
-                        Home
-                    </a>
-                    <a href="/collection" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/collection")">
-                        <LucideIcon Name="layers" Size="20" class="mr-3" />
-                        Collection
-                    </a>
-                    <a href="/gallery" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/gallery")">
-                        <LucideIcon Name="images" Size="20" class="mr-3" />
-                        Gallery
-                    </a>
-                    <a href="/shop" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/shop")">
-                        <LucideIcon Name="shopping-bag" Size="20" class="mr-3" />
-                        Shop
-                    </a>
-                    <a href="/trades" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/trades")">
-                        <LucideIcon Name="arrow-left-right" Size="20" class="mr-3" />
-                        Trades
-                    </a>
-                    <a href="/wiki" @onclick="CloseMobileMenu" class="mobile-nav-link @GetMobileActiveClass("/wiki")">
-                        <LucideIcon Name="book-open" Size="20" class="mr-3" />
-                        Wiki
-                    </a>
-                    <AuthorizeView Roles="Admin">
-                        <div class="pt-2 mt-2 border-t border-slate-800">
-                            <a href="/admin" @onclick="CloseMobileMenu" class="mobile-nav-link text-amber-400 @GetMobileActiveClass("/admin")">
-                                <LucideIcon Name="shield" Size="20" class="mr-3" />
-                                Admin
-                            </a>
-                        </div>
-                    </AuthorizeView>
-                </nav>
+            <!-- Desktop Navigation -->
+            <nav class="hidden md:flex items-center space-x-1">
+                <NavLink href="/" Match="NavLinkMatch.All" class="@NavLinkClass("/")">
+                    <i class="fa fa-home mr-2"></i> Home
+                </NavLink>
+                <NavLink href="/collection" class="@NavLinkClass("/collection")">
+                    <i class="fa fa-layer-group mr-2"></i> Collection
+                </NavLink>
+                <NavLink href="/gallery" class="@NavLinkClass("/gallery")">
+                    <i class="fa fa-images mr-2"></i> Gallery
+                </NavLink>
+                <NavLink href="/shop" class="@NavLinkClass("/shop")">
+                    <i class="fa fa-shopping-bag mr-2"></i> Shop
+                </NavLink>
+                <NavLink href="/deck" class="@NavLinkClass("/deck")">
+                    <i class="fa fa-layer-group mr-2"></i> Deck
+                </NavLink>
+                <NavLink href="/trades" class="@NavLinkClass("/trades")">
+                    <i class="fa fa-arrow-right-arrow-left mr-2"></i> Trades
+                </NavLink>
+                <NavLink href="/wiki" class="@NavLinkClass("/wiki")">
+                    <i class="fa fa-book-open mr-2"></i> Wiki
+                </NavLink>
+                <AuthorizeView Roles="Admin">
+                    <NavLink href="/admin" class="@NavLinkClass("/admin")" Match="NavLinkMatch.All">
+                        <i class="fa fa-shield mr-2 text-amber-400"></i> <span class="text-amber-400">Admin</span>
+                    </NavLink>
+                </AuthorizeView>
+            </nav>
 
-                <!-- Mobile Gold Display -->
+            <!-- Right side -->
+            <div class="flex flex-1 items-center justify-end space-x-4">
+                <!-- Gold Display -->
                 <AuthorizeView>
                     <Authorized>
-                        <div class="mx-4 mt-auto p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                            <div class="flex items-center gap-2">
-                                <LucideIcon Name="coins" Size="20" class="text-amber-400" />
-                                <span class="text-amber-400 font-bold text-lg">@Gold.ToString("N0")</span>
-                                <span class="text-amber-400/60 text-sm">Gold</span>
-                            </div>
+                        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                            <i class="fa fa-coins text-amber-400"></i>
+                            <span class="text-amber-400 font-semibold">@Gold.ToString("N0")</span>
                         </div>
                     </Authorized>
                 </AuthorizeView>
-            </SheetContent>
-        </Sheet>
 
-        <!-- Main Content -->
-        <main class="flex-1 pb-20 md:pb-0">
-            @Body
-        </main>
-
-        <!-- Mobile Bottom Navigation -->
-        <nav class="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur">
-            <div class="flex items-center justify-around h-16">
-                <a href="/" class="bottom-nav-item @GetBottomNavActive("/", true)">
-                    <LucideIcon Name="home" Size="22" />
-                    <span class="text-[10px] mt-0.5">Home</span>
-                </a>
-                <a href="/collection" class="bottom-nav-item @GetBottomNavActive("/collection")">
-                    <LucideIcon Name="layers" Size="22" />
-                    <span class="text-[10px] mt-0.5">Collection</span>
-                </a>
-                <a href="/shop" class="bottom-nav-item @GetBottomNavActive("/shop")">
-                    <LucideIcon Name="shopping-bag" Size="22" />
-                    <span class="text-[10px] mt-0.5">Shop</span>
-                </a>
-                <a href="/trades" class="bottom-nav-item @GetBottomNavActive("/trades")">
-                    <LucideIcon Name="arrow-left-right" Size="22" />
-                    <span class="text-[10px] mt-0.5">Trades</span>
-                </a>
-                <a href="/gallery" class="bottom-nav-item @GetBottomNavActive("/gallery")">
-                    <LucideIcon Name="images" Size="22" />
-                    <span class="text-[10px] mt-0.5">Gallery</span>
-                </a>
+                <!-- User Menu -->
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="relative">
+                            <button @onclick="ToggleUserMenu" class="flex items-center gap-2">
+                                @if (!string.IsNullOrEmpty(AvatarUrl))
+                                {
+                                    <img src="@AvatarUrl" alt="@Username" class="h-9 w-9 rounded-full object-cover" />
+                                }
+                                else
+                                {
+                                    <div class="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
+                                        @(Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                    </div>
+                                }
+                            </button>
+                            @if (ShowUserMenu)
+                            {
+                                <div class="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-lg z-50">
+                                    <div class="p-3 border-b border-slate-700">
+                                        <p class="font-medium">@Username</p>
+                                        <p class="text-sm text-slate-400">@Gold.ToString("N0") Gold</p>
+                                    </div>
+                                    <div class="p-1">
+                                        <a href="/collection" @onclick="() => ShowUserMenu = false" class="flex items-center px-3 py-2 text-slate-300 hover:bg-slate-800 rounded">
+                                            <i class="fa fa-layer-group mr-2 w-4"></i> My Collection
+                                        </a>
+                                        <a href="/deck" @onclick="() => ShowUserMenu = false" class="flex items-center px-3 py-2 text-slate-300 hover:bg-slate-800 rounded">
+                                            <i class="fa fa-layer-group mr-2 w-4"></i> Deck Builder
+                                        </a>
+                                        <button @onclick="Logout" class="w-full flex items-center px-3 py-2 text-red-400 hover:bg-slate-800 rounded">
+                                            <i class="fa fa-sign-out-alt mr-2 w-4"></i> Log out
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <button @onclick="Login" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 px-4 py-2 rounded-lg font-medium">
+                            <i class="fa fa-sign-in-alt mr-2"></i> Login with Discord
+                        </button>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
-        </nav>
+        </div>
+    </header>
 
-        <!-- Footer (hidden on mobile, bottom nav takes its place) -->
-        <footer class="hidden md:block border-t border-slate-800 py-6 bg-slate-950">
-            <div class="container flex flex-col md:flex-row items-center justify-between gap-4">
-                <p class="text-sm text-slate-500">
-                    @DateTime.Now.Year HengcordTCG. All rights reserved.
-                </p>
-                <div class="flex items-center space-x-6">
-                    <a href="https://discord.com" target="_blank" class="text-slate-500 hover:text-slate-300 transition-colors">
-                        <LucideIcon Name="message-circle" Size="20" />
-                    </a>
-                    <a href="https://github.com" target="_blank" class="text-slate-500 hover:text-slate-300 transition-colors">
-                        <LucideIcon Name="github" Size="20" />
-                    </a>
-                </div>
-            </div>
-        </footer>
-    </div>
+    <!-- Main Content -->
+    <main class="flex-1 pb-20 md:pb-0">
+        @Body
+    </main>
 
-    <ToastProvider Position="ToastPosition.TopRight" />
-    <PortalHost />
+    <!-- Mobile Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur">
+        <div class="flex items-center justify-around h-16">
+            <a href="/" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/")">
+                <i class="fa fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="/collection" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/collection")">
+                <i class="fa fa-layer-group text-xl"></i>
+                <span class="text-xs">Collection</span>
+            </a>
+            <a href="/shop" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/shop")">
+                <i class="fa fa-shopping-bag text-xl"></i>
+                <span class="text-xs">Shop</span>
+            </a>
+            <a href="/deck" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/deck")">
+                <i class="fa fa-layer-group text-xl"></i>
+                <span class="text-xs">Deck</span>
+            </a>
+            <a href="/trades" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/trades")">
+                <i class="fa fa-arrow-right-arrow-left text-xl"></i>
+                <span class="text-xs">Trades</span>
+            </a>
+            <a href="/gallery" class="flex flex-col items-center justify-center w-16 @BottomNavClass("/gallery")">
+                <i class="fa fa-images text-xl"></i>
+                <span class="text-xs">Gallery</span>
+            </a>
+        </div>
+    </nav>
+</div>
 
 @code {
     private string? Username { get; set; }
     private string? AvatarUrl { get; set; }
     private long Gold { get; set; }
-    private bool IsMobileMenuOpen { get; set; }
+    private bool ShowUserMenu { get; set; }
     private string CurrentPath => new Uri(Navigation.Uri).AbsolutePath;
-
-    protected override void OnInitialized()
-    {
-        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        Navigation.LocationChanged += OnLocationChanged;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             var user = await AuthService.InitializeAsync();
-            
             if (user != null)
             {
                 Username = user.Username;
-                AvatarUrl = user.AvatarUrl;
                 Gold = user.Gold;
+                AvatarUrl = user.AvatarUrl;
                 StateHasChanged();
             }
         }
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
-    {
-        var authState = await task;
-        var user = authState.User;
-        
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            var userInfo = await AuthService.GetCurrentUserAsync();
-            if (userInfo != null)
-            {
-                Username = userInfo.Username;
-                AvatarUrl = userInfo.AvatarUrl;
-                Gold = userInfo.Gold;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        else
-        {
-            Username = null;
-            AvatarUrl = null;
-            Gold = 0;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-    {
-        IsMobileMenuOpen = false;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        Navigation.LocationChanged -= OnLocationChanged;
-    }
-
-    private void ToggleMobileMenu() => IsMobileMenuOpen = !IsMobileMenuOpen;
-    private void CloseMobileMenu() => IsMobileMenuOpen = false;
+    private void ToggleUserMenu() => ShowUserMenu = !ShowUserMenu;
+    private void ToggleMobileMenu() { }
 
     private void Login()
     {
@@ -311,19 +184,34 @@
 
     private async Task Logout()
     {
+        ShowUserMenu = false;
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/");
     }
 
-    private void GoToProfile() => Navigation.NavigateTo("/profile");
-    private void GoToCollection() => Navigation.NavigateTo("/collection");
+    private string NavLinkClass(string path)
+    {
+        if (path == "/")
+            return CurrentPath == "/" 
+                ? "px-3 py-2 rounded-lg text-amber-400 bg-slate-800" 
+                : "px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors";
+        
+        return CurrentPath == path || CurrentPath.StartsWith(path + "/") 
+            ? "px-3 py-2 rounded-lg text-amber-400 bg-slate-800" 
+            : "px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors";
+    }
 
-    private bool IsActive(string path, bool exact = false) =>
-        exact ? CurrentPath == path : CurrentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase);
+    private string BottomNavClass(string path)
+    {
+        if (path == "/")
+            return CurrentPath == "/" ? "text-amber-400" : "text-slate-500";
+        
+        return CurrentPath == path || CurrentPath.StartsWith(path + "/") 
+            ? "text-amber-400" 
+            : "text-slate-500";
+    }
 
-    private string GetMobileActiveClass(string path, bool exact = false) =>
-        IsActive(path, exact) ? "bg-slate-800 text-white" : "";
-
-    private string GetBottomNavActive(string path, bool exact = false) =>
-        IsActive(path, exact) ? "text-amber-400" : "text-slate-500";
+    public void Dispose()
+    {
+    }
 }

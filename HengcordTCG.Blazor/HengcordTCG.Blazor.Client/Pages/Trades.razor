@@ -2,81 +2,116 @@
 @attribute [Authorize]
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
-@inject ToastService Toast
 
 <PageTitle>Trading - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <PageHeader Title="Trading Center" Section="Trades" Subtitle="Trade cards with other players" />
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Trading Center</h1>
+        <p class="text-slate-400">Trade cards with other players</p>
+    </div>
+    
     <div class="flex justify-end mb-6">
-        <Button @onclick="() => ShowCreateTrade = true" class="bg-gradient-to-r from-purple-500 to-pink-500">
-            <LucideIcon Name="plus" Size="18" class="mr-2" />
-            Create Trade
-        </Button>
+        <button @onclick="() => ShowCreateTrade = true" class="bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded-lg font-medium">
+            <i class="fa fa-plus mr-2"></i> Create Trade
+        </button>
     </div>
 
-    <Tabs @bind-Value="_activeTab" class="w-full">
-        <TabsList class="bg-slate-900 border border-slate-800">
-            <TabsTrigger Value="active" class="data-[state=active]:bg-slate-800">Active Trades</TabsTrigger>
-            <TabsTrigger Value="my" class="data-[state=active]:bg-slate-800">My Trades</TabsTrigger>
-            <TabsTrigger Value="history" class="data-[state=active]:bg-slate-800">History</TabsTrigger>
-        </TabsList>
+    <!-- Tabs -->
+    <div class="border-b border-slate-700 mb-6">
+        <div class="flex space-x-1">
+            <button @onclick='() => ActiveTab = "active"' class="@TabClass("active")">
+                Active Trades
+            </button>
+            <button @onclick='() => ActiveTab = "my"' class="@TabClass("my")">
+                My Trades
+            </button>
+            <button @onclick='() => ActiveTab = "history"' class="@TabClass("history")">
+                History
+            </button>
+        </div>
+    </div>
 
-        <TabsContent Value="active" class="mt-6">
+    <!-- Active Trades -->
+    @if (ActiveTab == "active")
+    {
+        <div class="space-y-4">
             @if (!IsLoading && ActiveTrades.Any())
             {
-                <div class="space-y-4">
-                    @foreach (var trade in ActiveTrades)
-                    {
-                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
-                    }
+                @foreach (var trade in ActiveTrades)
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-white font-medium">@trade.Initiator?.Username</p>
+                                <p class="text-slate-400 text-sm">to @trade.Target?.Username</p>
+                            </div>
+                            <span class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-sm">Pending</span>
+                        </div>
+                    </div>
+                }
+            }
+            else if (!IsLoading)
+            {
+                <div class="text-center py-16 text-slate-400">
+                    <i class="fa fa-arrow-right-arrow-left text-4xl mb-4 block"></i>
+                    <p>No active trades</p>
                 </div>
             }
-            else
-            {
-                <EmptyState Icon="arrow-left-right" Title="No Active Trades" Description="There are no active trades at the moment." />
-            }
-        </TabsContent>
+        </div>
+    }
 
-        <TabsContent Value="my" class="mt-6">
+    <!-- My Trades -->
+    @if (ActiveTab == "my")
+    {
+        <div class="space-y-4">
             @if (!IsLoading && MyTrades.Any())
             {
-                <div class="space-y-4">
-                    @foreach (var trade in MyTrades)
-                    {
-                        <TradeCard Trade="trade" CurrentUserId="CurrentUserId" />
-                    }
+                @foreach (var trade in MyTrades)
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-white font-medium">Trade #@trade.Id</p>
+                                <p class="text-slate-400 text-sm">@trade.Status</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else if (!IsLoading)
+            {
+                <div class="text-center py-16 text-slate-400">
+                    <i class="fa fa-box text-4xl mb-4 block"></i>
+                    <p>No trades yet</p>
                 </div>
             }
-            else
-            {
-                <EmptyState Icon="package" Title="No Trades Yet" Description="You haven't created any trades yet." />
-            }
-        </TabsContent>
+        </div>
+    }
 
-        <TabsContent Value="history" class="mt-6">
-            <EmptyState Icon="history" Title="No Trade History" Description="Your completed trades will appear here." />
-        </TabsContent>
-    </Tabs>
+    <!-- History -->
+    @if (ActiveTab == "history")
+    {
+        <div class="text-center py-16 text-slate-400">
+            <i class="fa fa-history text-4xl mb-4 block"></i>
+            <p>No trade history</p>
+        </div>
+    }
 </div>
 
 @code {
-    private string _activeTab = "active";
+    private string ActiveTab = "active";
     private bool IsLoading = true;
-    private ulong CurrentUserId { get; set; }
-    private long CurrentGold { get; set; }
-
-    private List<Trade> ActiveTrades { get; set; } = new();
-    private List<Trade> MyTrades { get; set; } = new();
-
-    private bool ShowCreateTrade { get; set; }
+    private List<Trade> ActiveTrades = new();
+    private List<Trade> MyTrades = new();
+    private bool ShowCreateTrade;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadTrades();
     }
 
-    private async Task LoadData()
+    private async Task LoadTrades()
     {
         IsLoading = true;
         try
@@ -84,21 +119,18 @@
             var user = await AuthService.GetCurrentUserAsync();
             if (user != null)
             {
-                CurrentUserId = user.Id;
-                CurrentGold = user.Gold;
+                var allTrades = await Client.GetTradesForUserAsync(user.Id);
+                ActiveTrades = allTrades.Where(t => t.Status == TradeStatus.Pending).ToList();
+                MyTrades = allTrades.Where(t => t.Initiator?.DiscordId == user.Id).ToList();
             }
-
-            var allTrades = await Client.GetTradesForUserAsync(CurrentUserId);
-            ActiveTrades = allTrades.Where(t => t.Status == TradeStatus.Pending && t.TargetId != 0).ToList();
-            MyTrades = allTrades.Where(t => t.Initiator?.DiscordId == CurrentUserId).ToList();
-        }
-        catch
-        {
-            Toast.Error("Failed to load trades");
         }
         finally
         {
             IsLoading = false;
         }
     }
+
+    private string TabClass(string tab) => ActiveTab == tab
+        ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium"
+        : "px-4 py-2 text-slate-400 hover:text-white transition-colors";
 }

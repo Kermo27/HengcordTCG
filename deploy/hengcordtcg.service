@@ -1,0 +1,15 @@
+[Unit]
+Description=HengcordTCG Server
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=/var/hengcordtcg
+ExecStart=/root/.dotnet/dotnet HengcordTCG.Server.dll
+Restart=always
+RestartSec=5
+Environment=ASPNETCORE_URLS=http://localhost:5000
+Environment=ASPNETCORE_ENVIRONMENT=Production
+
+[Install]
+WantedBy=multi-user.target

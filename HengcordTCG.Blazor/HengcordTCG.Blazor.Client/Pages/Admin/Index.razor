@@ -1,1442 +1,1172 @@
 @page "/admin"
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.JSInterop
-@using ModelCard = HengcordTCG.Shared.Models.Card
-@using HengcordTCG.Shared.Models
-@using HengcordTCG.Blazor.Client.Services
 @inject HengcordTCGClient Client
-@inject AuthService AuthService
-@inject ToastService Toast
-@inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JSRuntime
 @inject WikiService WikiService
+@using HengcordTCG.Blazor.Client.DTOs
+@using HengcordTCG.Blazor.Client.Services
+@using Markdig
 
-<PageTitle>Admin Panel - HengcordTCG</PageTitle>
+<PageTitle>Admin - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-8">
-        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <LucideIcon Name="shield" Size="28" class="text-white" />
-        </div>
-        <div>
-            <h1 class="text-3xl font-bold text-slate-100">Admin Panel</h1>
-            <p class="text-slate-400">Manage cards, packs, users, and battles</p>
+    <h1 class="text-3xl font-bold text-white mb-8">Admin Panel</h1>
+
+    <!-- Tabs -->
+    <div class="border-b border-slate-700 mb-6">
+        <div class="flex space-x-1">
+            <button @onclick='() => _tab = "cards"' class="@TabClass("cards")">
+                <i class="fa fa-images mr-2"></i> Cards
+            </button>
+            <button @onclick='() => _tab = "packs"' class="@TabClass("packs")">
+                <i class="fa fa-box mr-2"></i> Packs
+            </button>
+            <button @onclick='() => _tab = "users"' class="@TabClass("users")">
+                <i class="fa fa-users mr-2"></i> Users
+            </button>
+            <button @onclick='async () => { _tab = "wiki"; await LoadProposals(); await LoadWikiPages(); }' class="@TabClass("wiki")">
+                <i class="fa fa-book mr-2"></i> Wiki
+            </button>
         </div>
     </div>
 
-    <!-- Admin Tabs -->
-    <Tabs @bind-Value="ActiveTab" class="w-full">
-        <TabsList class="bg-slate-900 border border-slate-800">
-            <TabsTrigger Value="cards" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="images" Size="16" class="mr-2" />
-                Cards
-            </TabsTrigger>
-            <TabsTrigger Value="packs" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="package" Size="16" class="mr-2" />
-                Packs
-            </TabsTrigger>
-            <TabsTrigger Value="users" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="users" Size="16" class="mr-2" />
-                Users
-            </TabsTrigger>
-            <TabsTrigger Value="battles" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="swords" Size="16" class="mr-2" />
-                Battles
-            </TabsTrigger>
-            <TabsTrigger Value="tools" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="wrench" Size="16" class="mr-2" />
-                Tools
-            </TabsTrigger>
-            <TabsTrigger Value="wiki" class="data-[state=active]:bg-slate-800">
-                <LucideIcon Name="book-open" Size="16" class="mr-2" />
-                Wiki
-            </TabsTrigger>
-        </TabsList>
-
-        <!-- Cards Tab -->
-        <TabsContent Value="cards" class="mt-6 space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-slate-100">Manage Cards</h2>
-                <Button @onclick="OpenAddCard" class="bg-emerald-500 hover:bg-emerald-600">
-                    <LucideIcon Name="plus" Size="18" class="mr-2" />
-                    Add Card
-                </Button>
-            </div>
-
-            <!-- Card Type Filter -->
-            <div class="flex gap-2">
-                <Button @onclick="() => CardFilter = null"
-                    Variant="@(CardFilter == null ? ButtonVariant.Default : ButtonVariant.Outline)"
-                    class="@(CardFilter == null ? "bg-slate-700" : "border-slate-700")">
-                    All (@AllCards.Count)
-                </Button>
-                @foreach (var type in Enum.GetValues<CardType>())
-                {
-                    var t = type;
-                    <Button @onclick="() => CardFilter = t"
-                        Variant="@(CardFilter == t ? ButtonVariant.Default : ButtonVariant.Outline)"
-                        class="@(CardFilter == t ? GetCardTypeColor(t) : "border-slate-700")">
-                        @GetCardTypeIcon(t) @t (@AllCards.Count(c => c.CardType == t))
-                    </Button>
-                }
-            </div>
-
-            @if (IsLoading)
+    <!-- Cards Tab -->
+    @if (_tab == "cards")
+    {
+        <div class="mb-6 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-white">Manage Cards</h2>
+            <button @onclick="OpenAddCard" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                <i class="fa fa-plus mr-2"></i> Add Card
+            </button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            @foreach (var card in _cards)
             {
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    @for (int i = 0; i < 8; i++)
-                    {
-                        <Skeleton class="aspect-[3/4] rounded-lg" />
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    @foreach (var card in FilteredCards)
-                    {
-                        <div class="relative group">
-                            <CardComponent Card="card" />
-                            <div class="absolute top-2 left-2">
-                                <Badge class="@GetCardTypeBadgeClass(card.CardType)">
-                                    @GetCardTypeIcon(card.CardType) @card.CardType
-                                </Badge>
-                            </div>
-                            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
-                                <Button @onclick="() => OpenEditCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
-                                    <LucideIcon Name="pencil" Size="16" />
-                                </Button>
-                                <Button @onclick="() => DeleteCard(card)" Size="ButtonSize.Icon" Variant="ButtonVariant.Destructive">
-                                    <LucideIcon Name="trash-2" Size="16" />
-                                </Button>
-                            </div>
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+                    <div class="aspect-3/4 bg-slate-800">
+                        @if (!string.IsNullOrEmpty(card.ImagePath))
+                        {
+                            <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
+                        }
+                    </div>
+                    <div class="p-3">
+                        <p class="text-white font-medium truncate">@card.Name</p>
+                        <p class="text-slate-400 text-sm">@card.CardType</p>
+                        <div class="flex gap-2 mt-2">
+                            <button @onclick="() => OpenEditCard(card)" class="flex-1 bg-slate-700 px-2 py-1 rounded text-xs text-white">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button @onclick="() => ConfirmDeleteCard(card)" class="flex-1 bg-red-600/50 px-2 py-1 rounded text-xs text-white">
+                                <i class="fa fa-trash"></i>
+                            </button>
                         </div>
-                    }
-                </div>
-            }
-        </TabsContent>
-
-        <!-- Packs Tab -->
-        <TabsContent Value="packs" class="mt-6 space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-slate-100">Manage Packs</h2>
-                <Button @onclick="() => ShowAddPack = true" class="bg-emerald-500 hover:bg-emerald-600">
-                    <LucideIcon Name="plus" Size="18" class="mr-2" />
-                    Add Pack
-                </Button>
-            </div>
-
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach (var pack in AllPacks)
-                {
-                    <Card class="border-slate-800 bg-slate-900/50">
-                        <CardHeader>
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <CardTitle class="text-slate-100">@pack.Name</CardTitle>
-                                    <CardDescription class="text-slate-400">
-                                        @(pack.IsAvailable ? "Available" : "Unavailable")
-                                    </CardDescription>
-                                </div>
-                                <Badge Variant="BadgeVariant.Outline" 
-                                    class="@(pack.IsAvailable ? "border-emerald-500 text-emerald-400" : "border-slate-500 text-slate-400")">
-                                    @(pack.IsAvailable ? "Active" : "Inactive")
-                                </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">Price</span>
-                                    <span class="text-amber-400 font-semibold">@pack.Price.ToString("N0") Gold</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">Legendary</span>
-                                    <span class="text-amber-400">@pack.ChanceLegendary%</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">Rare</span>
-                                    <span class="text-purple-400">@pack.ChanceRare%</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">Common</span>
-                                    <span class="text-slate-400">@pack.ChanceCommon%</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter class="flex gap-2">
-                            <Button @onclick="() => TogglePack(pack)" Variant="ButtonVariant.Outline" class="flex-1 justify-start border-slate-700">
-                                @(pack.IsAvailable ? "Disable" : "Enable")
-                            </Button>
-                            <Button @onclick="() => EditPack(pack)" Size="ButtonSize.Icon" Variant="ButtonVariant.Secondary">
-                                <LucideIcon Name="pencil" Size="16" />
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                }
-            </div>
-        </TabsContent>
-
-        <!-- Users Tab -->
-        <TabsContent Value="users" class="mt-6 space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-slate-100">User Management</h2>
-                <div class="flex gap-2">
-                    <div class="relative">
-                        <LucideIcon Name="search" Size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <Input @bind-Value="UserSearch" Placeholder="Search users..." class="pl-10 bg-slate-950 border-slate-700 w-64" />
                     </div>
                 </div>
+            }
+        </div>
+    }
+
+    <!-- Packs Tab -->
+    @if (_tab == "packs")
+    {
+        <div class="mb-6 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-white">Manage Packs</h2>
+            <button @onclick="OpenAddPack" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                <i class="fa fa-plus mr-2"></i> Add Pack
+            </button>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6">
+            @foreach (var pack in _packs)
+            {
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-semibold text-white">@pack.Name</h3>
+                        @if (!pack.IsAvailable)
+                        {
+                            <span class="text-xs bg-red-600/50 text-white px-2 py-1 rounded">Unavailable</span>
+                        }
+                    </div>
+                    <p class="text-amber-400 font-bold mb-2">@pack.Price Gold</p>
+                    <div class="text-sm text-slate-400 mb-4">
+                        <p>Common: @pack.ChanceCommon%</p>
+                        <p>Rare: @pack.ChanceRare%</p>
+                        <p>Legendary: @pack.ChanceLegendary%</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @onclick="() => OpenEditPack(pack)" class="flex-1 bg-slate-700 px-4 py-2 rounded-lg text-white">
+                            <i class="fa fa-edit mr-2"></i> Edit
+                        </button>
+                        <button @onclick="() => TogglePack(pack)" class="px-4 py-2 rounded-lg @GetTogglePackClass(pack)">
+                            @(pack.IsAvailable ? "Disable" : "Enable")
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Users Tab -->
+    @if (_tab == "users")
+    {
+        <h2 class="text-xl font-semibold text-white mb-6">User Management</h2>
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-slate-400">User</th>
+                        <th class="px-4 py-3 text-left text-slate-400">Gold</th>
+                        <th class="px-4 py-3 text-left text-slate-400">Admin</th>
+                        <th class="px-4 py-3 text-left text-slate-400">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    @foreach (var user in _users)
+                    {
+                        <tr class="hover:bg-slate-800">
+                            <td class="px-4 py-3 text-white">@user.Username</td>
+                            <td class="px-4 py-3 text-amber-400">@user.Gold.ToString("N0")</td>
+                            <td class="px-4 py-3">
+                                @if (user.IsBotAdmin)
+                                {
+                                    <span class="text-amber-400">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-500">No</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex gap-2">
+                                    <button @onclick="() => OpenEditGold(user)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
+                                        <i class="fa fa-coins"></i>
+                                    </button>
+                                    @if (user.IsBotAdmin)
+                                    {
+                                        <button @onclick="() => RemoveAdmin(user)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
+                                            <i class="fa fa-user-minus"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button @onclick="() => AddAdmin(user)" class="bg-emerald-600/50 px-3 py-1 rounded text-white text-sm">
+                                            <i class="fa fa-user-plus"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <!-- Wiki Tab -->
+    @if (_tab == "wiki")
+    {
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-white">Wiki Management</h2>
+                <button @onclick="OpenCreateWikiPage" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                    <i class="fa fa-plus mr-2"></i> New Page
+                </button>
+            </div>
+            
+            <!-- Wiki Tabs -->
+            <div class="border-b border-slate-700 mb-4">
+                <div class="flex space-x-1">
+                    <button @onclick='() => _wikiTab = "pages"' class="@(_wikiTab == "pages" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
+                        <i class="fa fa-file mr-2"></i> Pages
+                    </button>
+                    <button @onclick='async () => { _wikiTab = "proposals"; await LoadProposals(); }' class="@(_wikiTab == "proposals" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
+                        <i class="fa fa-tasks mr-2"></i> Proposals
+                        @if (_proposals.Any())
+                        {
+                            <span class="ml-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">@_proposals.Count</span>
+                        }
+                    </button>
+                </div>
             </div>
 
-            <Card class="border-slate-800 bg-slate-900/50">
-                <CardContent class="p-0">
-                    <div class="divide-y divide-slate-800">
-                        @foreach (var user in FilteredUsers)
+            <!-- Pages List -->
+            @if (_wikiTab == "pages")
+            {
+                @if (_wikiPages.Any())
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-slate-800">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-slate-400">Title</th>
+                                    <th class="px-4 py-3 text-left text-slate-400">Slug</th>
+                                    <th class="px-4 py-3 text-left text-slate-400">Updated</th>
+                                    <th class="px-4 py-3 text-right text-slate-400">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                @foreach (var wikiPage in _wikiPages)
+                                {
+                                    <tr class="hover:bg-slate-800">
+                                        <td class="px-4 py-3 text-white">@wikiPage.Title</td>
+                                        <td class="px-4 py-3 text-slate-400">@wikiPage.Slug</td>
+                                        <td class="px-4 py-3 text-slate-400 text-sm">@wikiPage.UpdatedAt.ToString("yyyy-MM-dd")</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <div class="flex gap-2 justify-end">
+                                                <a href="@("/wiki/" + wikiPage.Slug)" target="_blank" class="bg-slate-700 px-3 py-1 rounded text-white text-sm">
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
+                                                <button @onclick="() => OpenEditWikiPage(wikiPage)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                                <button @onclick="() => ConfirmDeleteWikiPage(wikiPage)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+                        <i class="fa fa-file text-4xl text-slate-500 mb-4"></i>
+                        <p class="text-slate-400">No wiki pages yet. Create your first page!</p>
+                    </div>
+                }
+            }
+
+            <!-- Proposals List -->
+            @if (_wikiTab == "proposals")
+            {
+                @if (_proposals.Any())
+                {
+                    <div class="space-y-4">
+                        @foreach (var proposal in _proposals)
                         {
-                            <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                                        @(user.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                                    </div>
+                            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                                <div class="flex justify-between items-start mb-4">
                                     <div>
-                                        <div class="font-medium text-slate-200">@user.Username</div>
-                                        <div class="text-sm text-slate-500">ID: @user.DiscordId</div>
+                                        <span class="text-xs font-medium px-2 py-1 rounded mr-2 @GetProposalTypeClass(proposal.Type.ToString())">
+                                            @proposal.Type.ToString()
+                                        </span>
+                                        <span class="text-xs text-slate-400">
+                                            by @proposal.SubmittedByUsername
+                                        </span>
                                     </div>
+                                    <span class="text-xs text-slate-500">
+                                        @proposal.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                                    </span>
                                 </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="text-right">
-                                        <div class="text-amber-400 font-semibold">@user.Gold.ToString("N0") Gold</div>
-                                        @if (user.IsBotAdmin)
-                                        {
-                                            <Badge Variant="BadgeVariant.Outline" class="border-amber-500 text-amber-400">Admin</Badge>
-                                        }
+                                
+                                <h3 class="text-lg font-semibold text-white mb-2">@proposal.Title</h3>
+                                
+                                @if (!string.IsNullOrEmpty(proposal.ChangeDescription))
+                                {
+                                    <p class="text-slate-400 text-sm mb-4">@proposal.ChangeDescription</p>
+                                }
+                                
+                                @if (proposal.Type.ToString() == "Edit" || proposal.Type.ToString() == "Delete")
+                                {
+                                    <div class="bg-slate-800 rounded p-3 mb-4 text-sm text-slate-300 max-h-40 overflow-y-auto">
+                                        @((MarkupString)proposal.Content.Replace("\n", "<br>"))
                                     </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger>
-                                            <Button Size="ButtonSize.Icon" Variant="ButtonVariant.Ghost">
-                                                <LucideIcon Name="more-vertical" Size="16" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem @onclick="() => OpenGiveGold(user)">
-                                                <LucideIcon Name="coins" Size="16" class="mr-2" />
-                                                Give Gold
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem @onclick="() => OpenGiveCard(user)">
-                                                <LucideIcon Name="image" Size="16" class="mr-2" />
-                                                Give Card
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem @onclick="() => ToggleAdmin(user)" class="@(user.IsBotAdmin ? "text-red-400" : "text-emerald-400")">
-                                                <LucideIcon Name="@(user.IsBotAdmin ? "user-minus" : "user-plus")" Size="16" class="mr-2" />
-                                                @(user.IsBotAdmin ? "Remove Admin" : "Make Admin")
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                }
+                                
+                                <div class="flex gap-2">
+                                    <button @onclick="() => ViewProposal(proposal)" class="bg-slate-700 px-4 py-2 rounded-lg text-white">
+                                        <i class="fa fa-eye mr-2"></i> View Details
+                                    </button>
+                                    <button @onclick="() => OpenApproveProposal(proposal)" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                                        <i class="fa fa-check mr-2"></i> Approve
+                                    </button>
+                                    <button @onclick="() => OpenRejectProposal(proposal)" class="bg-red-600 px-4 py-2 rounded-lg text-white">
+                                        <i class="fa fa-times mr-2"></i> Reject
+                                    </button>
                                 </div>
                             </div>
                         }
                     </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
-
-        <!-- Battles Tab -->
-        <TabsContent Value="battles" class="mt-6 space-y-6">
-            <h2 class="text-xl font-semibold text-slate-100">Battle Leaderboard</h2>
-
-            @if (Leaderboard.Count == 0)
-            {
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardContent class="p-8 text-center">
-                        <LucideIcon Name="swords" Size="48" class="mx-auto mb-4 text-slate-600" />
-                        <p class="text-slate-400">No battles played yet.</p>
-                    </CardContent>
-                </Card>
+                }
+                else
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+                        <i class="fa fa-check text-4xl text-emerald-500 mb-4"></i>
+                        <p class="text-slate-400">No pending proposals</p>
+                    </div>
+                }
             }
-            else
-            {
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardContent class="p-0">
-                        <div class="divide-y divide-slate-800">
-                            @for (int i = 0; i < Leaderboard.Count; i++)
-                            {
-                                var entry = Leaderboard[i];
-                                var rank = i;
-                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg @GetRankClass(rank)">
-                                            @GetRankDisplay(rank)
-                                        </div>
-                                        <div>
-                                            <div class="font-medium text-slate-200">@entry.Username</div>
-                                            <div class="text-sm text-slate-500">@entry.Wins W / @entry.Losses L</div>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="font-semibold @(entry.WinRate >= 50 ? "text-emerald-400" : "text-slate-400")">
-                                            @entry.WinRate% WR
-                                        </div>
-                                        <div class="text-xs text-slate-500">@(entry.Wins + entry.Losses) games</div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </CardContent>
-                </Card>
-            }
-        </TabsContent>
-
-        <!-- Tools Tab -->
-        <TabsContent Value="tools" class="mt-6 space-y-6">
-            <h2 class="text-xl font-semibold text-slate-100">Admin Tools</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardHeader>
-                        <CardTitle class="text-slate-100 flex items-center gap-2">
-                            <LucideIcon Name="database" Size="20" class="text-blue-400" />
-                            Database Tools
-                        </CardTitle>
-                        <CardDescription class="text-slate-400">
-                            Maintenance and repair tools
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="space-y-3">
-                        <Button @onclick="FixInventory" Variant="ButtonVariant.Outline" class="w-full justify-start border-slate-700">
-                            <LucideIcon Name="package-check" Size="18" class="mr-2" />
-                            Fix Inventory Issues
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardHeader>
-                        <CardTitle class="text-slate-100 flex items-center gap-2">
-                            <LucideIcon Name="bar-chart-3" Size="20" class="text-emerald-400" />
-                            Statistics
-                        </CardTitle>
-                        <CardDescription class="text-slate-400">
-                            Platform overview
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-3 rounded-lg bg-slate-800 text-center">
-                                <div class="text-2xl font-bold text-slate-100">@AllCards.Count</div>
-                                <div class="text-xs text-slate-500">Total Cards</div>
-                            </div>
-                            <div class="p-3 rounded-lg bg-slate-800 text-center">
-                                <div class="text-2xl font-bold text-slate-100">@AllPacks.Count</div>
-                                <div class="text-xs text-slate-500">Pack Types</div>
-                            </div>
-                            <div class="p-3 rounded-lg bg-slate-800 text-center">
-                                <div class="text-2xl font-bold text-slate-100">@Users.Count</div>
-                                <div class="text-xs text-slate-500">Total Users</div>
-                            </div>
-                            <div class="p-3 rounded-lg bg-slate-800 text-center">
-                                <div class="text-2xl font-bold text-slate-100">@Users.Count(u => u.IsBotAdmin)</div>
-                                <div class="text-xs text-slate-500">Admins</div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </TabsContent>
-
-        <!-- Wiki Tab -->
-        <TabsContent Value="wiki" class="mt-6 space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-slate-100">Wiki Management</h2>
-                <Button @onclick="OpenAddWikiPage" class="bg-emerald-500 hover:bg-emerald-600">
-                    <LucideIcon Name="plus" Size="18" class="mr-2" />
-                    Add Page
-                </Button>
-            </div>
-
-            <div class="grid md:grid-cols-4 gap-4">
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardContent class="p-4 text-center">
-                        <div class="text-3xl font-bold text-amber-400">@WikiPages.Count</div>
-                        <div class="text-sm text-slate-500">Total Pages</div>
-                    </CardContent>
-                </Card>
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardContent class="p-4 text-center">
-                        <div class="text-3xl font-bold text-purple-400">@WikiProposals.Count(p => p.Status == ProposalStatus.Pending)</div>
-                        <div class="text-sm text-slate-500">Pending Proposals</div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card class="border-slate-800 bg-slate-900/50">
-                <CardHeader>
-                    <CardTitle class="text-slate-100">Wiki Pages</CardTitle>
-                </CardHeader>
-                <CardContent class="p-0">
-                    @if (WikiIsLoading)
-                    {
-                        <div class="p-8 text-center">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400 mx-auto"></div>
-                        </div>
-                    }
-                    else if (WikiPages.Count == 0)
-                    {
-                        <div class="p-8 text-center text-slate-400">
-                            <LucideIcon Name="file-text" Size="48" class="mx-auto mb-4 opacity-50" />
-                            <p>No wiki pages yet. Create your first page!</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="divide-y divide-slate-800">
-                            @foreach (var wikiPage in FlatWikiPages)
-                            {
-                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-slate-400">
-                                            <LucideIcon Name="file-text" Size="16" />
-                                        </div>
-                                        <div>
-                                            <div class="font-medium text-slate-200" style="padding-left: @(wikiPage.Depth * 16)px">
-                                                @wikiPage.Title
-                                            </div>
-                                            <div class="text-xs text-slate-500">/@wikiPage.Slug</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <Button @onclick="() => OpenEditWikiPage(WikiPages.FirstOrDefault(p => p.Id == wikiPage.Id)!)" Size="ButtonSize.Icon" Variant="ButtonVariant.Ghost">
-                                            <LucideIcon Name="pencil" Size="16" />
-                                        </Button>
-                                        <Button @onclick="() => DeleteWikiPage(WikiPages.FirstOrDefault(p => p.Id == wikiPage.Id)!)" Size="ButtonSize.Icon" Variant="ButtonVariant.Destructive">
-                                            <LucideIcon Name="trash-2" Size="16" />
-                                        </Button>
-                                        <Button @onclick="() => ViewWikiPage(WikiPages.FirstOrDefault(p => p.Id == wikiPage.Id)!)" Size="ButtonSize.Icon" Variant="ButtonVariant.Ghost">
-                                            <LucideIcon Name="external-link" Size="16" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </CardContent>
-            </Card>
-
-            @if (WikiProposals.Count(p => p.Status == ProposalStatus.Pending) > 0)
-            {
-                <Card class="border-slate-800 bg-slate-900/50">
-                    <CardHeader>
-                        <CardTitle class="text-slate-100 flex items-center gap-2">
-                            <LucideIcon Name="lightbulb" Size="20" class="text-amber-400" />
-                            Pending Proposals
-                            <Badge class="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/50">
-                                @WikiProposals.Count(p => p.Status == ProposalStatus.Pending)
-                            </Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent class="p-0">
-                        <div class="divide-y divide-slate-800">
-                            @foreach (var proposal in WikiProposals.Where(p => p.Status == ProposalStatus.Pending))
-                            {
-                                <div class="flex items-center justify-between p-4 hover:bg-slate-800/50">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white">
-                                            <LucideIcon Name="lightbulb" Size="18" />
-                                        </div>
-                                        <div>
-                                            <div class="font-medium text-slate-200">@proposal.Title</div>
-                                            <div class="text-xs text-slate-500">
-                                                @proposal.Type @(proposal.WikiPageTitle != null ? $"for {proposal.WikiPageTitle}" : "")
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <Button @onclick="() => ViewProposal(proposal)" Variant="ButtonVariant.Outline" size="ButtonSize.Small">
-                                            <LucideIcon Name="eye" Size="14" class="mr-1" />
-                                            View
-                                        </Button>
-                                        <Button @onclick="() => ApproveProposal(proposal)" class="bg-emerald-500 hover:bg-emerald-600" size="ButtonSize.Small">
-                                            <LucideIcon Name="check" Size="14" class="mr-1" />
-                                            Approve
-                                        </Button>
-                                        <Button @onclick="() => OpenRejectProposal(proposal)" Variant="ButtonVariant.Destructive" size="ButtonSize.Small">
-                                            <LucideIcon Name="x" Size="14" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </CardContent>
-                </Card>
-            }
-        </TabsContent>
-    </Tabs>
+        </div>
+    }
 </div>
 
-<!-- Add/Edit Card Dialog -->
-<Dialog @bind-Open="ShowCardDialog">
-    <DialogContent class="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader class="flex-shrink-0">
-            <DialogTitle class="text-slate-100">
-                @(IsEditingCard ? "Edit Card" : "Add New Card")
-            </DialogTitle>
-        </DialogHeader>
-        <div class="flex-1 overflow-y-auto space-y-3 py-3 pr-1">
-            <!-- Basic Info -->
-            <div class="grid grid-cols-4 gap-3">
-                <div class="col-span-2">
-                    <Label class="text-slate-400 text-xs">Card Name</Label>
-                    <Input @bind-Value="EditingCard.Name" class="mt-1 bg-slate-950 border-slate-700" />
+<!-- Add/Edit Card Modal -->
+@if (_showCardModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">@(_editingCard?.Id == 0 ? "Add Card" : "Edit Card")</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Name</label>
+                    <input @bind="_cardForm.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Card Type</label>
+                        <select @bind="_cardForm.CardType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                            <option value="Unit">Unit</option>
+                            <option value="Commander">Commander</option>
+                            <option value="Closer">Closer</option>
+                            <option value="Spell">Spell</option>
+                            <option value="Structure">Structure</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Rarity</label>
+                        <select @bind="_cardForm.Rarity" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                            <option value="Common">Common</option>
+                            <option value="Uncommon">Uncommon</option>
+                            <option value="Rare">Rare</option>
+                            <option value="Legendary">Legendary</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Attack</label>
+                        <input type="number" @bind="_cardForm.Attack" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Defense</label>
+                        <input type="number" @bind="_cardForm.Defense" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Health</label>
+                        <input type="number" @bind="_cardForm.Health" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Light Cost</label>
+                        <input type="number" @bind="_cardForm.LightCost" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Speed</label>
+                        <input type="number" @bind="_cardForm.Speed" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Image Path</label>
+                        <input @bind="_cardForm.ImagePath" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="cards/name.png" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Min Damage</label>
+                        <input type="number" @bind="_cardForm.MinDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Max Damage</label>
+                        <input type="number" @bind="_cardForm.MaxDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
                 </div>
                 <div>
-                    <Label class="text-slate-400 text-xs">Rarity</Label>
-                    <Select @bind-Value="EditingCardRarity" class="mt-1">
-                        <SelectItem Value="@nameof(Rarity.Common)">Common</SelectItem>
-                        <SelectItem Value="@nameof(Rarity.Rare)">Rare</SelectItem>
-                        <SelectItem Value="@nameof(Rarity.Legendary)">Legendary</SelectItem>
-                    </Select>
+                    <label class="block text-slate-400 text-sm mb-1">Counter Strike</label>
+                    <input type="number" @bind="_cardForm.CounterStrike" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
                 </div>
                 <div>
-                    <Label class="text-slate-400 text-xs">Card Type</Label>
-                    <Select @bind-Value="EditingCardType" class="mt-1">
-                        <SelectItem Value="@nameof(CardType.Unit)">Unit</SelectItem>
-                        <SelectItem Value="@nameof(CardType.Commander)">Commander</SelectItem>
-                        <SelectItem Value="@nameof(CardType.Closer)">Closer</SelectItem>
-                    </Select>
+                    <label class="block text-slate-400 text-sm mb-1">Ability Text</label>
+                    <textarea @bind="_cardForm.AbilityText" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white h-20"></textarea>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Ability ID</label>
+                    <input @bind="_cardForm.AbilityId" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="heal_on_enter" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Exclusive Pack</label>
+                    <select @bind="_cardForm.ExclusivePackName" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        <option value="">None</option>
+                        @foreach (var pack in _packs)
+                        {
+                            <option value="@pack.Name">@pack.Name</option>
+                        }
+                    </select>
                 </div>
             </div>
-
-            <!-- Image Upload -->
-            <div>
-                <Label class="text-slate-400 text-xs">Card Image</Label>
-                <div class="mt-1 flex items-center gap-2">
-                    <div class="flex-1">
-                        <InputFile OnChange="OnImageSelected" Accept=".png,.jpg,.jpeg,.gif,.webp"
-                            class="block w-full text-sm text-slate-400 
-                                   file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0
-                                   file:text-sm file:font-semibold file:bg-slate-800 file:text-slate-200
-                                   hover:file:bg-slate-700 file:cursor-pointer" />
-                    </div>
-                    @if (IsUploading)
-                    {
-                        <div class="text-sm text-slate-400 flex items-center gap-2">
-                            <LucideIcon Name="loader-2" Size="16" class="animate-spin" />
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
-                    {
-                        <img src="@($"/api/images/{EditingCard.ImagePath}")" alt="Preview"
-                             class="w-12 h-12 object-cover rounded-lg border border-slate-700" />
-                    }
-                </div>
-                @if (!string.IsNullOrEmpty(EditingCard.ImagePath))
-                {
-                    <p class="text-xs text-slate-500 mt-0.5">@EditingCard.ImagePath</p>
-                }
-            </div>
-
-            <!-- Collection Stats + Battle Stats combined -->
-            <div class="border-t border-slate-800 pt-3">
-                <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
-                    <LucideIcon Name="swords" Size="16" class="text-orange-400" />
-                    Stats
-                </h3>
-                <div class="grid grid-cols-4 gap-3">
-                    <div>
-                        <Label class="text-slate-400 text-xs">⚔️ Attack</Label>
-                        <Input @bind-Value="EditingCardAttackStr" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    <div>
-                        <Label class="text-slate-400 text-xs">🛡️ Defense</Label>
-                        <Input @bind-Value="EditingCardDefenseStr" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    <div>
-                        <Label class="text-slate-400 text-xs">
-                            ❤️ @(EditingCardType == "Commander" ? "Commander HP" : "Health")
-                        </Label>
-                        <Input @bind-Value="EditingCardHealthStr" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    @if (EditingCardType is "Unit" or "Closer")
-                    {
-                        <div>
-                            <Label class="text-slate-400 text-xs">💡 Light Cost</Label>
-                            <Input @bind-Value="EditingCardLightCostStr" class="mt-1 bg-slate-950 border-slate-700" />
-                        </div>
-                        <div>
-                            <Label class="text-slate-400 text-xs">Min Damage</Label>
-                            <Input @bind-Value="EditingCardMinDamageStr" class="mt-1 bg-slate-950 border-slate-700" />
-                        </div>
-                        <div>
-                            <Label class="text-slate-400 text-xs">Max Damage</Label>
-                            <Input @bind-Value="EditingCardMaxDamageStr" class="mt-1 bg-slate-950 border-slate-700" />
-                        </div>
-                    }
-                    @if (EditingCardType == "Commander")
-                    {
-                        <div>
-                            <Label class="text-slate-400 text-xs">⚡ Speed</Label>
-                            <Input @bind-Value="EditingCardSpeedStr" class="mt-1 bg-slate-950 border-slate-700" />
-                        </div>
-                        <div>
-                            <Label class="text-slate-400 text-xs">🗡️ Counter-Strike</Label>
-                            <Input @bind-Value="EditingCardCounterStrikeStr" class="mt-1 bg-slate-950 border-slate-700" />
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Ability -->
-            <div class="border-t border-slate-800 pt-3">
-                <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
-                    <LucideIcon Name="sparkles" Size="16" class="text-purple-400" />
-                    Ability
-                </h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <Label class="text-slate-400 text-xs">Ability Text</Label>
-                        <Input @bind-Value="EditingCard.AbilityText" Placeholder="Description" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                    <div>
-                        <Label class="text-slate-400 text-xs">Ability ID</Label>
-                        <Input @bind-Value="EditingCard.AbilityId" Placeholder="e.g. heal_on_enter" class="mt-1 bg-slate-950 border-slate-700" />
-                    </div>
-                </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="CloseCardModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="SaveCard" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                    @(_editingCard?.Id == 0 ? "Add Card" : "Save Changes")
+                </button>
             </div>
         </div>
-        <DialogFooter class="flex-shrink-0 border-t border-slate-800 pt-3">
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowCardDialog = false">Cancel</Button>
-            <Button @onclick="SaveCard" class="bg-emerald-500 hover:bg-emerald-600" disabled="@IsSaving">
-                @if (IsSaving)
-                {
-                    <LucideIcon Name="loader-2" Size="16" class="mr-2 animate-spin" />
-                }
-                @(IsEditingCard ? "Save Changes" : "Add Card")
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
+    </div>
+}
 
-<!-- Give Gold Dialog -->
-<Dialog @bind-Open="ShowGiveGoldDialog">
-    <DialogContent class="max-w-sm">
-        <DialogHeader>
-            <DialogTitle class="text-slate-100">Give Gold to @SelectedUser?.Username</DialogTitle>
-        </DialogHeader>
-        <div class="py-4">
-            <Label class="text-slate-400">Amount</Label>
-            <Input @bind-Value="GoldAmountStr" Placeholder="1000" class="mt-1 bg-slate-950 border-slate-700" />
-        </div>
-        <DialogFooter>
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowGiveGoldDialog = false">Cancel</Button>
-            <Button @onclick="GiveGold" class="bg-amber-500 hover:bg-amber-600">Give Gold</Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
-
-<!-- Give Card Dialog -->
-<Dialog @bind-Open="ShowGiveCardDialog">
-    <DialogContent class="max-w-sm">
-        <DialogHeader>
-            <DialogTitle class="text-slate-100">Give Card to @SelectedUser?.Username</DialogTitle>
-        </DialogHeader>
-        <div class="py-4 space-y-4">
-            <div>
-                <Label class="text-slate-400">Card</Label>
-                <Select @bind-Value="SelectedCardName" class="mt-1">
-                    @foreach (var card in AllCards)
-                    {
-                        <SelectItem Value="@card.Name">@card.Name (@card.Rarity)</SelectItem>
-                    }
-                </Select>
+<!-- Add/Edit Pack Modal -->
+@if (_showPackModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">@(_editingPack?.Id == 0 ? "Add Pack" : "Edit Pack")</h3>
             </div>
-            <div>
-                <Label class="text-slate-400">Amount</Label>
-                <Input @bind-Value="CardAmountStr" Placeholder="1" class="mt-1 bg-slate-950 border-slate-700" />
-            </div>
-        </div>
-        <DialogFooter>
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowGiveCardDialog = false">Cancel</Button>
-            <Button @onclick="GiveCard" class="bg-emerald-500 hover:bg-emerald-600">Give Card</Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
-
-<!-- Add/Edit Wiki Page Dialog -->
-<Dialog @bind-Open="ShowWikiDialog">
-    <DialogContent class="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader class="flex-shrink-0">
-            <DialogTitle class="text-slate-100">
-                @(IsEditingWikiPage ? "Edit Wiki Page" : "Add New Wiki Page")
-            </DialogTitle>
-        </DialogHeader>
-        <div class="flex-1 overflow-y-auto space-y-3 py-3 pr-1">
-            <div>
-                <Label class="text-slate-400 text-xs">Title</Label>
-                <Input @bind-Value="EditingWikiPageTitle" class="mt-1 bg-slate-950 border-slate-700" placeholder="Page title" />
-            </div>
-            <div>
-                <Label class="text-slate-400 text-xs">Slug (URL)</Label>
-                <Input @bind-Value="EditingWikiPageSlug" class="mt-1 bg-slate-950 border-slate-700" placeholder="page-url-slug" />
-            </div>
-            <div>
-                <Label class="text-slate-400 text-xs">Parent Page</Label>
-                <Select @bind-Value="EditingWikiPageParentId" class="mt-1">
-                    <SelectItem Value="(int?)null">- No Parent -</SelectItem>
-                    @foreach (var wikiPage in WikiPages.Where(p => p.Id != EditingWikiPageId))
-                    {
-                        <SelectItem Value="@((int?)wikiPage.Id)">@wikiPage.Title</SelectItem>
-                    }
-                </Select>
-            </div>
-            <div>
-                <Label class="text-slate-400 text-xs">Order</Label>
-                <Input @bind-Value="EditingWikiPageOrderStr" class="mt-1 bg-slate-950 border-slate-700" type="InputType.Number" />
-            </div>
-            <div>
-                <Label class="text-slate-400 text-xs">Content (Markdown)</Label>
-                <textarea @bind="EditingWikiPageContent" 
-                          rows="15" 
-                          class="w-full bg-slate-950 border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm"
-                          placeholder="Page content in Markdown format..."></textarea>
-            </div>
-        </div>
-        <DialogFooter class="flex-shrink-0 border-t border-slate-800 pt-3">
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowWikiDialog = false">Cancel</Button>
-            <Button @onclick="SaveWikiPage" class="bg-emerald-500 hover:bg-emerald-600" disabled="@IsSavingWiki">
-                @if (IsSavingWiki)
-                {
-                    <LucideIcon Name="loader-2" Size="16" class="mr-2 animate-spin" />
-                }
-                @(IsEditingWikiPage ? "Save Changes" : "Create Page")
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
-
-<!-- View Proposal Dialog -->
-<Dialog @bind-Open="ShowProposalDialog">
-    <DialogContent class="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader class="flex-shrink-0">
-            <DialogTitle class="text-slate-100">Proposal: @ViewingProposal?.Title</DialogTitle>
-        </DialogHeader>
-        <div class="flex-1 overflow-y-auto space-y-3 py-3 pr-1">
-            @if (ViewingProposal != null)
-            {
-                <div class="flex gap-4 text-sm">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Name</label>
+                    <input @bind="_packForm.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Price (Gold)</label>
+                    <input type="number" @bind="_packForm.Price" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <span class="text-slate-500">Type:</span>
-                        <span class="text-slate-200 ml-2">@ViewingProposal.Type</span>
+                        <label class="block text-slate-400 text-sm mb-1">Common %</label>
+                        <input type="number" @bind="_packForm.ChanceCommon" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
                     </div>
                     <div>
-                        <span class="text-slate-500">Status:</span>
-                        <span class="text-slate-200 ml-2">@ViewingProposal.Status</span>
+                        <label class="block text-slate-400 text-sm mb-1">Rare %</label>
+                        <input type="number" @bind="_packForm.ChanceRare" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Legendary %</label>
+                        <input type="number" @bind="_packForm.ChanceLegendary" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
                     </div>
                 </div>
-                
-                <div class="border-t border-slate-800 pt-3">
-                    <Label class="text-slate-400 text-xs">Title</Label>
-                    <div class="text-slate-100 mt-1">@ViewingProposal.Title</div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Available</label>
+                    <input type="checkbox" @bind="_packForm.IsAvailable" class="w-5 h-5" />
+                    <span class="text-white ml-2">Pack is available for purchase</span>
                 </div>
-                
-                @if (ViewingProposalDetail != null)
-                {
-                    @if (!string.IsNullOrEmpty(ViewingProposalDetail.Slug))
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="ClosePackModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="SavePack" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                    @(_editingPack?.Id == 0 ? "Add Pack" : "Save Changes")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Gold Modal -->
+@if (_showGoldModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">Edit Gold - @_editingUser?.Username</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Current Gold</label>
+                    <p class="text-amber-400 text-2xl font-bold">@_editingUser?.Gold.ToString("N0")</p>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">New Gold Amount</label>
+                    <input type="number" @bind="_goldAmount" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div class="flex gap-2">
+                    <button @onclick="() => SetGold(_goldAmount)" class="flex-1 bg-amber-600 px-4 py-2 rounded-lg text-white">
+                        Set Gold
+                    </button>
+                    <button @onclick="() => AddGold(_goldAmount)" class="flex-1 bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                        Add Gold
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end">
+                <button @onclick="CloseGoldModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Proposal Detail Modal -->
+@if (_showProposalModal && _viewingProposal != null)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-medium px-2 py-1 rounded @GetProposalTypeClass(_viewingProposal.Type.ToString())">
+                        @_viewingProposal.Type.ToString()
+                    </span>
+                    <h3 class="text-xl font-bold text-white">Proposal Details</h3>
+                </div>
+                <button @onclick="CloseProposalModal" class="text-slate-400 hover:text-white">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 border-b border-slate-700 bg-slate-800/50">
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="text-slate-400">by <span class="text-white">@_viewingProposal.SubmittedByUsername</span></span>
+                    <span class="text-slate-500">@_viewingProposal.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                    @if (!string.IsNullOrEmpty(_viewingProposal.WikiPageTitle))
                     {
+                        <span class="text-slate-400">Page: <span class="text-amber-400">@_viewingProposal.WikiPageTitle</span></span>
+                    }
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6">
+                @if (_viewingProposal.Type.ToString() == "Edit" && _viewingProposal.Diff != null)
+                {
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <Label class="text-slate-400 text-xs">Slug</Label>
-                            <div class="text-slate-100 mt-1">/@ViewingProposalDetail.Slug</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-red-400">
+                                    <i class="fa fa-minus-circle mr-1"></i> Original
+                                </h4>
+                                <span class="text-xs text-slate-500">@_viewingProposal.Diff.Left.Lines.Count lines</span>
+                            </div>
+                            <div class="diff-panel">
+                                @foreach (var line in _viewingProposal.Diff.Left.Lines)
+                                {
+                                    <div class="diff-line @GetDiffLineClass(line.Type)">
+                                        @if (line.LineNumber > 0)
+                                        {
+                                            <span class="diff-line-number">@line.LineNumber</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="diff-line-number"></span>
+                                        }
+                                        <span class="diff-line-prefix">@GetDiffPrefix(line.Type)</span>
+                                        <span class="diff-line-content">@line.Content</span>
+                                    </div>
+                                }
+                            </div>
                         </div>
-                    }
-                    
-                    <div>
-                        <Label class="text-slate-400 text-xs">Content</Label>
-                        <div class="mt-1 p-3 bg-slate-800 rounded-lg text-slate-100 font-mono text-sm whitespace-pre-wrap">
-                            @(string.IsNullOrEmpty(ViewingProposalDetail.Content) ? "(empty)" : ViewingProposalDetail.Content)
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-emerald-400">
+                                    <i class="fa fa-plus-circle mr-1"></i> Proposed
+                                </h4>
+                                <span class="text-xs text-slate-500">@_viewingProposal.Diff.Right.Lines.Count lines</span>
+                            </div>
+                            <div class="diff-panel">
+                                @foreach (var line in _viewingProposal.Diff.Right.Lines)
+                                {
+                                    <div class="diff-line @GetDiffLineClass(line.Type)">
+                                        @if (line.LineNumber > 0)
+                                        {
+                                            <span class="diff-line-number">@line.LineNumber</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="diff-line-number"></span>
+                                        }
+                                        <span class="diff-line-prefix">@GetDiffPrefix(line.Type)</span>
+                                        <span class="diff-line-content">@line.Content</span>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
-            }
+                else if (_viewingProposal.Type.ToString() == "Delete")
+                {
+                    <div>
+                        <h4 class="text-sm font-medium text-red-400 mb-2">
+                            <i class="fa fa-trash mr-1"></i> Content to be deleted
+                        </h4>
+                        <div class="bg-slate-800 rounded p-4 text-slate-300 max-h-96 overflow-y-auto whitespace-pre-wrap font-mono text-sm">
+                            @_viewingProposal.Content
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <h4 class="text-sm font-medium text-emerald-400 mb-2">
+                            <i class="fa fa-file-text mr-1"></i> New Page Content
+                        </h4>
+                        <div class="bg-slate-800 rounded p-4 text-slate-300 max-h-96 overflow-y-auto whitespace-pre-wrap font-mono text-sm">
+                            @_viewingProposal.Content
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="p-6 border-t border-slate-700 flex justify-between items-center">
+                <div class="text-sm text-slate-400">
+                    <span class="text-emerald-400">+@(_viewingProposal.Diff?.Right.Lines.Count(l => l.Type == "inserted") ?? 0)</span>
+                    <span class="mx-2">|</span>
+                    <span class="text-red-400">-@(_viewingProposal.Diff?.Left.Lines.Count(l => l.Type == "deleted") ?? 0)</span>
+                </div>
+                <div class="flex gap-3">
+                    <button @onclick="CloseProposalModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white hover:bg-slate-600">Close</button>
+                    <button @onclick="() => { CloseProposalModal(); OpenRejectProposal(_viewingProposal); }" class="bg-red-600 px-4 py-2 rounded-lg text-white hover:bg-red-500">
+                        <i class="fa fa-times mr-2"></i> Reject
+                    </button>
+                    <button @onclick="() => { var p = _viewingProposal; CloseProposalModal(); OpenApproveProposal(p); }" class="bg-emerald-600 px-4 py-2 rounded-lg text-white hover:bg-emerald-500">
+                        <i class="fa fa-check mr-2"></i> Approve
+                    </button>
+                </div>
+            </div>
         </div>
-        <DialogFooter class="flex-shrink-0 border-t border-slate-800 pt-3">
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowProposalDialog = false">Close</Button>
-            <Button @onclick="ApproveCurrentProposal" class="bg-emerald-500 hover:bg-emerald-600">
-                <LucideIcon Name="check" Size="16" class="mr-1" />
-                Approve
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
+    </div>
+}
 
-<!-- Reject Proposal Dialog -->
-<Dialog @bind-Open="ShowRejectDialog">
-    <DialogContent class="max-w-sm">
-        <DialogHeader>
-            <DialogTitle class="text-slate-100">Reject Proposal</DialogTitle>
-        </DialogHeader>
-        <div class="py-4">
-            <Label class="text-slate-400">Reason</Label>
-            <textarea @bind="RejectReason" 
-                      rows="3" 
-                      class="w-full bg-slate-950 border-slate-700 rounded-lg px-3 py-2 text-slate-100 mt-1"
-                      placeholder="Reason for rejection..."></textarea>
+<!-- Reject Proposal Modal -->
+@if (_showRejectModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">Reject Proposal</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-slate-400">Rejecting: <span class="text-white">@_rejectingProposal?.Title</span></p>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Reason (optional)</label>
+                    <textarea @bind="_rejectReason" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white h-24"></textarea>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="CloseRejectModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="RejectProposal" class="bg-red-600 px-4 py-2 rounded-lg text-white">Reject</button>
+            </div>
         </div>
-        <DialogFooter>
-            <Button Variant="ButtonVariant.Outline" @onclick="() => ShowRejectDialog = false">Cancel</Button>
-            <Button Variant="ButtonVariant.Destructive" @onclick="ConfirmRejectProposal">Reject</Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
+    </div>
+}
+
+<!-- Confirm Delete Card Modal -->
+@if (_showDeleteCardModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">Delete Card</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-slate-400">Are you sure you want to delete card:</p>
+                <p class="text-white font-semibold text-lg mt-2">@_deletingCard?.Name</p>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="CloseDeleteCardModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="DeleteCard" class="bg-red-600 px-4 py-2 rounded-lg text-white">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Wiki Page Editor Modal -->
+@if (_showWikiPageModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">@(_editingWikiPageId != null ? "Edit Wiki Page" : "Create Wiki Page")</h3>
+                <button @onclick="CloseWikiPageModal" class="text-slate-400 hover:text-white">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 border-b border-slate-700">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Title</label>
+                        <input @bind="_wikiPageForm.Title" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Slug (URL)</label>
+                        <input @bind="_wikiPageForm.Slug" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="my-page-slug" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor -->
+            <div class="flex-1 overflow-hidden min-h-[300px]" style="max-height: calc(95vh - 280px);">
+                <MarkdownEditor @bind-Value="_wikiPageForm.Content" />
+            </div>
+            
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="CloseWikiPageModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="CreateWikiPage" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">@(_editingWikiPageId != null ? "Save Changes" : "Create Page")</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Wiki Page Modal -->
+@if (_showDeleteWikiPageModal)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">Delete Wiki Page</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-slate-400">Are you sure you want to delete page:</p>
+                <p class="text-white font-semibold text-lg mt-2">@_deletingWikiPage?.Title</p>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="() => _showDeleteWikiPageModal = false" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="DeleteWikiPage" class="bg-red-600 px-4 py-2 rounded-lg text-white">Delete</button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    private string ActiveTab { get; set; } = "cards";
-    private bool IsLoading { get; set; } = true;
+    private string _tab = "cards";
+    private List<Card> _cards = new();
+    private List<PackType> _packs = new();
+    private List<User> _users = new();
+    private List<WikiProposalListDto> _proposals = new();
+    private List<WikiPageItem> _wikiPages = new();
+    private string _wikiTab = "pages";
 
-    private List<ModelCard> AllCards { get; set; } = new();
-    private List<PackType> AllPacks { get; set; } = new();
-    private List<User> Users { get; set; } = new();
-    private List<HengcordTCGClient.LeaderboardEntry> Leaderboard { get; set; } = new();
+    private bool _showCardModal;
+    private bool _showPackModal;
+    private bool _showGoldModal;
+    private bool _showProposalModal;
+    private bool _showRejectModal;
+    private bool _showDeleteCardModal;
+    private bool _showWikiPageModal;
+    private bool _showDeleteWikiPageModal;
+    private int? _editingWikiPageId;
+    private WikiPageItem? _deletingWikiPage;
 
-    // Card dialog
-    private bool ShowCardDialog { get; set; }
-    private bool IsEditingCard { get; set; }
-    private bool IsSaving { get; set; }
-    private bool IsUploading { get; set; }
-    private ModelCard EditingCard { get; set; } = new() { Name = "" };
-    private string EditingCardRarity { get; set; } = "Common";
-    private string EditingCardType { get; set; } = "Unit";
-    private string EditingCardAttackStr { get; set; } = "50";
-    private string EditingCardDefenseStr { get; set; } = "50";
-    private string EditingCardLightCostStr { get; set; } = "0";
-    private string EditingCardHealthStr { get; set; } = "0";
-    private string EditingCardMinDamageStr { get; set; } = "0";
-    private string EditingCardMaxDamageStr { get; set; } = "0";
-    private string EditingCardSpeedStr { get; set; } = "0";
-    private string EditingCardCounterStrikeStr { get; set; } = "0";
-
-    // Card filter
-    private CardType? CardFilter { get; set; }
-    private IEnumerable<ModelCard> FilteredCards =>
-        CardFilter.HasValue ? AllCards.Where(c => c.CardType == CardFilter.Value) : AllCards;
-
-    // Packs
-    private bool ShowAddPack { get; set; }
-
-    // Users
-    private string UserSearch { get; set; } = "";
-    private IEnumerable<User> FilteredUsers =>
-        string.IsNullOrWhiteSpace(UserSearch) ? Users :
-        Users.Where(u => u.Username?.Contains(UserSearch, StringComparison.OrdinalIgnoreCase) == true ||
-                         u.DiscordId.ToString().Contains(UserSearch));
-
-    // User action dialogs
-    private bool ShowGiveGoldDialog { get; set; }
-    private bool ShowGiveCardDialog { get; set; }
-    private User? SelectedUser { get; set; }
-    private string GoldAmountStr { get; set; } = "1000";
-    private string SelectedCardName { get; set; } = "";
-    private string CardAmountStr { get; set; } = "1";
+    private Card? _editingCard;
+    private PackType? _editingPack;
+    private User? _editingUser;
+    private WikiProposalListDto? _viewingProposal;
+    private WikiProposalListDto? _rejectingProposal;
+    private Card? _deletingCard;
+    
+    private CardFormData _cardForm = new();
+    private PackFormData _packForm = new();
+    private WikiPageFormData _wikiPageForm = new();
+    private int _goldAmount;
+    private string _rejectReason = "";
 
     protected override async Task OnInitializedAsync()
     {
-        await AuthService.InitializeAsync();
-        
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (user.Identity?.IsAuthenticated != true || !user.IsInRole("Admin"))
-        {
-            Navigation.NavigateTo("/");
-            return;
-        }
-        
         await LoadData();
     }
 
     private async Task LoadData()
     {
-        IsLoading = true;
-        try
+        _cards = await Client.GetCardsAsync();
+        _packs = await Client.GetPacksAsync();
+        _users = await Client.GetUsersAsync();
+        if (_tab == "wiki")
         {
-            var cardsTask = Client.GetCardsAsync();
-            var packsTask = Client.GetPacksAsync();
-            var usersTask = Client.GetUsersAsync();
-            var leaderboardTask = Client.GetLeaderboardAsync(20);
-
-            await Task.WhenAll(cardsTask, packsTask, usersTask, leaderboardTask);
-
-            AllCards = cardsTask.Result;
-            AllPacks = packsTask.Result;
-            Users = usersTask.Result;
-            Leaderboard = leaderboardTask.Result;
-            
-            await LoadWikiData();
-        }
-        catch
-        {
-            Toast.Error("Failed to load admin data");
-        }
-        finally
-        {
-            IsLoading = false;
+            await LoadProposals();
         }
     }
 
-    // ── Card Dialog ──
+    private string TabClass(string tab) => _tab == tab
+        ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium"
+        : "px-4 py-2 text-slate-400 hover:text-white transition-colors";
 
     private void OpenAddCard()
     {
-        IsEditingCard = false;
-        EditingCard = new ModelCard { Name = "", Attack = 50, Defense = 50 };
-        EditingCardRarity = "Common";
-        EditingCardType = "Unit";
-        EditingCardAttackStr = "50";
-        EditingCardDefenseStr = "50";
-        EditingCardLightCostStr = "0";
-        EditingCardHealthStr = "0";
-        EditingCardMinDamageStr = "0";
-        EditingCardMaxDamageStr = "0";
-        EditingCardSpeedStr = "0";
-        EditingCardCounterStrikeStr = "0";
-        ShowCardDialog = true;
+        _editingCard = new Card();
+        _cardForm = new CardFormData();
+        _showCardModal = true;
     }
 
-    private void OpenEditCard(ModelCard card)
+    private void OpenEditCard(Card card)
     {
-        IsEditingCard = true;
-        EditingCard = new ModelCard
+        _editingCard = card;
+        _cardForm = new CardFormData
         {
-            Id = card.Id,
             Name = card.Name,
+            CardType = card.CardType.ToString(),
+            Rarity = card.Rarity.ToString(),
             Attack = card.Attack,
             Defense = card.Defense,
-            Rarity = card.Rarity,
-            ImagePath = card.ImagePath,
-            CardType = card.CardType,
-            LightCost = card.LightCost,
             Health = card.Health,
+            LightCost = card.LightCost,
             Speed = card.Speed,
+            ImagePath = card.ImagePath ?? "",
             MinDamage = card.MinDamage,
             MaxDamage = card.MaxDamage,
             CounterStrike = card.CounterStrike,
-            AbilityText = card.AbilityText,
-            AbilityId = card.AbilityId,
-            ExclusivePackId = card.ExclusivePackId
+            AbilityText = card.AbilityText ?? "",
+            AbilityId = card.AbilityId ?? "",
+            ExclusivePackName = _packs.FirstOrDefault(p => p.Id == card.ExclusivePackId)?.Name ?? ""
         };
-        EditingCardRarity = card.Rarity.ToString();
-        EditingCardType = card.CardType.ToString();
-        EditingCardAttackStr = card.Attack.ToString();
-        EditingCardDefenseStr = card.Defense.ToString();
-        EditingCardLightCostStr = card.LightCost.ToString();
-        EditingCardHealthStr = card.Health.ToString();
-        EditingCardMinDamageStr = card.MinDamage.ToString();
-        EditingCardMaxDamageStr = card.MaxDamage.ToString();
-        EditingCardSpeedStr = card.Speed.ToString();
-        EditingCardCounterStrikeStr = card.CounterStrike.ToString();
-        ShowCardDialog = true;
+        _showCardModal = true;
     }
 
-    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    private void CloseCardModal()
     {
-        var file = e.File;
-        if (file.Size > 10 * 1024 * 1024)
-        {
-            Toast.Error("File too large (max 10MB)");
-            return;
-        }
-
-        IsUploading = true;
-        StateHasChanged();
-
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var path = await Client.UploadImageAsync(stream, file.Name);
-            if (path != null)
-            {
-                EditingCard.ImagePath = path;
-                Toast.Success("Image uploaded!");
-            }
-            else
-            {
-                Toast.Error("Upload failed");
-            }
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Upload error: {ex.Message}");
-        }
-        finally
-        {
-            IsUploading = false;
-            StateHasChanged();
-        }
+        _showCardModal = false;
+        _editingCard = null;
     }
 
     private async Task SaveCard()
     {
-        if (string.IsNullOrWhiteSpace(EditingCard.Name))
-        {
-            Toast.Error("Card name is required");
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(_cardForm.Name)) return;
 
-        IsSaving = true;
-        StateHasChanged();
-
-        // Parse string values
-        EditingCard.Rarity = Enum.Parse<Rarity>(EditingCardRarity);
-        EditingCard.CardType = Enum.Parse<CardType>(EditingCardType);
-        EditingCard.Attack = int.TryParse(EditingCardAttackStr, out var atk) ? atk : 50;
-        EditingCard.Defense = int.TryParse(EditingCardDefenseStr, out var def) ? def : 50;
-        EditingCard.LightCost = int.TryParse(EditingCardLightCostStr, out var lc) ? lc : 0;
-        EditingCard.Health = int.TryParse(EditingCardHealthStr, out var hp) ? hp : 0;
-        EditingCard.MinDamage = int.TryParse(EditingCardMinDamageStr, out var min) ? min : 0;
-        EditingCard.MaxDamage = int.TryParse(EditingCardMaxDamageStr, out var max) ? max : 0;
-        EditingCard.Speed = int.TryParse(EditingCardSpeedStr, out var spd) ? spd : 0;
-        EditingCard.CounterStrike = int.TryParse(EditingCardCounterStrikeStr, out var cs) ? cs : 0;
-
-        bool success;
-        if (IsEditingCard)
+        var card = new Card
         {
-            success = await Client.UpdateCardAsync(EditingCard);
-        }
-        else
-        {
-            success = await Client.AddCardAsync(EditingCard);
-        }
+            Id = _editingCard?.Id ?? 0,
+            Name = _cardForm.Name,
+            CardType = (CardType)Enum.Parse(typeof(CardType), _cardForm.CardType),
+            Rarity = (Rarity)Enum.Parse(typeof(Rarity), _cardForm.Rarity),
+            Attack = _cardForm.Attack,
+            Defense = _cardForm.Defense,
+            Health = _cardForm.Health,
+            LightCost = _cardForm.LightCost,
+            Speed = _cardForm.Speed,
+            ImagePath = string.IsNullOrEmpty(_cardForm.ImagePath) ? null : _cardForm.ImagePath,
+            MinDamage = _cardForm.MinDamage,
+            MaxDamage = _cardForm.MaxDamage,
+            CounterStrike = _cardForm.CounterStrike,
+            AbilityText = string.IsNullOrEmpty(_cardForm.AbilityText) ? null : _cardForm.AbilityText,
+            AbilityId = string.IsNullOrEmpty(_cardForm.AbilityId) ? null : _cardForm.AbilityId
+        };
 
-        if (success)
+        if (card.Id == 0)
         {
-            Toast.Success(IsEditingCard ? "Card updated!" : $"Card '{EditingCard.Name}' added!");
-            ShowCardDialog = false;
-            await LoadData();
+            await Client.AddCardAsync(card);
         }
         else
         {
-            Toast.Error(IsEditingCard ? "Failed to update card" : "Failed to add card");
+            await Client.UpdateCardAsync(card);
         }
 
-        IsSaving = false;
+        if (!string.IsNullOrEmpty(_cardForm.ExclusivePackName))
+        {
+            await Client.SetCardPackAsync(card.Name, _cardForm.ExclusivePackName);
+        }
+        else if (_editingCard?.ExclusivePackId != null)
+        {
+            await Client.SetCardPackAsync(card.Name, "null");
+        }
+
+        CloseCardModal();
+        await LoadData();
     }
 
-    private async Task DeleteCard(ModelCard card)
+    private void ConfirmDeleteCard(Card card)
     {
-        var success = await Client.RemoveCardAsync(card.Name);
-        if (success)
+        _deletingCard = card;
+        _showDeleteCardModal = true;
+    }
+
+    private void CloseDeleteCardModal()
+    {
+        _showDeleteCardModal = false;
+        _deletingCard = null;
+    }
+
+    private async Task DeleteCard()
+    {
+        if (_deletingCard != null)
         {
-            Toast.Success($"Card '{card.Name}' removed!");
+            await Client.RemoveCardAsync(_deletingCard.Name);
+            CloseDeleteCardModal();
             await LoadData();
-        }
-        else
-        {
-            Toast.Error("Failed to remove card");
         }
     }
 
-    // ── Pack Actions ──
+    private void OpenAddPack()
+    {
+        _editingPack = new PackType();
+        _packForm = new PackFormData();
+        _showPackModal = true;
+    }
+
+    private void OpenEditPack(PackType pack)
+    {
+        _editingPack = pack;
+        _packForm = new PackFormData
+        {
+            Name = pack.Name,
+            Price = pack.Price,
+            ChanceCommon = pack.ChanceCommon,
+            ChanceRare = pack.ChanceRare,
+            ChanceLegendary = pack.ChanceLegendary,
+            IsAvailable = pack.IsAvailable
+        };
+        _showPackModal = true;
+    }
+
+    private void ClosePackModal()
+    {
+        _showPackModal = false;
+        _editingPack = null;
+    }
+
+    private async Task SavePack()
+    {
+        if (string.IsNullOrWhiteSpace(_packForm.Name)) return;
+
+        var pack = new PackType
+        {
+            Id = _editingPack?.Id ?? 0,
+            Name = _packForm.Name,
+            Price = _packForm.Price,
+            ChanceCommon = _packForm.ChanceCommon,
+            ChanceRare = _packForm.ChanceRare,
+            ChanceLegendary = _packForm.ChanceLegendary,
+            IsAvailable = _packForm.IsAvailable
+        };
+
+        if (pack.Id == 0)
+        {
+            await Client.CreatePackAsync(pack);
+        }
+        else
+        {
+            await Client.UpdatePackAsync(pack);
+        }
+
+        ClosePackModal();
+        await LoadData();
+    }
 
     private async Task TogglePack(PackType pack)
     {
-        var success = await Client.TogglePackAsync(pack.Name);
-        if (success)
+        await Client.TogglePackAsync(pack.Name);
+        await LoadData();
+    }
+
+    private string GetTogglePackClass(PackType pack) => pack.IsAvailable
+        ? "bg-red-600 hover:bg-red-700 text-white"
+        : "bg-emerald-600 hover:bg-emerald-700 text-white";
+
+    private void OpenEditGold(User user)
+    {
+        _editingUser = user;
+        _goldAmount = (int)user.Gold;
+        _showGoldModal = true;
+    }
+
+    private void CloseGoldModal()
+    {
+        _showGoldModal = false;
+        _editingUser = null;
+    }
+
+    private async Task SetGold(int amount)
+    {
+        if (_editingUser != null)
         {
-            Toast.Success($"Pack '{pack.Name}' {(pack.IsAvailable ? "disabled" : "enabled")}!");
+            await Client.SetGoldAdminAsync(_editingUser.DiscordId, amount);
+            CloseGoldModal();
             await LoadData();
         }
-        else
+    }
+
+    private async Task AddGold(int amount)
+    {
+        if (_editingUser != null)
         {
-            Toast.Error("Failed to toggle pack");
-        }
-    }
-
-    private void EditPack(PackType pack)
-    {
-        Toast.Success("Edit pack functionality coming soon");
-    }
-
-    // ── User Actions ──
-
-    private void OpenGiveGold(User user)
-    {
-        SelectedUser = user;
-        GoldAmountStr = "1000";
-        ShowGiveGoldDialog = true;
-    }
-
-    private async Task GiveGold()
-    {
-        if (SelectedUser == null) return;
-        var amount = int.TryParse(GoldAmountStr, out var a) ? a : 0;
-        if (amount <= 0) { Toast.Error("Invalid amount"); return; }
-
-        var result = await Client.GiveGoldAdminAsync(SelectedUser.DiscordId, amount);
-        if (result >= 0)
-        {
-            Toast.Success($"Gave {amount} gold to {SelectedUser.Username}! New balance: {result:N0}");
-            ShowGiveGoldDialog = false;
+            await Client.GiveGoldAdminAsync(_editingUser.DiscordId, amount);
+            CloseGoldModal();
             await LoadData();
         }
-        else
-        {
-            Toast.Error("Failed to give gold");
-        }
     }
 
-    private void OpenGiveCard(User user)
+    private async Task AddAdmin(User user)
     {
-        SelectedUser = user;
-        CardAmountStr = "1";
-        SelectedCardName = AllCards.FirstOrDefault()?.Name ?? "";
-        ShowGiveCardDialog = true;
+        await Client.AddAdminAsync(user.DiscordId);
+        await LoadData();
     }
 
-    private async Task GiveCard()
+    private async Task RemoveAdmin(User user)
     {
-        if (SelectedUser == null || string.IsNullOrEmpty(SelectedCardName)) return;
-        var amount = int.TryParse(CardAmountStr, out var a) ? a : 1;
-
-        var success = await Client.GiveCardAsync(SelectedUser.DiscordId, SelectedCardName, amount);
-        if (success)
-        {
-            Toast.Success($"Gave {amount}x {SelectedCardName} to {SelectedUser.Username}!");
-            ShowGiveCardDialog = false;
-        }
-        else
-        {
-            Toast.Error("Failed to give card");
-        }
+        await Client.RemoveAdminAsync(user.DiscordId);
+        await LoadData();
     }
 
-    private async Task ToggleAdmin(User user)
+    private async Task LoadProposals()
     {
-        bool success;
-        if (user.IsBotAdmin)
-        {
-            success = await Client.RemoveAdminAsync(user.DiscordId);
-        }
-        else
-        {
-            success = await Client.AddAdminAsync(user.DiscordId);
-        }
-
-        if (success)
-        {
-            Toast.Success(user.IsBotAdmin ? $"Removed admin from {user.Username}" : $"Made {user.Username} an admin");
-            await LoadData();
-        }
-        else
-        {
-            Toast.Error("Failed to toggle admin status");
-        }
+        _proposals = await Client.GetWikiProposalsAsync();
     }
 
-    // ── Tools ──
-
-    private async Task FixInventory()
+    private async Task LoadWikiPages()
     {
-        var success = await Client.FixInventoryAsync();
-        if (success)
-        {
-            Toast.Success("Inventory issues fixed!");
-        }
-        else
-        {
-            Toast.Error("Failed to fix inventory");
-        }
+        _wikiPages = await WikiService.GetPagesAsync();
     }
 
-    // ── Helpers ──
-
-    private string GetCardTypeIcon(CardType type) => type switch
+    private void ViewProposal(WikiProposalListDto proposal)
     {
-        CardType.Commander => "👑",
-        CardType.Closer => "💥",
-        _ => "⚔️"
-    };
+        _viewingProposal = proposal;
+        _showProposalModal = true;
+    }
 
-    private string GetCardTypeColor(CardType type) => type switch
+    private void CloseProposalModal()
     {
-        CardType.Commander => "bg-amber-600",
-        CardType.Closer => "bg-red-600",
-        _ => "bg-blue-600"
-    };
+        _showProposalModal = false;
+        _viewingProposal = null;
+    }
 
-    private string GetCardTypeBadgeClass(CardType type) => type switch
+    private async Task OpenApproveProposal(WikiProposalListDto proposal)
     {
-        CardType.Commander => "bg-amber-500/20 text-amber-400 border-amber-500/50",
-        CardType.Closer => "bg-red-500/20 text-red-400 border-red-500/50",
-        _ => "bg-blue-500/20 text-blue-400 border-blue-500/50"
-    };
+        await Client.ApproveWikiProposalAsync(proposal.Id);
+        await LoadProposals();
+    }
 
-    private string GetRankClass(int rank) => rank switch
+    private void OpenRejectProposal(WikiProposalListDto proposal)
     {
-        0 => "bg-amber-500 text-white",
-        1 => "bg-slate-400 text-white",
-        2 => "bg-amber-700 text-white",
-        _ => "bg-slate-800 text-slate-400"
-    };
+        _rejectingProposal = proposal;
+        _rejectReason = "";
+        _showRejectModal = true;
+    }
 
-    private string GetRankDisplay(int rank) => rank switch
+    private void CloseRejectModal()
     {
-        0 => "🥇",
-        1 => "🥈",
-        2 => "🥉",
-        _ => $"{rank + 1}"
-    };
+        _showRejectModal = false;
+        _rejectingProposal = null;
+    }
 
-    // ── Wiki Tab ──
-    private bool WikiIsLoading { get; set; } = true;
-    private List<WikiPageItem> WikiPages { get; set; } = new();
-    private List<WikiProposalListItem> WikiProposals { get; set; } = new();
-    private List<FlatWikiPage> FlatWikiPages { get; set; } = new();
-
-    private bool ShowWikiDialog { get; set; }
-    private bool IsEditingWikiPage { get; set; }
-    private bool IsSavingWiki { get; set; }
-    private int EditingWikiPageId { get; set; }
-    private string EditingWikiPageTitle { get; set; } = "";
-    private string EditingWikiPageSlug { get; set; } = "";
-    private string EditingWikiPageContent { get; set; } = "";
-    private int? EditingWikiPageParentId { get; set; }
-    private string EditingWikiPageOrderStr { get; set; } = "0";
-
-    private bool ShowProposalDialog { get; set; }
-    private WikiProposalListItem? ViewingProposal { get; set; }
-    private WikiProposalDetail? ViewingProposalDetail { get; set; }
-
-    private bool ShowRejectDialog { get; set; }
-    private WikiProposalListItem? RejectingProposal { get; set; }
-    private string RejectReason { get; set; } = "";
-
-    private async Task LoadWikiData()
+    private async Task RejectProposal()
     {
-        WikiIsLoading = true;
-        try
+        if (_rejectingProposal != null)
         {
-            WikiPages = await WikiService.GetPagesAsync();
-            WikiProposals = await WikiService.GetProposalsAsync();
-            BuildWikiFlatList();
+            await Client.RejectWikiProposalAsync(_rejectingProposal.Id, _rejectReason);
         }
-        catch (Exception ex)
+        CloseRejectModal();
+        await LoadProposals();
+    }
+
+    private void OpenCreateWikiPage()
+    {
+        _editingWikiPageId = null;
+        _wikiPageForm = new WikiPageFormData();
+        _showWikiPageModal = true;
+    }
+
+    private async Task OpenEditWikiPage(WikiPageItem page)
+    {
+        _editingWikiPageId = page.Id;
+        _wikiPageForm = new WikiPageFormData
         {
-            Toast.Error($"Failed to load wiki data: {ex.Message}");
-        }
-        finally
-        {
-            WikiIsLoading = false;
-        }
-    }
-
-    private class FlatWikiPage
-    {
-        public int Id { get; set; }
-        public string Title { get; set; } = "";
-        public string Slug { get; set; } = "";
-        public int? ParentId { get; set; }
-        public int Order { get; set; }
-        public int Depth { get; set; }
-    }
-
-    private void BuildWikiFlatList()
-    {
-        FlatWikiPages = new();
-        BuildFlatWikiPages(WikiPages.Where(p => p.ParentId == null).ToList(), 0);
-    }
-
-    private void BuildFlatWikiPages(List<WikiPageItem> items, int depth)
-    {
-        foreach (var item in items.OrderBy(p => p.Order))
-        {
-            FlatWikiPages.Add(new FlatWikiPage
-            {
-                Id = item.Id,
-                Title = item.Title,
-                Slug = item.Slug,
-                ParentId = item.ParentId,
-                Order = item.Order,
-                Depth = depth
-            });
-            var children = WikiPages.Where(p => p.ParentId == item.Id).ToList();
-            if (children.Count > 0)
-            {
-                BuildFlatWikiPages(children, depth + 1);
-            }
-        }
-    }
-
-    private void OpenAddWikiPage()
-    {
-        IsEditingWikiPage = false;
-        EditingWikiPageId = 0;
-        EditingWikiPageTitle = "";
-        EditingWikiPageSlug = "";
-        EditingWikiPageContent = "";
-        EditingWikiPageParentId = null;
-        EditingWikiPageOrderStr = "0";
-        ShowWikiDialog = true;
-    }
-
-    private async void OpenEditWikiPage(WikiPageItem page)
-    {
-        IsEditingWikiPage = true;
-        EditingWikiPageId = page.Id;
-        EditingWikiPageTitle = page.Title;
-        EditingWikiPageSlug = page.Slug;
-        EditingWikiPageParentId = page.ParentId;
-        EditingWikiPageOrderStr = page.Order.ToString();
+            Title = page.Title,
+            Slug = page.Slug,
+            Content = ""
+        };
         
         var detail = await WikiService.GetPageAsync(page.Slug);
         if (detail != null)
         {
-            EditingWikiPageContent = detail.Content;
+            _wikiPageForm.Content = detail.Content;
         }
         
-        ShowWikiDialog = true;
+        _showWikiPageModal = true;
     }
 
-    private async Task SaveWikiPage()
+    private void ConfirmDeleteWikiPage(WikiPageItem page)
     {
-        if (string.IsNullOrWhiteSpace(EditingWikiPageTitle))
-        {
-            Toast.Error("Title is required");
+        _deletingWikiPage = page;
+        _showDeleteWikiPageModal = true;
+    }
+
+    private void CloseWikiPageModal()
+    {
+        _showWikiPageModal = false;
+        _editingWikiPageId = null;
+    }
+
+    private async Task CreateWikiPage()
+    {
+        if (string.IsNullOrWhiteSpace(_wikiPageForm.Title) || string.IsNullOrWhiteSpace(_wikiPageForm.Slug))
             return;
-        }
 
-        if (string.IsNullOrWhiteSpace(EditingWikiPageSlug))
+        if (_editingWikiPageId != null)
         {
-            EditingWikiPageSlug = EditingWikiPageTitle.ToLowerInvariant()
-                .Replace(" ", "-")
-                .Replace("ą", "a").Replace("ć", "c").Replace("ę", "e")
-                .Replace("ł", "l").Replace("ń", "n").Replace("ó", "o")
-                .Replace("ś", "s").Replace("ź", "z").Replace("ż", "z");
-        }
-
-        IsSavingWiki = true;
-        StateHasChanged();
-
-        try
-        {
-            var order = int.TryParse(EditingWikiPageOrderStr, out var o) ? o : 0;
-
-            if (IsEditingWikiPage)
+            await WikiService.UpdatePageAsync(_editingWikiPageId.Value, new DTOs.UpdateWikiPageRequest
             {
-                await WikiService.UpdatePageAsync(EditingWikiPageId, new UpdateWikiPageRequest
-                {
-                    Title = EditingWikiPageTitle,
-                    Slug = EditingWikiPageSlug,
-                    Content = EditingWikiPageContent,
-                    ParentId = EditingWikiPageParentId,
-                    Order = order
-                });
-                Toast.Success("Wiki page updated!");
-            }
-            else
+                Title = _wikiPageForm.Title,
+                Slug = _wikiPageForm.Slug,
+                Content = _wikiPageForm.Content
+            });
+        }
+        else
+        {
+            await WikiService.CreatePageAsync(new DTOs.CreateWikiPageRequest
             {
-                await WikiService.CreatePageAsync(new CreateWikiPageRequest
-                {
-                    Title = EditingWikiPageTitle,
-                    Slug = EditingWikiPageSlug,
-                    Content = EditingWikiPageContent,
-                    ParentId = EditingWikiPageParentId,
-                    Order = order
-                });
-                Toast.Success("Wiki page created!");
-            }
+                Title = _wikiPageForm.Title,
+                Slug = _wikiPageForm.Slug,
+                Content = _wikiPageForm.Content
+            });
+        }
+        
+        CloseWikiPageModal();
+        await LoadWikiPages();
+    }
 
-            ShowWikiDialog = false;
-            await LoadWikiData();
-        }
-        catch (Exception ex)
+    private async Task DeleteWikiPage()
+    {
+        if (_deletingWikiPage != null)
         {
-            Toast.Error($"Failed to save wiki page: {ex.Message}");
-        }
-        finally
-        {
-            IsSavingWiki = false;
+            await WikiService.DeletePageAsync(_deletingWikiPage.Id);
+            _showDeleteWikiPageModal = false;
+            _deletingWikiPage = null;
+            await LoadWikiPages();
         }
     }
 
-    private async Task DeleteWikiPage(WikiPageItem page)
+    private string GetProposalTypeClass(string type) => type switch
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{page.Title}'?");
-        if (!confirmed) return;
+        "NewPage" => "bg-emerald-600/50 text-emerald-300",
+        "Edit" => "bg-amber-600/50 text-amber-300",
+        "Delete" => "bg-red-600/50 text-red-300",
+        _ => "bg-slate-600 text-slate-300"
+    };
 
-        try
-        {
-            await WikiService.DeletePageAsync(page.Id);
-            Toast.Success("Wiki page deleted!");
-            await LoadWikiData();
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Failed to delete wiki page: {ex.Message}");
-        }
+    private string GetDiffLineClass(string type) => type switch
+    {
+        "deleted" => "diff-deleted",
+        "inserted" => "diff-added",
+        "imaginary" => "diff-imaginary",
+        "modified" => "diff-modified",
+        _ => "diff-unchanged"
+    };
+
+    private string GetDiffPrefix(string type) => type switch
+    {
+        "deleted" => "-",
+        "inserted" => "+",
+        _ => " "
+    };
+
+    private class CardFormData
+    {
+        public string Name { get; set; } = "";
+        public string CardType { get; set; } = "Unit";
+        public string Rarity { get; set; } = "Common";
+        public int Attack { get; set; }
+        public int Defense { get; set; }
+        public int Health { get; set; }
+        public int LightCost { get; set; }
+        public int Speed { get; set; }
+        public string ImagePath { get; set; } = "";
+        public int MinDamage { get; set; }
+        public int MaxDamage { get; set; }
+        public int CounterStrike { get; set; }
+        public string AbilityText { get; set; } = "";
+        public string AbilityId { get; set; } = "";
+        public string ExclusivePackName { get; set; } = "";
     }
 
-    private void ViewWikiPage(WikiPageItem page)
+    private class PackFormData
     {
-        Navigation.NavigateTo($"/wiki/{page.Slug}");
+        public string Name { get; set; } = "";
+        public int Price { get; set; } = 100;
+        public int ChanceCommon { get; set; } = 60;
+        public int ChanceRare { get; set; } = 35;
+        public int ChanceLegendary { get; set; } = 5;
+        public bool IsAvailable { get; set; } = true;
     }
 
-    private async Task ViewProposal(WikiProposalListItem proposal)
+    private class WikiPageFormData
     {
-        try
-        {
-            ViewingProposalDetail = await WikiService.GetProposalAsync(proposal.Id);
-            ViewingProposal = proposal;
-            ShowProposalDialog = true;
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Failed to load proposal: {ex.Message}");
-        }
-    }
-
-    private async Task ApproveProposal(WikiProposalListItem proposal)
-    {
-        try
-        {
-            await WikiService.ApproveProposalAsync(proposal.Id);
-            Toast.Success("Proposal approved!");
-            await LoadWikiData();
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Failed to approve proposal: {ex.Message}");
-        }
-    }
-
-    private async Task ApproveCurrentProposal()
-    {
-        if (ViewingProposal == null) return;
-        ShowProposalDialog = false;
-        await ApproveProposal(ViewingProposal);
-    }
-
-    private void OpenRejectProposal(WikiProposalListItem proposal)
-    {
-        RejectingProposal = proposal;
-        RejectReason = "";
-        ShowRejectDialog = true;
-    }
-
-    private async Task ConfirmRejectProposal()
-    {
-        if (RejectingProposal == null) return;
-
-        try
-        {
-            await WikiService.RejectProposalAsync(RejectingProposal.Id, RejectReason);
-            Toast.Success("Proposal rejected!");
-            ShowRejectDialog = false;
-            await LoadWikiData();
-        }
-        catch (Exception ex)
-        {
-            Toast.Error($"Failed to reject proposal: {ex.Message}");
-        }
+        public string Title { get; set; } = "";
+        public string Slug { get; set; } = "";
+        public string Content { get; set; } = "";
     }
 }

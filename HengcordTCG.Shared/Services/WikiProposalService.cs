@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.DTOs.Wiki;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
 
 namespace HengcordTCG.Shared.Services;
 
@@ -48,22 +50,90 @@ public class WikiProposalService
 
     public async Task<List<WikiProposalListDto>> GetPendingProposalsAsync()
     {
-        return await _context.WikiProposals
+        var proposals = await _context.WikiProposals
             .Include(p => p.WikiPage)
             .Where(p => p.Status == ProposalStatus.Pending)
             .OrderByDescending(p => p.CreatedAt)
-            .Select(p => new WikiProposalListDto
+            .ToListAsync();
+        
+        var userIds = proposals.Select(p => p.SubmittedBy).Distinct().ToList();
+        var users = await _context.Users.Where(u => userIds.Contains(u.DiscordId)).ToDictionaryAsync(u => u.DiscordId, u => u.Username);
+        
+        var wikiPageIds = proposals
+            .Where(p => p.Type == ProposalType.Edit && p.WikiPageId.HasValue)
+            .Select(p => p.WikiPageId!.Value)
+            .Distinct()
+            .ToList();
+        var wikiPages = await _context.WikiPages
+            .Where(p => wikiPageIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Content);
+        
+        var result = new List<WikiProposalListDto>();
+        foreach (var p in proposals)
+        {
+            var username = users.GetValueOrDefault(p.SubmittedBy);
+            if (string.IsNullOrEmpty(username))
+            {
+                username = $"User_{p.SubmittedBy}";
+            }
+            
+            var dto = new WikiProposalListDto
             {
                 Id = p.Id,
                 WikiPageId = p.WikiPageId,
-                WikiPageTitle = p.WikiPage != null ? p.WikiPage.Title : null,
+                WikiPageTitle = p.WikiPage?.Title,
                 Type = p.Type,
                 Title = p.Title,
                 Status = p.Status,
                 SubmittedBy = p.SubmittedBy,
-                CreatedAt = p.CreatedAt
-            })
-            .ToListAsync();
+                SubmittedByUsername = username,
+                CreatedAt = p.CreatedAt,
+                Content = p.Content,
+                ChangeDescription = p.Type == ProposalType.Edit ? $"Edit: {p.WikiPage?.Title}" : 
+                                   p.Type == ProposalType.Delete ? $"Delete: {p.WikiPage?.Title}" : 
+                                   "New page proposal"
+            };
+            
+            if (p.Type == ProposalType.Edit && p.WikiPageId.HasValue)
+            {
+                var originalContent = wikiPages.GetValueOrDefault(p.WikiPageId.Value) ?? "";
+                dto.OriginalContent = originalContent;
+                dto.Diff = ComputeSideBySideDiff(originalContent, p.Content);
+            }
+            
+            result.Add(dto);
+        }
+        
+        return result;
+    }
+    
+    private DTOs.Wiki.SideBySideDiffModel ComputeSideBySideDiff(string oldText, string newText)
+    {
+        var diff = SideBySideDiffBuilder.Diff(oldText, newText);
+        
+        return new DTOs.Wiki.SideBySideDiffModel
+        {
+            Left = new DiffPanel
+            {
+                Title = "Original",
+                Lines = diff.OldText.Lines.Select(l => new DiffLine
+                {
+                    LineNumber = l.Position ?? 0,
+                    Content = l.Text,
+                    Type = l.Type.ToString().ToLower()
+                }).ToList()
+            },
+            Right = new DiffPanel
+            {
+                Title = "Proposed",
+                Lines = diff.NewText.Lines.Select(l => new DiffLine
+                {
+                    LineNumber = l.Position ?? 0,
+                    Content = l.Text,
+                    Type = l.Type.ToString().ToLower()
+                }).ToList()
+            }
+        };
     }
 
     public async Task<WikiProposalDetailDto?> GetProposalAsync(int id)

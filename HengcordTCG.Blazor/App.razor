@@ -3,37 +3,42 @@
 @using HengcordTCG.Blazor.Client
 
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <!-- Theme CSS variables - must load first -->
-    <link href="styles/themes/default.css" rel="stylesheet" />
-    <!-- BlazorBlueprint component styles -->
-    <link href="_content/BlazorBlueprint.Components/blazorblueprint.css" rel="stylesheet" />
-    <!-- App styles (Tailwind utilities for template pages) -->
     <link href="css/app.css" rel="stylesheet" />
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
     <HeadOutlet />
 </head>
-<body class="font-sans antialiased dark bg-slate-950 text-slate-50">
+<body>
     <Routes @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 
-    <div id="blazor-error-ui" class="hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-destructive text-destructive-foreground">
-        An error has occurred. This application may no longer respond until reloaded.
-        <a href="" class="underline">Reload</a>
+    <div id="blazor-error-ui" class="bg-slate-900 text-white p-4 fixed bottom-0 left-0 right-0 hidden">
+        An error has occurred. <a href="/" class="underline">Reload</a>
     </div>
-
-    <!-- Preload Floating UI for positioning (Select, Popover, etc.) -->
-    <script type="module">
-        import * as FloatingUI from 'https://cdn.jsdelivr.net/npm/@@floating-ui/dom@@1.5.3/+esm';
-        window.FloatingUIDOM = FloatingUI;
-    </script>
 
     <script src="_framework/blazor.web.js"></script>
     <script>
-        window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
-        window.isDarkModeEnabled = () => document.documentElement.classList.contains('dark');
+        window.insertAtCursor = function(textarea, beforeText, afterText) {
+            if (!textarea) return { value: '' };
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            const selectedText = value.substring(start, end);
+            
+            const newText = value.substring(0, start) + beforeText + selectedText + (afterText || '') + value.substring(end);
+            textarea.value = newText;
+            
+            const newCursorPos = start + beforeText.length + selectedText.length + (afterText ? afterText.length : 0);
+            textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+            textarea.focus();
+            
+            return { value: newText };
+        };
     </script>
 </body>
 </html>

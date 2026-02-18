@@ -82,9 +82,33 @@ public class WikiProposalListDto
     public string? WikiPageTitle { get; set; }
     public ProposalType Type { get; set; }
     public string Title { get; set; } = "";
+    public string Content { get; set; } = "";
+    public string? OriginalContent { get; set; }
+    public SideBySideDiffModel? Diff { get; set; }
+    public string ChangeDescription { get; set; } = "";
     public ProposalStatus Status { get; set; }
     public ulong SubmittedBy { get; set; }
+    public string? SubmittedByUsername { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+public class DiffLine
+{
+    public int LineNumber { get; set; }
+    public string Content { get; set; } = "";
+    public string Type { get; set; } = "";
+}
+
+public class DiffPanel
+{
+    public string Title { get; set; } = "";
+    public List<DiffLine> Lines { get; set; } = new();
+}
+
+public class SideBySideDiffModel
+{
+    public DiffPanel Left { get; set; } = new();
+    public DiffPanel Right { get; set; } = new();
 }
 
 public class WikiProposalDetailDto
@@ -96,9 +120,11 @@ public class WikiProposalDetailDto
     public string Title { get; set; } = "";
     public string Slug { get; set; } = "";
     public string Content { get; set; } = "";
+    public string ChangeDescription { get; set; } = "";
     public int? ParentId { get; set; }
     public int Order { get; set; }
     public ulong SubmittedBy { get; set; }
+    public string? SubmittedByUsername { get; set; }
     public ProposalStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }

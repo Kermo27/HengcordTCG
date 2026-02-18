@@ -29,12 +29,13 @@ public class AuthService
             _http.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var user = await GetCurrentUserAsync();
-            if (user != null)
-            {
-                _authStateProvider.SetAuthenticated(user);
-                return user;
-            }
+                var user = await GetCurrentUserAsync();
+                if (user != null)
+                {
+                    user.Username = user.Username == "Unknown" ? $"User_{user.Id}" : user.Username;
+                    _authStateProvider.SetAuthenticated(user);
+                    return user;
+                }
             else
             {
                 await LogoutAsync();
@@ -232,7 +233,7 @@ public class AuthService
                     return new UserInfo
                     {
                         Id = userId,
-                        Username = authInfo.Name ?? "Unknown",
+                        Username = authInfo.Name ?? $"User_{userId}",
                         AvatarUrl = authInfo.AvatarUrl,
                         IsBotAdmin = authInfo.IsAdmin || ExtractIsAdminFromToken(_jwtToken ?? ""),
                         Gold = gold,

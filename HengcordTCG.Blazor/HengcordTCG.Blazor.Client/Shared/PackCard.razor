@@ -1,94 +1,93 @@
 @using HengcordTCG.Shared.Models
 
-<Card class="border-slate-800 bg-slate-900/50 overflow-hidden">
+<div class="border border-slate-800 bg-slate-900/50 rounded-xl overflow-hidden">
     <!-- Pack Header -->
     <div class="relative h-40 bg-gradient-to-br @GetGradient() p-6 flex items-center justify-center">
         <div class="absolute inset-0 opacity-20">
             <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')]"></div>
         </div>
         <div class="relative text-center">
-            <LucideIcon Name="package" Size="64" class="text-white drop-shadow-lg" />
+            <i class="fa fa-box text-white drop-shadow-lg text-6xl"></i>
         </div>
     </div>
 
-    <CardHeader>
-        <CardTitle class="text-slate-100 text-xl">@Pack.Name</CardTitle>
-        <CardDescription class="text-slate-400">
-            @(Pack.IsAvailable ? "Available Now" : "Currently Unavailable")
-        </CardDescription>
-    </CardHeader>
+    <div class="p-6 space-y-4">
+        <!-- Title -->
+        <div>
+            <h3 class="text-slate-100 text-xl font-semibold">@Pack.Name</h3>
+            <p class="text-slate-400 text-sm">
+                @(Pack.IsAvailable ? "Available Now" : "Currently Unavailable")
+            </p>
+        </div>
 
-    <CardContent class="space-y-4">
         <!-- Drop Rates -->
         <div class="space-y-2">
             <div class="flex justify-between text-sm">
                 <span class="text-slate-500">Legendary</span>
                 <span class="text-amber-400 font-semibold">@Pack.ChanceLegendary%</span>
             </div>
-            <Progress Value="@Pack.ChanceLegendary" Max="100" 
-                class="h-2 bg-slate-800 [&>div]:bg-gradient-to-r [&>div]:from-amber-500 [&>div]:to-orange-500" />
+            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: @Pack.ChanceLegendary%"></div>
+            </div>
 
             <div class="flex justify-between text-sm">
                 <span class="text-slate-500">Rare</span>
                 <span class="text-purple-400 font-semibold">@Pack.ChanceRare%</span>
             </div>
-            <Progress Value="@Pack.ChanceRare" Max="100" 
-                class="h-2 bg-slate-800 [&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-blue-500" />
+            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-purple-500 to-blue-500" style="width: @Pack.ChanceRare%"></div>
+            </div>
 
             <div class="flex justify-between text-sm">
                 <span class="text-slate-500">Common</span>
                 <span class="text-slate-400 font-semibold">@Pack.ChanceCommon%</span>
             </div>
-            <Progress Value="@Pack.ChanceCommon" Max="100" 
-                class="h-2 bg-slate-800 [&>div]:bg-slate-500" />
+            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full bg-slate-500" style="width: @Pack.ChanceCommon%"></div>
+            </div>
         </div>
 
         <!-- Price -->
         <div class="flex items-center justify-between pt-4 border-t border-slate-800">
             <div class="flex items-center gap-2">
-                <LucideIcon Name="coins" Size="20" class="text-amber-400" />
+                <i class="fa fa-coins text-amber-400 text-xl"></i>
                 <span class="text-2xl font-bold text-amber-400">@Pack.Price.ToString("N0")</span>
             </div>
             @if (IsAuthenticated)
             {
                 @if (UserGold >= Pack.Price)
                 {
-                    <Badge Variant="BadgeVariant.Outline" Class="border-emerald-500/50 text-emerald-400">
-                        Affordable
-                    </Badge>
+                    <span class="border border-emerald-500/50 text-emerald-400 text-xs px-2 py-1 rounded">Affordable</span>
                 }
                 else
                 {
-                    <Badge Variant="BadgeVariant.Outline" Class="border-red-500/50 text-red-400">
-                        Need @((Pack.Price - UserGold).ToString("N0")) more
-                    </Badge>
+                    <span class="border border-red-500/50 text-red-400 text-xs px-2 py-1 rounded">Need @((Pack.Price - UserGold).ToString("N0")) more</span>
                 }
             }
         </div>
-    </CardContent>
+    </div>
 
-    <CardFooter>
+    <div class="p-6 pt-0">
         @if (IsAuthenticated)
         {
-            <Button 
+            <button 
                 @onclick="OnBuy"
-                Disabled="@(!Pack.IsAvailable || UserGold < Pack.Price)"
-                class="@($"w-full h-12 text-base font-semibold {GetButtonClass()}")">
-                <LucideIcon Name="shopping-cart" Size="18" class="mr-2" />
+                disabled="@(!Pack.IsAvailable || UserGold < Pack.Price)"
+                class="@GetButtonClass() w-full h-12 text-base font-semibold rounded-lg">
+                <i class="fa fa-shopping-cart mr-2"></i>
                 @(UserGold < Pack.Price ? "Insufficient Gold" : "Buy Pack")
-            </Button>
+            </button>
         }
         else
         {
-            <Button 
+            <button 
                 @onclick="OnBuy"
-                class="w-full h-12 text-base font-semibold bg-indigo-500 hover:bg-indigo-600">
-                <LucideIcon Name="log-in" Size="18" class="mr-2" />
-                Login to Purchase
-            </Button>
+                class="w-full h-12 text-base font-semibold rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white">
+                <i class="fa fa-sign-in mr-2"></i> Login to Purchase
+            </button>
         }
-    </CardFooter>
-</Card>
+    </div>
+</div>
 
 @code {
     [Parameter] public PackType Pack { get; set; } = default!;
@@ -108,6 +107,6 @@
     {
         if (!Pack.IsAvailable) return "bg-slate-700 text-slate-400 cursor-not-allowed";
         if (UserGold < Pack.Price) return "bg-slate-700 text-slate-400 cursor-not-allowed";
-        return "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600";
+        return "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white";
     }
 }

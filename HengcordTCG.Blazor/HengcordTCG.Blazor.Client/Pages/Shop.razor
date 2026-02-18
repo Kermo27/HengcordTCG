@@ -1,121 +1,75 @@
 @page "/shop"
-@using ModelCard = HengcordTCG.Shared.Models.Card
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
-@inject ToastService Toast
-@inject NavigationManager Navigation
 
-<PageTitle>Card Shop - HengcordTCG</PageTitle>
+<PageTitle>Shop - HengcordTCG</PageTitle>
 
 <div class="container py-8">
-    <PageHeader Title="Card Shop" Section="Shop" Subtitle="Purchase card packs to expand your collection" />
-    <AuthorizeView>
-        <Authorized>
-            <div class="flex items-center gap-2 px-6 py-3 mb-6 rounded-full bg-amber-500/10 border border-amber-500/20 w-fit">
-                <LucideIcon Name="coins" Size="24" class="text-amber-400" />
-                <span class="text-2xl font-bold text-amber-400">@Gold.ToString("N0")</span>
-            </div>
-        </Authorized>
-    </AuthorizeView>
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Shop</h1>
+        <p class="text-slate-400">Buy card packs to expand your collection</p>
+    </div>
 
-    <!-- Packs Grid -->
     @if (IsLoading)
     {
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @for (int i = 0; i < 3; i++)
+            @for (int i = 0; i < 6; i++)
             {
-                <Skeleton class="h-80 rounded-xl" />
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 animate-pulse">
+                    <div class="h-48 bg-slate-800 rounded-lg mb-4"></div>
+                    <div class="h-6 bg-slate-800 rounded w-3/4 mb-2"></div>
+                    <div class="h-4 bg-slate-800 rounded w-1/2"></div>
+                </div>
             }
         </div>
     }
     else
     {
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @foreach (var pack in AvailablePacks)
+            @foreach (var pack in Packs.Where(p => p.IsAvailable))
             {
-                <PackCard 
-                    Pack="pack" 
-                    UserGold="Gold"
-                    IsAuthenticated="IsAuthenticated"
-                    OnBuy="() => BuyPack(pack)" />
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden hover:border-amber-500/50 transition-colors">
+                    <div class="h-48 bg-gradient-to-br from-amber-600 to-orange-700 flex items-center justify-center">
+                        <i class="fa fa-box text-white text-6xl opacity-50"></i>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-white mb-2">@pack.Name</h3>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-2xl font-bold text-amber-400">@pack.Price.ToString("N0")</span>
+                            <span class="text-amber-400"><i class="fa fa-coins"></i> Gold</span>
+                        </div>
+                        <button @onclick="() => BuyPack(pack)" 
+                            disabled="@IsBuying"
+                            class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium py-3 rounded-lg disabled:opacity-50">
+                            @if (IsBuying)
+                            {
+                                <i class="fa fa-spinner fa-spin mr-2"></i>
+                            }
+                            <i class="fa fa-shopping-cart mr-2"></i> Buy Pack
+                        </button>
+                    </div>
+                </div>
             }
         </div>
     }
 </div>
 
-<!-- Pack Opening Animation -->
-<Dialog @bind-Open="IsOpeningPack">
-    <DialogContent class="max-w-lg">
-        <div class="flex flex-col items-center py-8">
-            @if (OpeningStep == 0)
-            {
-                <div class="w-48 h-64 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center animate-pulse">
-                    <LucideIcon Name="package" Size="80" class="text-white" />
-                </div>
-                <p class="mt-6 text-xl font-semibold text-slate-100">Opening pack...</p>
-            }
-            else if (OpeningStep == 1 && OpenedCards.Any())
-            {
-                <h3 class="text-2xl font-bold text-slate-100 mb-6">You Got!</h3>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
-                    @foreach (var card in OpenedCards)
-                    {
-                        <div class="aspect-[3/4] rounded-lg overflow-hidden border-2 @GetBorderClass(card.Rarity)">
-                            @if (!string.IsNullOrEmpty(card.ImagePath))
-                            {
-                                <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover" />
-                            }
-                            else
-                            {
-                                <div class="w-full h-full bg-gradient-to-br @GetRarityGradient(card.Rarity) flex items-center justify-center">
-                                    <span class="text-white font-bold text-center px-2">@card.Name</span>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-                <Button @onclick="ClosePackOpening" class="mt-8">
-                    Awesome!
-                </Button>
-            }
-        </div>
-    </DialogContent>
-</Dialog>
-
 @code {
-    private List<PackType> AvailablePacks { get; set; } = new();
-    private bool IsLoading { get; set; } = true;
-    private bool IsAuthenticated { get; set; }
-    private long Gold { get; set; }
-
-    // Pack opening
-    private bool IsOpeningPack { get; set; }
-    private int OpeningStep { get; set; }
-    private List<ModelCard> OpenedCards { get; set; } = new();
+    private List<PackType> Packs { get; set; } = new();
+    private bool IsLoading = true;
+    private bool IsBuying;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadPacks();
     }
 
-    private async Task LoadData()
+    private async Task LoadPacks()
     {
         IsLoading = true;
         try
         {
-            var packs = await Client.GetPacksAsync();
-            AvailablePacks = packs.Where(p => p.IsAvailable).ToList();
-
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user != null)
-            {
-                IsAuthenticated = true;
-                Gold = user.Gold;
-            }
-        }
-        catch
-        {
-            Toast.Error("Failed to load shop");
+            Packs = await Client.GetPacksAsync();
         }
         finally
         {
@@ -125,72 +79,21 @@
 
     private async Task BuyPack(PackType pack)
     {
-        if (!IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user == null) return;
 
-        if (Gold < pack.Price)
-        {
-            Toast.Error("Not enough gold!");
-            return;
-        }
-
-        IsOpeningPack = true;
-        OpeningStep = 0;
-        
+        IsBuying = true;
         try
         {
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user == null)
-            {
-                Toast.Error("Authentication error");
-                IsOpeningPack = false;
-                return;
-            }
-
             var result = await Client.BuyPackAsync(user.Id, user.Username, pack.Name);
-            
-            if (result.success && result.cards != null)
+            if (result.success)
             {
-                OpenedCards = result.cards;
-                Gold -= pack.Price;
-                
-                // Simulate opening animation
-                await Task.Delay(1500);
-                OpeningStep = 1;
-            }
-            else
-            {
-                Toast.Error(result.message ?? "Failed to buy pack");
-                IsOpeningPack = false;
+                user.Gold -= pack.Price;
             }
         }
-        catch
+        finally
         {
-            Toast.Error("An error occurred");
-            IsOpeningPack = false;
+            IsBuying = false;
         }
     }
-
-    private void ClosePackOpening()
-    {
-        IsOpeningPack = false;
-        OpenedCards.Clear();
-    }
-
-    private string GetBorderClass(Rarity rarity) => rarity switch
-    {
-        Rarity.Legendary => "border-amber-500",
-        Rarity.Rare => "border-purple-500",
-        _ => "border-slate-500"
-    };
-
-    private string GetRarityGradient(Rarity rarity) => rarity switch
-    {
-        Rarity.Legendary => "from-amber-600 to-orange-700",
-        Rarity.Rare => "from-purple-600 to-blue-700",
-        _ => "from-slate-600 to-slate-700"
-    };
 }

@@ -1,116 +1,111 @@
 @using HengcordTCG.Shared.Models
 @using Microsoft.AspNetCore.Components
 
-<Card class="border-slate-800 bg-slate-900/50">
-    <CardContent class="p-6">
-        <div class="flex flex-col md:flex-row gap-6">
-            <!-- Initiator Side -->
-            <div class="flex-1 space-y-3">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-bold">
-                        @(Trade.Initiator?.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                    </div>
-                    <span class="font-medium text-slate-200">@Trade.Initiator?.Username</span>
-                    @if (IsInitiator)
-                    {
-                        <Badge Variant="BadgeVariant.Outline" class="border-emerald-500/50 text-emerald-400 text-xs">You</Badge>
-                    }
-                </div>
-                
-                <div class="space-y-2">
-                    @if (Trade.OfferGold > 0)
-                    {
-                        <div class="flex items-center gap-2 text-amber-400">
-                            <LucideIcon Name="coins" Size="16" />
-                            <span>@Trade.OfferGold.ToString("N0") Gold</span>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(Trade.OfferCardsJson))
-                    {
-                        <div class="flex flex-wrap gap-1">
-                            @foreach (var card in ParseCards(Trade.OfferCardsJson))
-                            {
-                                <Badge Variant="BadgeVariant.Outline" class="border-slate-600 text-slate-300">
-                                    @card
-                                </Badge>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Arrow -->
-            <div class="flex items-center justify-center">
-                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
-                    <LucideIcon Name="arrow-right" Size="24" class="text-slate-500" />
-                </div>
-            </div>
-
-            <!-- Target Side -->
-            <div class="flex-1 space-y-3">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
-                        @(Trade.Target?.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                    </div>
-                    <span class="font-medium text-slate-200">@Trade.Target?.Username</span>
-                    @if (IsTarget)
-                    {
-                        <Badge Variant="BadgeVariant.Outline" class="border-purple-500/50 text-purple-400 text-xs">You</Badge>
-                    }
-                </div>
-                
-                <div class="space-y-2">
-                    @if (Trade.RequestGold > 0)
-                    {
-                        <div class="flex items-center gap-2 text-amber-400">
-                            <LucideIcon Name="coins" Size="16" />
-                            <span>@Trade.RequestGold.ToString("N0") Gold</span>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(Trade.RequestCardsJson))
-                    {
-                        <div class="flex flex-wrap gap-1">
-                            @foreach (var card in ParseCards(Trade.RequestCardsJson))
-                            {
-                                <Badge Variant="BadgeVariant.Outline" class="border-slate-600 text-slate-300">
-                                    @card
-                                </Badge>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Actions -->
+<div class="border border-slate-800 bg-slate-900/50 rounded-xl p-6">
+    <div class="flex flex-col md:flex-row gap-6">
+        <!-- Initiator Side -->
+        <div class="flex-1 space-y-3">
             <div class="flex items-center gap-2">
-                @if (IsTarget && Trade.Status == TradeStatus.Pending)
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-bold">
+                    @(Trade.Initiator?.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                </div>
+                <span class="font-medium text-slate-200">@Trade.Initiator?.Username</span>
+                @if (IsInitiator)
                 {
-                    <Button @onclick="OnAccept" class="bg-emerald-500 hover:bg-emerald-600">
-                        <LucideIcon Name="check" Size="16" class="mr-1" />
-                        Accept
-                    </Button>
-                    <Button @onclick="OnReject" Variant="ButtonVariant.Outline" class="border-red-500/50 text-red-400 hover:bg-red-500/10">
-                        <LucideIcon Name="x" Size="16" class="mr-1" />
-                        Decline
-                    </Button>
+                    <span class="border border-emerald-500/50 text-emerald-400 text-xs px-2 py-0.5 rounded">You</span>
                 }
-                else if (IsInitiator && Trade.Status == TradeStatus.Pending)
+            </div>
+            
+            <div class="space-y-2">
+                @if (Trade.OfferGold > 0)
                 {
-                    <Button @onclick="OnCancel" Variant="ButtonVariant.Outline" class="border-slate-600 text-slate-400">
-                        <LucideIcon Name="trash-2" Size="16" class="mr-1" />
-                        Cancel
-                    </Button>
+                    <div class="flex items-center gap-2 text-amber-400">
+                        <i class="fa fa-coins"></i>
+                        <span>@Trade.OfferGold.ToString("N0") Gold</span>
+                    </div>
                 }
-                else
+                @if (!string.IsNullOrEmpty(Trade.OfferCardsJson))
                 {
-                    <Badge Variant="BadgeVariant.Outline" class="@GetStatusClass()">
-                        @Trade.Status
-                    </Badge>
+                    <div class="flex flex-wrap gap-1">
+                        @foreach (var card in ParseCards(Trade.OfferCardsJson))
+                        {
+                            <span class="border border-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                @card
+                            </span>
+                        }
+                    </div>
                 }
             </div>
         </div>
-    </CardContent>
-</Card>
+
+        <!-- Arrow -->
+        <div class="flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+                <i class="fa fa-arrow-right text-slate-500 text-xl"></i>
+            </div>
+        </div>
+
+        <!-- Target Side -->
+        <div class="flex-1 space-y-3">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
+                    @(Trade.Target?.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                </div>
+                <span class="font-medium text-slate-200">@Trade.Target?.Username</span>
+                @if (IsTarget)
+                {
+                    <span class="border border-purple-500/50 text-purple-400 text-xs px-2 py-0.5 rounded">You</span>
+                }
+            </div>
+            
+            <div class="space-y-2">
+                @if (Trade.RequestGold > 0)
+                {
+                    <div class="flex items-center gap-2 text-amber-400">
+                        <i class="fa fa-coins"></i>
+                        <span>@Trade.RequestGold.ToString("N0") Gold</span>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Trade.RequestCardsJson))
+                {
+                    <div class="flex flex-wrap gap-1">
+                        @foreach (var card in ParseCards(Trade.RequestCardsJson))
+                        {
+                            <span class="border border-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                @card
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+            @if (IsTarget && Trade.Status == TradeStatus.Pending)
+            {
+                <button @onclick="OnAccept" class="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-white text-sm">
+                    <i class="fa fa-check mr-1"></i> Accept
+                </button>
+                <button @onclick="OnReject" class="border border-red-500/50 text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-lg text-sm">
+                    <i class="fa fa-times mr-1"></i> Decline
+                </button>
+            }
+            else if (IsInitiator && Trade.Status == TradeStatus.Pending)
+            {
+                <button @onclick="OnCancel" class="border border-slate-600 text-slate-400 hover:bg-slate-800 px-3 py-1.5 rounded-lg text-sm">
+                    <i class="fa fa-trash mr-1"></i> Cancel
+                </button>
+            }
+            else
+            {
+                <span class="@GetStatusClass() text-xs px-2 py-1 rounded border">
+                    @Trade.Status
+                </span>
+            }
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter] public Trade Trade { get; set; } = default!;

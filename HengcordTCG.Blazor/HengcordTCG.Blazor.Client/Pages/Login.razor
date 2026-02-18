@@ -1,163 +1,79 @@
 @page "/login"
+@using System
 @inject AuthService AuthService
 @inject NavigationManager Navigation
-@inject ToastService Toast
+@inject IJSRuntime JS
 
 <PageTitle>Login - HengcordTCG</PageTitle>
 
 <div class="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
-    <Card class="w-full max-w-md border-slate-800 bg-slate-900/50">
-        <CardHeader class="text-center space-y-4">
-            <div class="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                <LucideIcon Name="sparkles" Size="40" class="text-white" />
+    @if (IsProcessing)
+    {
+        <div class="text-center">
+            <i class="fa fa-spinner fa-spin text-4xl text-amber-400 mb-4"></i>
+            <p class="text-slate-400">Logging you in...</p>
+        </div>
+    }
+    else
+    {
+        <div class="w-full max-w-md bg-slate-900/50 border border-slate-800 rounded-xl p-8 text-center">
+            <div class="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mb-6">
+                <i class="fa fa-sparkles text-white text-3xl"></i>
             </div>
-            <div>
-                <CardTitle class="text-2xl text-slate-100">Welcome to HengcordTCG</CardTitle>
-                <CardDescription class="text-slate-400">
-                    Sign in with Discord to access your collection and trade cards
-                </CardDescription>
-            </div>
-        </CardHeader>
-        <CardContent class="space-y-4">
-            @if (IsLoading)
-            {
-                <div class="flex flex-col items-center space-y-4 py-8">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400"></div>
-                    <p class="text-slate-400">@LoadingMessage</p>
-                </div>
-            }
-            else if (IsAuthenticated)
-            {
-                <div class="flex flex-col items-center space-y-4 py-8">
-                    <div class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <LucideIcon Name="check" Size="32" class="text-green-400" />
-                    </div>
-                    <p class="text-slate-200 font-medium">Successfully authenticated!</p>
-                    <p class="text-slate-400 text-sm">Redirecting...</p>
-                </div>
-            }
-            else
-            {
-                <Button 
-                    @onclick="StartDiscordLogin"
-                    class="w-full h-12 text-base font-semibold bg-[#5865F2] hover:bg-[#4752C4] text-white">
-                    <LucideIcon Name="message-circle" Size="20" class="mr-2" />
-                    Continue with Discord
-                </Button>
-
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <Separator class="w-full border-slate-700" />
-                    </div>
-                    <div class="relative flex justify-center text-xs uppercase">
-                        <span class="bg-slate-900 px-2 text-slate-500">or</span>
-                    </div>
-                </div>
-
-                <Button 
-                    @onclick="ContinueAsGuest"
-                    Variant="ButtonVariant.Outline"
-                    class="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                    <LucideIcon Name="eye" Size="20" class="mr-2" />
-                    Browse as Guest
-                </Button>
-            }
-        </CardContent>
-        <CardFooter class="text-center">
-            <p class="text-xs text-slate-500">
-                By signing in, you agree to our Terms of Service and Privacy Policy
-            </p>
-        </CardFooter>
-    </Card>
+            
+            <h1 class="text-2xl font-bold text-white mb-2">Welcome to HengcordTCG</h1>
+            <p class="text-slate-400 mb-6">Sign in to collect, trade, and battle!</p>
+            
+            <button @onclick="HandleLogin" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium py-3 rounded-lg">
+                <i class="fa fa-discord mr-2"></i> Login with Discord
+            </button>
+        </div>
+    }
 </div>
 
 @code {
-    [Parameter, SupplyParameterFromQuery]
-    public string? Token { get; set; }
+    private bool IsProcessing = true;
 
-    [Parameter, SupplyParameterFromQuery]
-    public string? Error { get; set; }
-
-    private bool IsLoading { get; set; }
-    private bool IsAuthenticated { get; set; }
-    private string LoadingMessage { get; set; } = "Connecting to Discord...";
-    private string? _pendingToken;
-    private bool _hasError;
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Capture token from query string (during prerender)
-        if (!string.IsNullOrEmpty(Token))
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query;
+        
+        if (!string.IsNullOrEmpty(query) && query.Contains("token="))
         {
-            IsLoading = true;
-            LoadingMessage = "Completing authentication...";
-            _pendingToken = Token;
-        }
-        else if (!string.IsNullOrEmpty(Error))
-        {
-            _hasError = true;
-        }
-    }
+            var tokenStart = query.IndexOf("token=") + 6;
+            var token = query.Substring(tokenStart).Split('&')[0];
+            token = Uri.UnescapeDataString(token);
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-
-        // Handle OAuth callback token FIRST (before checking localStorage)
-        if (!string.IsNullOrEmpty(_pendingToken))
-        {
-            // Store the JWT token
-            await AuthService.SetTokenAsync(_pendingToken);
-            
-            // Verify the token works by checking auth status
-            var isAuth = await AuthService.CheckAuthStatusAsync();
-            
-            if (isAuth)
+            if (!string.IsNullOrEmpty(token))
             {
-                IsLoading = false;
-                IsAuthenticated = true;
-                StateHasChanged();
-                
-                await Task.Delay(500);
+                await AuthService.SetTokenAsync(token);
+                var user = await AuthService.GetCurrentUserAsync();
+                if (user != null)
+                {
+                    Navigation.NavigateTo("/");
+                    return;
+                }
+            }
+        }
+
+        var jwtToken = AuthService.GetToken();
+        if (!string.IsNullOrEmpty(jwtToken))
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
                 Navigation.NavigateTo("/");
+                return;
             }
-            else
-            {
-                IsLoading = false;
-                Toast.Error("Authentication failed. Please try again.");
-                StateHasChanged();
-            }
-            return;
         }
 
-        // Handle error from OAuth
-        if (_hasError)
-        {
-            Toast.Error("Authentication failed. Please try again.");
-            return;
-        }
-
-        // Initialize auth state from localStorage (for returning users)
-        await AuthService.InitializeAsync();
-
-        // Check if already authenticated
-        var isAlreadyAuth = await AuthService.CheckAuthStatusAsync();
-        if (isAlreadyAuth)
-        {
-            Navigation.NavigateTo("/");
-        }
+        IsProcessing = false;
     }
 
-    private void StartDiscordLogin()
+    private void HandleLogin()
     {
-        IsLoading = true;
-        LoadingMessage = "Redirecting to Discord...";
         var loginUrl = AuthService.GetDiscordLoginUrl();
         Navigation.NavigateTo(loginUrl, forceLoad: true);
-    }
-
-    private void ContinueAsGuest()
-    {
-        Navigation.NavigateTo("/gallery");
     }
 }
