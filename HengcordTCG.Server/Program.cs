@@ -5,6 +5,7 @@ using Scalar.AspNetCore;
 using HengcordTCG.Server.Middleware;
 using HengcordTCG.Server.Authentication;
 using HengcordTCG.Server.Validators;
+using HengcordTCG.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -83,6 +84,12 @@ builder.Services.AddScoped<TradeService>();
 builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<WikiService>();
 builder.Services.AddScoped<WikiProposalService>();
+
+// Server Services
+builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddScoped<IPackService, PackService>();
+builder.Services.AddScoped<IDeckService, DeckService>();
+builder.Services.AddScoped<IMatchService, MatchService>();
 
 // Authentication & Discord OAuth
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");

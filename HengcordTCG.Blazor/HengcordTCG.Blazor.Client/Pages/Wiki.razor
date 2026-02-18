@@ -1,6 +1,6 @@
 @page "/wiki"
 @page "/wiki/{Slug}"
-@using HengcordTCG.Blazor.Client.DTOs
+@using HengcordTCG.Shared.DTOs.Wiki
 @using Markdig
 @inject WikiService WikiService
 @inject NavigationManager Navigation
@@ -122,10 +122,10 @@
     [Parameter]
     public string? Slug { get; set; }
 
-    private WikiPageDetail? Page { get; set; }
+    private WikiPageDetailDto? Page { get; set; }
     private string SearchQuery = "";
-    private List<WikiPageItem> FlatPages { get; set; } = new();
-    private List<WikiPageItem> AllPages { get; set; } = new();
+    private List<WikiPageDto> FlatPages { get; set; } = new();
+    private List<WikiPageDto> AllPages { get; set; } = new();
 
     private bool IsLoggedIn => AuthService.GetCurrentUser() != null;
     
@@ -211,7 +211,7 @@
             _ => HengcordTCG.Shared.Models.ProposalType.Edit 
         };
         
-        var request = new DTOs.CreateProposalRequest
+        var request = new CreateProposalRequest
         {
             Type = type,
             Title = ProposalTitle,

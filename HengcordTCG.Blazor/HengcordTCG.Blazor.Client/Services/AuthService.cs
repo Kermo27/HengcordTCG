@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using HengcordTCG.Blazor.Client.DTOs;
+using HengcordTCG.Shared.DTOs.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 

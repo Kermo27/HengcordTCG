@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Server.Extensions;
+using HengcordTCG.Server.Services;
 
 namespace HengcordTCG.Server.Controllers;
 
@@ -14,57 +15,52 @@ namespace HengcordTCG.Server.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ICardService _cardService;
+    private readonly IPackService _packService;
+    private readonly ILogger<AdminController> _logger;
 
-    public AdminController(AppDbContext context)
+    public AdminController(
+        AppDbContext context,
+        ICardService cardService,
+        IPackService packService,
+        ILogger<AdminController> logger)
     {
         _context = context;
+        _cardService = cardService;
+        _packService = packService;
+        _logger = logger;
     }
 
     [HttpPost("add-card")]
     public async Task<ActionResult> AddCard(Card card)
     {
-        var existing = await _context.Cards.FirstOrDefaultAsync(c => c.Name == card.Name);
-        if (existing != null) return BadRequest("Card already exists.");
-        
-        _context.Cards.Add(card);
-        await _context.SaveChangesAsync();
-        return Ok(card);
+        var result = await _cardService.AddAsync(card);
+        if (result.IsFailure)
+        {
+            return BadRequest(result.Error.Message);
+        }
+        return Ok(result.Value);
     }
 
     [HttpPut("update-card/{id}")]
     public async Task<ActionResult> UpdateCard(int id, [FromBody] Card card)
     {
-        var existing = await _context.Cards.FindAsync(id);
-        if (existing == null) return NotFound("Card not found");
-
-        existing.Name = card.Name;
-        existing.Attack = card.Attack;
-        existing.Defense = card.Defense;
-        existing.Rarity = card.Rarity;
-        existing.ImagePath = card.ImagePath;
-        existing.ExclusivePackId = card.ExclusivePackId;
-        existing.CardType = card.CardType;
-        existing.LightCost = card.LightCost;
-        existing.Health = card.Health;
-        existing.Speed = card.Speed;
-        existing.MinDamage = card.MinDamage;
-        existing.MaxDamage = card.MaxDamage;
-        existing.CounterStrike = card.CounterStrike;
-        existing.AbilityText = card.AbilityText;
-        existing.AbilityId = card.AbilityId;
-
-        await _context.SaveChangesAsync();
-        return Ok(existing);
+        var result = await _cardService.UpdateAsync(id, card);
+        if (result.IsFailure)
+        {
+            return result.Error.Code == "NOT_FOUND" ? NotFound(result.Error.Message) : BadRequest(result.Error.Message);
+        }
+        return Ok(result.Value);
     }
 
     [HttpDelete("remove-card/{name}")]
     public async Task<ActionResult> RemoveCard(string name)
     {
-        var card = await _context.Cards.FirstOrDefaultAsync(c => c.Name == name);
-        if (card == null) return NotFound("Card not found.");
-        
-        _context.Cards.Remove(card);
-        await _context.SaveChangesAsync();
+        var result = await _cardService.DeleteAsync(name);
+        if (result.IsFailure)
+        {
+            return result.Error.Code == "NOT_FOUND" ? NotFound(result.Error.Message) : BadRequest(result.Error.Message);
+        }
         return Ok();
     }
 
@@ -81,6 +77,7 @@ public class AdminController : ControllerBase
             
             user.Gold += amount;
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Gave {Amount} gold to user {DiscordId}", amount, discordId);
             return Ok(new { newBalance = user.Gold });
         }
         catch (ArgumentException ex)
@@ -97,35 +94,31 @@ public class AdminController : ControllerBase
         
         user.Gold = amount;
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Set gold to {Amount} for user {DiscordId}", amount, discordId);
         return Ok(user.Gold);
     }
 
     [HttpPost("create-pack")]
     public async Task<ActionResult> CreatePack([FromBody] PackType pack)
     {
-        _context.PackTypes.Add(pack);
-        await _context.SaveChangesAsync();
-        return Ok(pack);
+        var result = await _packService.AddAsync(pack);
+        if (result.IsFailure)
+        {
+            return BadRequest(result.Error.Message);
+        }
+        return Ok(result.Value);
     }
 
     [HttpPost("set-card-pack")]
     public async Task<ActionResult> SetCardPack([FromQuery] string cardName, [FromQuery] string packName)
     {
-        var card = await _context.Cards.FirstOrDefaultAsync(c => c.Name == cardName);
-        if (card == null) return NotFound("Card does not exist.");
-
-        if (packName.ToLower() == "null")
+        var result = await _cardService.SetCardPackAsync(cardName, packName);
+        if (result.IsFailure)
         {
-            card.ExclusivePackId = null;
+            return result.Error.Code == "CARD_NOT_FOUND" || result.Error.Code == "PACK_NOT_FOUND" 
+                ? NotFound(result.Error.Message) 
+                : BadRequest(result.Error.Message);
         }
-        else
-        {
-            var pack = await _context.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-            if (pack == null) return NotFound("Pack does not exist.");
-            card.ExclusivePackId = pack.Id;
-        }
-
-        await _context.SaveChangesAsync();
         return Ok();
     }
 
@@ -143,6 +136,7 @@ public class AdminController : ControllerBase
         else user.UserCards.Add(new UserCard { CardId = card.Id, Count = amount, ObtainedAt = DateTime.UtcNow });
 
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Gave {Amount} of card {CardName} to user {DiscordId}", amount, cardName, discordId);
         return Ok();
     }
 
@@ -166,6 +160,7 @@ public class AdminController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Fixed {Count} groups of duplicates", duplicates.Count);
         return Ok($"Fixed {duplicates.Count} groups of duplicates.");
     }
 
@@ -176,6 +171,7 @@ public class AdminController : ControllerBase
         if (user == null) return NotFound();
         user.IsBotAdmin = true;
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Added admin: {DiscordId}", discordId);
         return Ok();
     }
 
@@ -186,45 +182,40 @@ public class AdminController : ControllerBase
         if (user == null) return NotFound();
         user.IsBotAdmin = false;
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Removed admin: {DiscordId}", discordId);
         return Ok();
     }
 
     [HttpPost("toggle-pack/{packName}")]
     public async Task<ActionResult> TogglePack(string packName)
     {
-        var pack = await _context.PackTypes.FirstOrDefaultAsync(p => p.Name == packName);
-        if (pack == null) return NotFound("Pack not found.");
-        
-        pack.IsAvailable = !pack.IsAvailable;
-        await _context.SaveChangesAsync();
-        return Ok(new { packName, isAvailable = pack.IsAvailable });
+        var result = await _packService.ToggleAvailabilityAsync(packName);
+        if (result.IsFailure)
+        {
+            return NotFound(result.Error.Message);
+        }
+        return Ok(new { packName = result.Value.Name, isAvailable = result.Value.IsAvailable });
     }
 
     [HttpPut("update-pack/{id}")]
     public async Task<ActionResult> UpdatePack(int id, [FromBody] PackType packUpdate)
     {
-        var pack = await _context.PackTypes.FindAsync(id);
-        if (pack == null) return NotFound("Pack not found.");
-
-        pack.Name = packUpdate.Name;
-        pack.Price = packUpdate.Price;
-        pack.ChanceCommon = packUpdate.ChanceCommon;
-        pack.ChanceRare = packUpdate.ChanceRare;
-        pack.ChanceLegendary = packUpdate.ChanceLegendary;
-        pack.IsAvailable = packUpdate.IsAvailable;
-
-        await _context.SaveChangesAsync();
-        return Ok(pack);
+        var result = await _packService.UpdateAsync(id, packUpdate);
+        if (result.IsFailure)
+        {
+            return result.Error.Code == "NOT_FOUND" ? NotFound(result.Error.Message) : BadRequest(result.Error.Message);
+        }
+        return Ok(result.Value);
     }
 
     [HttpDelete("remove-pack/{id}")]
     public async Task<ActionResult> RemovePack(int id)
     {
-        var pack = await _context.PackTypes.FindAsync(id);
-        if (pack == null) return NotFound("Pack not found.");
-        
-        _context.PackTypes.Remove(pack);
-        await _context.SaveChangesAsync();
+        var result = await _packService.DeleteAsync(id);
+        if (result.IsFailure)
+        {
+            return result.Error.Code == "NOT_FOUND" ? NotFound(result.Error.Message) : BadRequest(result.Error.Message);
+        }
         return Ok();
     }
 }

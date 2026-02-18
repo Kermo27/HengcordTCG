@@ -1,7 +1,8 @@
 @page "/admin"
 @inject HengcordTCGClient Client
 @inject WikiService WikiService
-@using HengcordTCG.Blazor.Client.DTOs
+@using HengcordTCG.Shared.DTOs.Auth
+@using HengcordTCG.Shared.DTOs.Wiki
 @using HengcordTCG.Blazor.Client.Services
 @using Markdig
 
@@ -728,7 +729,7 @@
     private List<PackType> _packs = new();
     private List<User> _users = new();
     private List<WikiProposalListDto> _proposals = new();
-    private List<WikiPageItem> _wikiPages = new();
+    private List<WikiPageDto> _wikiPages = new();
     private string _wikiTab = "pages";
 
     private bool _showCardModal;
@@ -740,7 +741,7 @@
     private bool _showWikiPageModal;
     private bool _showDeleteWikiPageModal;
     private int? _editingWikiPageId;
-    private WikiPageItem? _deletingWikiPage;
+    private WikiPageDto? _deletingWikiPage;
 
     private Card? _editingCard;
     private PackType? _editingPack;
@@ -1061,7 +1062,7 @@
         _showWikiPageModal = true;
     }
 
-    private async Task OpenEditWikiPage(WikiPageItem page)
+    private async Task OpenEditWikiPage(WikiPageDto page)
     {
         _editingWikiPageId = page.Id;
         _wikiPageForm = new WikiPageFormData
@@ -1080,7 +1081,7 @@
         _showWikiPageModal = true;
     }
 
-    private void ConfirmDeleteWikiPage(WikiPageItem page)
+    private void ConfirmDeleteWikiPage(WikiPageDto page)
     {
         _deletingWikiPage = page;
         _showDeleteWikiPageModal = true;
@@ -1099,7 +1100,7 @@
 
         if (_editingWikiPageId != null)
         {
-            await WikiService.UpdatePageAsync(_editingWikiPageId.Value, new DTOs.UpdateWikiPageRequest
+            await WikiService.UpdatePageAsync(_editingWikiPageId.Value, new UpdateWikiPageRequest
             {
                 Title = _wikiPageForm.Title,
                 Slug = _wikiPageForm.Slug,
@@ -1108,7 +1109,7 @@
         }
         else
         {
-            await WikiService.CreatePageAsync(new DTOs.CreateWikiPageRequest
+            await WikiService.CreatePageAsync(new CreateWikiPageRequest
             {
                 Title = _wikiPageForm.Title,
                 Slug = _wikiPageForm.Slug,
