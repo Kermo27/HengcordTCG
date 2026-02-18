@@ -2,6 +2,7 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Results;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace HengcordTCG.Server.Services;
 
@@ -20,11 +21,13 @@ public class CardService : ICardService
 {
     private readonly AppDbContext _context;
     private readonly ILogger<CardService> _logger;
+    private readonly IMapper _mapper;
 
-    public CardService(AppDbContext context, ILogger<CardService> logger)
+    public CardService(AppDbContext context, ILogger<CardService> logger, IMapper mapper)
     {
         _context = context;
         _logger = logger;
+        _mapper = mapper;
     }
 
     public async Task<Result<List<Card>>> GetAllAsync()
@@ -110,21 +113,7 @@ public class CardService : ICardService
                 return Result<Card>.Failure("NOT_FOUND", $"Card with ID {id} not found");
             }
 
-            existing.Name = card.Name;
-            existing.Attack = card.Attack;
-            existing.Defense = card.Defense;
-            existing.Rarity = card.Rarity;
-            existing.ImagePath = card.ImagePath;
-            existing.ExclusivePackId = card.ExclusivePackId;
-            existing.CardType = card.CardType;
-            existing.LightCost = card.LightCost;
-            existing.Health = card.Health;
-            existing.Speed = card.Speed;
-            existing.MinDamage = card.MinDamage;
-            existing.MaxDamage = card.MaxDamage;
-            existing.CounterStrike = card.CounterStrike;
-            existing.AbilityText = card.AbilityText;
-            existing.AbilityId = card.AbilityId;
+            _mapper.Map(card, existing);
 
             await _context.SaveChangesAsync();
             

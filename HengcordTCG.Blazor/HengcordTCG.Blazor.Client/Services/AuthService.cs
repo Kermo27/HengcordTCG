@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using HengcordTCG.Shared.DTOs.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Configuration;
 
 namespace HengcordTCG.Blazor.Client.Services;
 
@@ -10,26 +11,25 @@ public class AuthService
     private readonly HttpClient _http;
     private readonly AuthStateProvider _authStateProvider;
     private readonly IJSRuntime _jsRuntime;
+    private readonly IConfiguration _config;
     private const string TokenKey = "jwt_token";
 
-    public AuthService(HttpClient http, AuthStateProvider authStateProvider, IJSRuntime jsRuntime)
+    public AuthService(HttpClient http, AuthStateProvider authStateProvider, IJSRuntime jsRuntime, IConfiguration config)
     {
         _http = http;
         _authStateProvider = authStateProvider;
         _jsRuntime = jsRuntime;
+        _config = config;
     }
 
     public async Task<UserInfo?> InitializeAsync()
     {
-        // Check for legacy token in localStorage (for migration)
         var legacyToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenKey);
         if (!string.IsNullOrEmpty(legacyToken))
         {
-            // Set Authorization header for backward compatibility during this session
             _http.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", legacyToken);
             
-            // Clear legacy token from localStorage (we use cookies now)
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenKey);
         }
         
@@ -47,15 +47,14 @@ public class AuthService
 
     public string GetDiscordLoginUrl()
     {
-        var serverUrl = _http.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7156";
-        var blazorUrl = _http.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:5001";
+        var serverUrl = _config["Urls:Server"] ?? _http.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7156";
+        var blazorUrl = _config["Urls:Blazor"] ?? "https://localhost:5001";
         var returnUrl = Uri.EscapeDataString($"{blazorUrl}/login");
         return $"{serverUrl}/login?returnUrl={returnUrl}";
     }
 
     public async Task SetTokenAsync(string token)
     {
-        // For backward compatibility with legacy token-based auth
         _http.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenKey, token);
@@ -67,7 +66,7 @@ public class AuthService
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenKey);
     }
 
-    public string? GetToken() => null; // Token is now in HttpOnly cookie
+    public string? GetToken() => null;
 
     public async Task<bool> CheckAuthStatusAsync()
     {

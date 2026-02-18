@@ -2,6 +2,7 @@ using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.Results;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace HengcordTCG.Server.Services;
 
@@ -20,11 +21,13 @@ public class PackService : IPackService
 {
     private readonly AppDbContext _context;
     private readonly ILogger<PackService> _logger;
+    private readonly IMapper _mapper;
 
-    public PackService(AppDbContext context, ILogger<PackService> logger)
+    public PackService(AppDbContext context, ILogger<PackService> logger, IMapper mapper)
     {
         _context = context;
         _logger = logger;
+        _mapper = mapper;
     }
 
     public async Task<Result<List<PackType>>> GetAllAsync()
@@ -103,12 +106,7 @@ public class PackService : IPackService
                 return Result<PackType>.Failure("NOT_FOUND", "Pack not found");
             }
 
-            pack.Name = packUpdate.Name;
-            pack.Price = packUpdate.Price;
-            pack.ChanceCommon = packUpdate.ChanceCommon;
-            pack.ChanceRare = packUpdate.ChanceRare;
-            pack.ChanceLegendary = packUpdate.ChanceLegendary;
-            pack.IsAvailable = packUpdate.IsAvailable;
+            _mapper.Map(packUpdate, pack);
 
             await _context.SaveChangesAsync();
             
