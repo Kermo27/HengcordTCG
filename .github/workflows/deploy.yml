@@ -18,60 +18,75 @@ jobs:
         dotnet-version: '10.0.x'
     
     - name: Build Server
-      run: dotnet publish HengcordTCG.Server -c Release -o publish --no-self-contained
+      run: dotnet publish HengcordTCG.Server -c Release -o server-publish --no-self-contained
     
     - name: Build Blazor
-      run: dotnet publish HengcordTCG.Blazor/HengcordTCG.Blazor.Client -c Release -o blazor-publish
+      run: dotnet publish HengcordTCG.Blazor -c Release -o blazor-publish --no-self-contained
     
-    - name: Generate Blazor appsettings
+    - name: Generate Server appsettings
       run: |
-        cat > blazor-publish/wwwroot/appsettings.Production.json << 'EOF'
+        cat > server-publish/appsettings.Production.json << 'EOF'
         {
-          "ApiBaseUrl": "https://api.leiheng.org",
-          "ApiKey": "${{ secrets.WEB_API_KEY }}"
+          "Logging": {
+            "LogLevel": {
+              "Default": "Information",
+              "Microsoft.AspNetCore": "Warning"
+            }
+          }
         }
         EOF
     
-    - name: Copy Blazor to Server wwwroot
+    - name: Generate Blazor appsettings
       run: |
-        rm -rf publish/wwwroot
-        cp -r blazor-publish/wwwroot publish/
+        cat > blazor-publish/appsettings.Production.json << 'EOF'
+        {
+          "ApiBaseUrl": "https://api.leiheng.org"
+        }
+        EOF
     
-    - name: Deploy to VPS
+    - name: Deploy Server to VPS
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
-        source: "publish/*"
-        target: "/var/hengcordtcg"
+        source: "server-publish/*"
+        target: "/var/hengcordtcg-server"
         strip_components: 1
     
-    - name: Configure and restart service
+    - name: Deploy Blazor to VPS
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        source: "blazor-publish/*"
+        target: "/var/hengcordtcg-blazor"
+        strip_components: 1
+    
+    - name: Configure and restart services
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
-          # Create data directory
-          mkdir -p /var/hengcordtcg/data
+          mkdir -p /var/hengcordtcg-server/data
           
-          # Generate systemd service with secrets
-          cat > /etc/systemd/system/hengcordtcg.service << 'EOF'
+          cat > /etc/systemd/system/hengcordtcg-server.service << 'EOF'
           [Unit]
-          Description=HengcordTCG Server
+          Description=HengcordTCG API Server
           After=network.target
 
           [Service]
           Type=exec
-          WorkingDirectory=/var/hengcordtcg
+          WorkingDirectory=/var/hengcordtcg-server
           ExecStart=/root/.dotnet/dotnet HengcordTCG.Server.dll
           Restart=always
           RestartSec=5
           Environment=ASPNETCORE_URLS=http://localhost:5000
           Environment=ASPNETCORE_ENVIRONMENT=Production
-          Environment=HENGCORD_DATA_DIR=/var/hengcordtcg/data
+          Environment=HENGCORD_DATA_DIR=/var/hengcordtcg-server/data
           Environment=HENGCORD_Discord__ClientId=${{ secrets.DISCORD_CLIENT_ID }}
           Environment=HENGCORD_Discord__ClientSecret=${{ secrets.DISCORD_CLIENT_SECRET }}
           Environment=HENGCORD_Jwt__Secret=${{ secrets.JWT_SECRET }}
@@ -85,6 +100,24 @@ jobs:
           WantedBy=multi-user.target
           EOF
           
-          # Reload and restart
+          cat > /etc/systemd/system/hengcordtcg-blazor.service << 'EOF'
+          [Unit]
+          Description=HengcordTCG Blazor Frontend
+          After=network.target
+
+          [Service]
+          Type=exec
+          WorkingDirectory=/var/hengcordtcg-blazor
+          ExecStart=/root/.dotnet/dotnet HengcordTCG.Blazor.dll
+          Restart=always
+          RestartSec=5
+          Environment=ASPNETCORE_URLS=http://localhost:5001
+          Environment=ASPNETCORE_ENVIRONMENT=Production
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
           systemctl daemon-reload
-          systemctl restart hengcordtcg
+          systemctl restart hengcordtcg-server
+          systemctl restart hengcordtcg-blazor

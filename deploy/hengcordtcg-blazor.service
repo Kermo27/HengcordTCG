@@ -1,0 +1,15 @@
+[Unit]
+Description=HengcordTCG Blazor Frontend
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=/var/hengcordtcg-blazor
+ExecStart=/root/.dotnet/dotnet HengcordTCG.Blazor.dll
+Restart=always
+RestartSec=5
+Environment=ASPNETCORE_URLS=http://localhost:5001
+Environment=ASPNETCORE_ENVIRONMENT=Production
+
+[Install]
+WantedBy=multi-user.target
