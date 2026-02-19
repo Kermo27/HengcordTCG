@@ -252,6 +252,9 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseMiddleware<ApiKeyAuthMiddleware>();
+    
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+    
     app.MapControllers();
 
     Log.Information("HengcordTCG Server started successfully");
