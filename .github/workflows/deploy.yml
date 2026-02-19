@@ -28,13 +28,16 @@ jobs:
     
     - name: Generate Server appsettings
       run: |
-        cat > server-publish/appsettings.Production.json << 'EOF'
+        cat > server-publish/appsettings.json << 'EOF'
         {
           "Logging": {
             "LogLevel": {
               "Default": "Information",
               "Microsoft.AspNetCore": "Warning"
             }
+          },
+          "ConnectionStrings": {
+            "DefaultConnection": "Data Source=hengcordtcg.db"
           }
         }
         EOF
