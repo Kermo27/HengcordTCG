@@ -16,6 +16,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using FluentValidation;
 using Serilog;
+using Microsoft.AspNetCore.HttpOverrides;
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
@@ -212,6 +213,13 @@ try
 
     builder.Services.AddAuthorization();
 
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
     var app = builder.Build();
 
     using (var scope = app.Services.CreateScope())
@@ -245,6 +253,8 @@ try
             diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
         };
     });
+
+    app.UseForwardedHeaders();
 
     app.UseMiddleware<RateLimitMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
