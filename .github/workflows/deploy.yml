@@ -44,7 +44,7 @@ jobs:
     
     - name: Generate Blazor appsettings
       run: |
-        cat > blazor-publish/appsettings.json << 'EOF'
+        cat > blazor-publish/wwwroot/appsettings.json << 'EOF'
         {
           "ApiBaseUrl": "https://api.leiheng.org",
           "Urls": {
