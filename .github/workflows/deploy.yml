@@ -17,6 +17,9 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     
+    - name: Install wasm-tools
+      run: dotnet workload install wasm-tools
+    
     - name: Build Server
       run: dotnet publish HengcordTCG.Server -c Release -o server-publish --no-self-contained
     
