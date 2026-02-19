@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
-using HengcordTCG.Blazor.Client.DTOs;
-using HengcordTCG.Blazor.Client.Services;
+using HengcordTCG.Shared.DTOs.Wiki;
 
 namespace HengcordTCG.Blazor.Client.Services;
 
@@ -25,50 +24,50 @@ public class WikiService
         }
     }
 
-    public async Task<List<WikiPageItem>> GetPagesAsync()
+    public async Task<List<WikiPageDto>> GetPagesAsync()
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync("api/wiki");
-        return await response.Content.ReadFromJsonAsync<List<WikiPageItem>>() ?? new();
+        return await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? new();
     }
 
-    public async Task<List<WikiPageTreeItem>> GetTreeAsync()
+    public async Task<List<WikiPageTreeDto>> GetTreeAsync()
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync("api/wiki/tree");
-        return await response.Content.ReadFromJsonAsync<List<WikiPageTreeItem>>() ?? new();
+        return await response.Content.ReadFromJsonAsync<List<WikiPageTreeDto>>() ?? new();
     }
 
-    public async Task<WikiPageDetail?> GetPageAsync(string slug)
+    public async Task<WikiPageDetailDto?> GetPageAsync(string slug)
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync($"api/wiki/{slug}");
         if (!response.IsSuccessStatusCode)
             return null;
-        return await response.Content.ReadFromJsonAsync<WikiPageDetail>();
+        return await response.Content.ReadFromJsonAsync<WikiPageDetailDto>();
     }
 
-    public async Task<List<WikiPageItem>> SearchAsync(string query)
+    public async Task<List<WikiPageDto>> SearchAsync(string query)
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync($"api/wiki/search?q={Uri.EscapeDataString(query)}");
-        return await response.Content.ReadFromJsonAsync<List<WikiPageItem>>() ?? new();
+        return await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? new();
     }
 
-    public async Task<WikiPageItem> CreatePageAsync(CreateWikiPageRequest request)
+    public async Task<WikiPageDto> CreatePageAsync(CreateWikiPageRequest request)
     {
         await EnsureAuthHeader();
         var response = await _http.PostAsJsonAsync("api/wiki", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WikiPageItem>() ?? throw new Exception("Failed to create page");
+        return await response.Content.ReadFromJsonAsync<WikiPageDto>() ?? throw new Exception("Failed to create page");
     }
 
-    public async Task<WikiPageItem> UpdatePageAsync(int id, UpdateWikiPageRequest request)
+    public async Task<WikiPageDto> UpdatePageAsync(int id, UpdateWikiPageRequest request)
     {
         await EnsureAuthHeader();
         var response = await _http.PutAsJsonAsync($"api/wiki/{id}", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WikiPageItem>() ?? throw new Exception("Failed to update page");
+        return await response.Content.ReadFromJsonAsync<WikiPageDto>() ?? throw new Exception("Failed to update page");
     }
 
     public async Task DeletePageAsync(int id)
@@ -78,35 +77,35 @@ public class WikiService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<WikiHistoryItem>> GetHistoryAsync(int pageId)
+    public async Task<List<WikiHistoryDto>> GetHistoryAsync(int pageId)
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync($"api/wiki/{pageId}/history");
-        return await response.Content.ReadFromJsonAsync<List<WikiHistoryItem>>() ?? new();
+        return await response.Content.ReadFromJsonAsync<List<WikiHistoryDto>>() ?? new();
     }
 
-    public async Task<WikiProposalItem> CreateProposalAsync(CreateProposalRequest request)
+    public async Task<WikiProposalDto> CreateProposalAsync(CreateProposalRequest request)
     {
         await EnsureAuthHeader();
         var response = await _http.PostAsJsonAsync("api/wiki/proposals", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WikiProposalItem>() ?? throw new Exception("Failed to create proposal");
+        return await response.Content.ReadFromJsonAsync<WikiProposalDto>() ?? throw new Exception("Failed to create proposal");
     }
 
-    public async Task<List<WikiProposalListItem>> GetProposalsAsync()
+    public async Task<List<WikiProposalListDto>> GetProposalsAsync()
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync("api/wiki/proposals");
-        return await response.Content.ReadFromJsonAsync<List<WikiProposalListItem>>() ?? new();
+        return await response.Content.ReadFromJsonAsync<List<WikiProposalListDto>>() ?? new();
     }
 
-    public async Task<WikiProposalDetail?> GetProposalAsync(int id)
+    public async Task<WikiProposalDetailDto?> GetProposalAsync(int id)
     {
         await EnsureAuthHeader();
         var response = await _http.GetAsync($"api/wiki/proposals/{id}");
         if (!response.IsSuccessStatusCode)
             return null;
-        return await response.Content.ReadFromJsonAsync<WikiProposalDetail>();
+        return await response.Content.ReadFromJsonAsync<WikiProposalDetailDto>();
     }
 
     public async Task ApproveProposalAsync(int id)

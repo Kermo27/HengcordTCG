@@ -101,17 +101,26 @@ public class WebAuthController : ControllerBase
 
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
         
-        // Redirect back to Blazor with token
+        // Set JWT as HttpOnly cookie for security
+        Response.Cookies.Append("auth_token", tokenString, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Expires = DateTime.Now.AddDays(7),
+            Path = "/"
+        });
+        
+        // Redirect back to Blazor without token in URL
         string redirectUrl;
         if (string.IsNullOrEmpty(returnUrl))
         {
-            redirectUrl = $"/login?token={tokenString}";
+            redirectUrl = "/login?success=true";
         }
         else
         {
-            // Check if returnUrl already has query parameters
             var separator = returnUrl.Contains("?") ? "&" : "?";
-            redirectUrl = $"{returnUrl}{separator}token={tokenString}";
+            redirectUrl = $"{returnUrl}{separator}success=true";
         }
         
         return Redirect(redirectUrl);
@@ -146,9 +155,6 @@ public class WebAuthController : ControllerBase
             }
         }
         
-        // Debug: log all claims
-        var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-        
         // Try to get from different claim types
         if (string.IsNullOrEmpty(userId))
             userId = User.FindFirst("sub")?.Value;
@@ -165,8 +171,6 @@ public class WebAuthController : ControllerBase
         }
         else if (!string.IsNullOrEmpty(userId))
         {
-            // User has default Discord avatar (no custom avatar set)
-            // Use the default avatar based on user discriminator modulo 5
             var discriminator = User.FindFirst("urn:discord:discriminator")?.Value;
             int defaultAvatarIndex = 0;
             if (!string.IsNullOrEmpty(discriminator) && int.TryParse(discriminator, out var disc))
@@ -187,13 +191,12 @@ public class WebAuthController : ControllerBase
             AvatarUrl = avatarUrl,
             IsAdmin = isAdmin,
             UserId = userId,
-            Roles = roles,
-            DebugClaims = allClaims
+            Roles = roles
         });
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+            return StatusCode(500, new { error = "An error occurred while retrieving user information" });
         }
     }
 

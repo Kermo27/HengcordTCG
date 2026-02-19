@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
-using HengcordTCG.Blazor.Client.DTOs;
+using HengcordTCG.Shared.DTOs.Auth;
 
 namespace HengcordTCG.Blazor.Client.Services;
 

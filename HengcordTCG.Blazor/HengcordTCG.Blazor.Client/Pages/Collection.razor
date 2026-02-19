@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject HengcordTCGClient Client
 @inject AuthService AuthService
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 <PageTitle>My Collection - HengcordTCG</PageTitle>
 
@@ -38,10 +39,10 @@
     <!-- Cards Grid -->
     @if (IsLoading)
     {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div class="flex flex-wrap gap-4">
             @for (int i = 0; i < 10; i++)
             {
-                <div class="aspect-[3/4] bg-slate-800 rounded-xl animate-pulse"></div>
+                <div class="card-container bg-slate-800 rounded-xl animate-pulse"></div>
             }
         </div>
     }
@@ -54,18 +55,18 @@
     }
     else
     {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div class="flex flex-wrap gap-4">
             @foreach (var userCard in FilteredCards)
             {
                 <div class="relative group">
-                    <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 @GetBorderClass(userCard.Card.Rarity)">
+                    <div class="card-container rounded-xl overflow-hidden border-2 @GetBorderClass(userCard.Card.Rarity)">
                         @if (!string.IsNullOrEmpty(userCard.Card.ImagePath))
                         {
-                            <img src="/api/images/@userCard.Card.ImagePath" alt="@userCard.Card.Name" class="w-full h-full object-cover">
+                            <img src="@GetImageUrl(userCard.Card.ImagePath)" alt="@userCard.Card.Name" class="card-image">
                         }
                         else
                         {
-                            <div class="w-full h-full bg-gradient-to-br @GetGradientClass(userCard.Card.Rarity) flex items-center justify-center">
+                            <div class="card-container bg-gradient-to-br @GetGradientClass(userCard.Card.Rarity) flex items-center justify-center">
                                 <i class="fa fa-image text-white opacity-30 text-4xl"></i>
                             </div>
                         }
@@ -90,6 +91,9 @@
     private string SearchQuery = "";
     private CardType? FilterType;
     private bool IsLoading = true;
+    
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? Configuration["Urls:Server"] ?? "https://localhost:7156";
+    private string GetImageUrl(string path) => $"{ApiBaseUrl}/api/images/{path}";
 
     private List<UserCard> FilteredCards => Cards
         .Where(c => (FilterType == null || c.Card.CardType == FilterType) &&

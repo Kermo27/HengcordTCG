@@ -1,4 +1,4 @@
-namespace HengcordTCG.Blazor.Client.DTOs;
+namespace HengcordTCG.Shared.DTOs.Auth;
 
 public class UserInfo
 {

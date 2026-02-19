@@ -42,6 +42,22 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(m => m.LoserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(m => m.WinnerId);
+            entity.HasIndex(m => m.LoserId);
+            entity.HasIndex(m => m.FinishedAt);
+        });
+
+        modelBuilder.Entity<UserCard>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.CardId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Card>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Name).IsUnique();
         });
 
         modelBuilder.Entity<Deck>(entity =>

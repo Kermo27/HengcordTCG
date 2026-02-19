@@ -1,0 +1,183 @@
+@using HengcordTCG.Shared.DTOs.Wiki
+
+<div class="mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-white">Wiki Management</h2>
+        <button @onclick="OnCreatePage" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+            <i class="fa fa-plus mr-2"></i> New Page
+        </button>
+    </div>
+    
+    <div class="border-b border-slate-700 mb-4">
+        <div class="flex space-x-1">
+            <button @onclick='() => SetSubTab("pages")' class="@(SubTab == "pages" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
+                <i class="fa fa-file mr-2"></i> Pages
+            </button>
+            <button @onclick='async () => { await SetSubTab("proposals"); await OnLoadProposals.InvokeAsync(); }' class="@(SubTab == "proposals" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
+                <i class="fa fa-tasks mr-2"></i> Proposals
+                @if (Proposals.Any())
+                {
+                    <span class="ml-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">@Proposals.Count</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (SubTab == "pages")
+    {
+        @if (WikiPages.Any())
+        {
+            <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-slate-800">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-slate-400">Title</th>
+                            <th class="px-4 py-3 text-left text-slate-400">Slug</th>
+                            <th class="px-4 py-3 text-left text-slate-400">Updated</th>
+                            <th class="px-4 py-3 text-right text-slate-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        @foreach (var wikiPage in WikiPages)
+                        {
+                            <tr class="hover:bg-slate-800">
+                                <td class="px-4 py-3 text-white">@wikiPage.Title</td>
+                                <td class="px-4 py-3 text-slate-400">@wikiPage.Slug</td>
+                                <td class="px-4 py-3 text-slate-400 text-sm">@wikiPage.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex gap-2 justify-end">
+                                        <a href="@("/wiki/" + wikiPage.Slug)" target="_blank" class="bg-slate-700 px-3 py-1 rounded text-white text-sm">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <button @onclick="() => OnEditPage.InvokeAsync(wikiPage)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button @onclick="() => OnDeletePage.InvokeAsync(wikiPage)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+                <i class="fa fa-file text-4xl text-slate-500 mb-4"></i>
+                <p class="text-slate-400">No wiki pages yet. Create your first page!</p>
+            </div>
+        }
+    }
+
+    @if (SubTab == "proposals")
+    {
+        @if (Proposals.Any())
+        {
+            <div class="space-y-4">
+                @foreach (var proposal in Proposals)
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-xs font-medium px-2 py-1 rounded mr-2 @GetProposalTypeClass(proposal.Type.ToString())">
+                                    @proposal.Type.ToString()
+                                </span>
+                                <span class="text-xs text-slate-400">
+                                    by @proposal.SubmittedByUsername
+                                </span>
+                            </div>
+                            <span class="text-xs text-slate-500">
+                                @proposal.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                            </span>
+                        </div>
+                        
+                        <h3 class="text-lg font-semibold text-white mb-2">@proposal.Title</h3>
+                        
+                        @if (!string.IsNullOrEmpty(proposal.ChangeDescription))
+                        {
+                            <p class="text-slate-400 text-sm mb-4">@proposal.ChangeDescription</p>
+                        }
+                        
+                        @if (proposal.Type.ToString() == "Edit" || proposal.Type.ToString() == "Delete")
+                        {
+                            <div class="bg-slate-800 rounded p-3 mb-4 text-sm text-slate-300 max-h-40 overflow-y-auto">
+                                @((MarkupString)proposal.Content.Replace("\n", "<br>"))
+                            </div>
+                        }
+                        
+                        <div class="flex gap-2">
+                            <button @onclick="() => OnViewProposal.InvokeAsync(proposal)" class="bg-slate-700 px-4 py-2 rounded-lg text-white">
+                                <i class="fa fa-eye mr-2"></i> View Details
+                            </button>
+                            <button @onclick="() => OnApproveProposal.InvokeAsync(proposal)" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                                <i class="fa fa-check mr-2"></i> Approve
+                            </button>
+                            <button @onclick="() => OnRejectProposal.InvokeAsync(proposal)" class="bg-red-600 px-4 py-2 rounded-lg text-white">
+                                <i class="fa fa-times mr-2"></i> Reject
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+                <i class="fa fa-check text-4xl text-emerald-500 mb-4"></i>
+                <p class="text-slate-400">No pending proposals</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string SubTab { get; set; } = "pages";
+
+    [Parameter]
+    public EventCallback<string> SubTabChanged { get; set; }
+
+    [Parameter]
+    public List<WikiPageDto> WikiPages { get; set; } = new();
+
+    [Parameter]
+    public List<WikiProposalListDto> Proposals { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnCreatePage { get; set; }
+
+    [Parameter]
+    public EventCallback OnLoadProposals { get; set; }
+
+    [Parameter]
+    public EventCallback<WikiPageDto> OnEditPage { get; set; }
+
+    [Parameter]
+    public EventCallback<WikiPageDto> OnDeletePage { get; set; }
+
+    [Parameter]
+    public EventCallback<WikiProposalListDto> OnViewProposal { get; set; }
+
+    [Parameter]
+    public EventCallback<WikiProposalListDto> OnApproveProposal { get; set; }
+
+    [Parameter]
+    public EventCallback<WikiProposalListDto> OnRejectProposal { get; set; }
+
+    private async Task SetSubTab(string tab)
+    {
+        SubTab = tab;
+        await SubTabChanged.InvokeAsync(tab);
+    }
+
+    private string GetProposalTypeClass(string type) => type switch
+    {
+        "NewPage" => "bg-emerald-600/50 text-emerald-300",
+        "Edit" => "bg-amber-600/50 text-amber-300",
+        "Delete" => "bg-red-600/50 text-red-300",
+        _ => "bg-slate-600 text-slate-300"
+    };
+}

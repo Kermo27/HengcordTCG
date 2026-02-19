@@ -1,0 +1,146 @@
+@if (Show)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">@(_card?.Id == 0 ? "Add Card" : "Edit Card")</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Name</label>
+                    <input @bind="Form!.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Card Type</label>
+                        <select @bind="Form!.CardType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                            <option value="Unit">Unit</option>
+                            <option value="Commander">Commander</option>
+                            <option value="Closer">Closer</option>
+                            <option value="Spell">Spell</option>
+                            <option value="Structure">Structure</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Rarity</label>
+                        <select @bind="Form!.Rarity" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                            <option value="Common">Common</option>
+                            <option value="Uncommon">Uncommon</option>
+                            <option value="Rare">Rare</option>
+                            <option value="Legendary">Legendary</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Attack</label>
+                        <input type="number" @bind="Form!.Attack" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Defense</label>
+                        <input type="number" @bind="Form!.Defense" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Health</label>
+                        <input type="number" @bind="Form!.Health" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Light Cost</label>
+                        <input type="number" @bind="Form!.LightCost" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Speed</label>
+                        <input type="number" @bind="Form!.Speed" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Card Image</label>
+                    <InputFile OnChange="HandleImageUpload" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
+                    @if (!string.IsNullOrEmpty(Form!.ImagePath))
+                    {
+                        <div class="mt-2 flex items-center gap-3">
+                            <img src="@GetImageUrl(Form!.ImagePath)" alt="Preview" class="card-image rounded-lg border border-slate-700" />
+                            <span class="text-slate-500 text-sm">@Form!.ImagePath</span>
+                            <button type="button" @onclick='() => Form!.ImagePath = ""' class="text-red-400 hover:text-red-300 text-sm">Remove</button>
+                        </div>
+                    }
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Min Damage</label>
+                        <input type="number" @bind="Form!.MinDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Max Damage</label>
+                        <input type="number" @bind="Form!.MaxDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Counter Strike</label>
+                    <input type="number" @bind="Form!.CounterStrike" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Ability Text</label>
+                    <textarea @bind="Form!.AbilityText" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white h-20"></textarea>
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Ability ID</label>
+                    <input @bind="Form!.AbilityId" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="heal_on_enter" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Exclusive Pack</label>
+                    <select @bind="Form!.ExclusivePackName" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
+                        <option value="">None</option>
+                        @foreach (var pack in Packs)
+                        {
+                            <option value="@pack.Name">@pack.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="OnCancel" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="OnSave" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+                    @(_card?.Id == 0 ? "Add Card" : "Save Changes")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Show { get; set; }
+
+    [Parameter]
+    public CardFormData? Form { get; set; }
+
+    [Parameter]
+    public Card? Card { get => _card; set { _card = value; } }
+
+    [Parameter]
+    public List<PackType> Packs { get; set; } = new();
+
+    [Parameter]
+    public string ApiBaseUrl { get; set; } = "";
+    
+    private string GetImageUrl(string path) => $"{ApiBaseUrl}/api/images/{path}";
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<InputFileChangeEventArgs> OnImageUpload { get; set; }
+
+    private Card? _card;
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        await OnImageUpload.InvokeAsync(e);
+    }
+}

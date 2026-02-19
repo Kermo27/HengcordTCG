@@ -8,6 +8,12 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
   </PropertyGroup>
 
+  <Target Name="RemoveSqliteNativeRef" BeforeTargets="ComputeManagedAssemblyToLink;_ComputeBlazorLinkingDescriptors;PrepareForBuild">
+    <ItemGroup>
+      <NativeFileReference Remove="@(NativeFileReference)" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.*" />

@@ -1,7 +1,7 @@
 @page "/deck"
-@attribute [Authorize]
-@inject HengcordTCGClient Client
-@inject AuthService AuthService
+@using HengcordTCG.Shared.Clients
+@using HengcordTCG.Shared.Models
+@using HengcordTCG.Blazor.Client.Services
 
 <PageTitle>Deck Builder - HengcordTCG</PageTitle>
 
@@ -42,8 +42,8 @@
             
             @if (Commander != null)
             {
-                <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-amber-500/50 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.Commander)">
-                    <img src="/api/images/@Commander.ImagePath" alt="@Commander.Name" class="w-full h-full object-cover">
+                <div class="card-container rounded-xl overflow-hidden border-2 border-amber-500/50 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.Commander)">
+                    <img src="@GetImageUrl(Commander.ImagePath)" alt="@Commander.Name" class="card-image">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex items-end p-3">
                         <p class="text-white font-medium">@Commander.Name</p>
                     </div>
@@ -81,8 +81,8 @@
                     if (index < MainDeck.Count)
                     {
                         var card = MainDeck[index];
-                        <div class="aspect-[3/4] rounded-lg overflow-hidden border border-slate-700 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.MainDeck, index)">
-                            <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
+                        <div class="card-container rounded-lg overflow-hidden border border-slate-700 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.MainDeck, index)">
+                            <img src="@GetImageUrl(card.ImagePath)" alt="@card.Name" class="card-image">
                             <button class="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs" @onclick="() => RemoveFromMainDeck(index)" @onclick:stopPropagation="true">
                                 <i class="fa fa-times"></i>
                             </button>
@@ -116,8 +116,8 @@
                     if (index < CloserDeck.Count)
                     {
                         var card = CloserDeck[index];
-                        <div class="aspect-[3/4] rounded-lg overflow-hidden border border-slate-700 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.Closer, index)">
-                            <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
+                        <div class="card-container rounded-lg overflow-hidden border border-slate-700 relative group cursor-pointer" @onclick="() => OpenCardPicker(DeckSection.Closer, index)">
+                            <img src="@GetImageUrl(card.ImagePath)" alt="@card.Name" class="card-image">
                             <button class="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs" @onclick="() => RemoveFromCloserDeck(index)" @onclick:stopPropagation="true">
                                 <i class="fa fa-times"></i>
                             </button>
@@ -166,14 +166,14 @@
                         <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                             @foreach (var card in FilteredCollectionCards)
                             {
-                                <div class="aspect-[3/4] rounded-lg overflow-hidden border-2 border-slate-700 hover:border-amber-500 cursor-pointer transition-colors relative group" @onclick="() => SelectCard(card)">
+                                <div class="card-container rounded-lg overflow-hidden border-2 border-slate-700 hover:border-amber-500 cursor-pointer transition-colors relative group" @onclick="() => SelectCard(card)">
                                     @if (!string.IsNullOrEmpty(card.ImagePath))
                                     {
-                                        <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
+                                        <img src="@GetImageUrl(card.ImagePath)" alt="@card.Name" class="card-image">
                                     }
                                     else
                                     {
-                                        <div class="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                                        <div class="card-container bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
                                             <i class="fa fa-image text-white opacity-30"></i>
                                         </div>
                                     }
@@ -190,219 +190,3 @@
         </div>
     }
 </div>
-
-@code {
-    private Card? Commander { get; set; }
-    private List<Card> MainDeck { get; set; } = new();
-    private List<Card> CloserDeck { get; set; } = new();
-    
-    private List<UserCard> Collection { get; set; } = new();
-    private bool IsLoading = true;
-    private string Message = "";
-    private string MessageClass = "";
-    
-    private bool ShowCardPicker;
-    private DeckSection CurrentPickerSection;
-    private int PickerSlotIndex;
-    private string CardSearchQuery = "";
-
-    private bool IsValid => Commander != null && MainDeck.Count == 9 && CloserDeck.Count == 3;
-
-    private string PickerTitle => CurrentPickerSection switch
-    {
-        DeckSection.Commander => "Commander",
-        DeckSection.MainDeck => "Main Deck Card",
-        DeckSection.Closer => "Closer Card",
-        _ => "Card"
-    };
-
-    private string PickerSectionTitle => CurrentPickerSection switch
-    {
-        DeckSection.Commander => "Commander (CardType.Commander)",
-        DeckSection.MainDeck => "Unit Card (CardType.Unit)",
-        DeckSection.Closer => "Closer Card (CardType.Closer)",
-        _ => "Card"
-    };
-
-    private List<Card> FilteredCollectionCards
-    {
-        get
-        {
-            var requiredType = CurrentPickerSection switch
-            {
-                DeckSection.Commander => CardType.Commander,
-                DeckSection.MainDeck => CardType.Unit,
-                DeckSection.Closer => CardType.Closer,
-                _ => (CardType?)null
-            };
-
-            var query = Collection
-                .Where(uc => uc.Count > 0)
-                .Select(uc => uc.Card)
-                .Where(c => requiredType == null || c.CardType == requiredType)
-                .Where(c => string.IsNullOrEmpty(CardSearchQuery) || c.Name.Contains(CardSearchQuery, StringComparison.OrdinalIgnoreCase));
-
-            if (CurrentPickerSection == DeckSection.MainDeck)
-            {
-                var usedIds = MainDeck.Select(c => c.Id).ToList();
-                query = query.Where(c => !usedIds.Contains(c.Id));
-            }
-            else if (CurrentPickerSection == DeckSection.Closer)
-            {
-                var usedIds = CloserDeck.Select(c => c.Id).ToList();
-                query = query.Where(c => !usedIds.Contains(c.Id));
-            }
-
-            return query.ToList();
-        }
-    }
-
-    private enum DeckSection
-    {
-        Commander,
-        MainDeck,
-        Closer
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadCollection();
-        await LoadDeck();
-    }
-
-    private async Task LoadCollection()
-    {
-        var user = await AuthService.GetCurrentUserAsync();
-        if (user != null)
-        {
-            Collection = await Client.GetCollectionAsync(user.Id);
-        }
-    }
-
-    private async Task LoadDeck()
-    {
-        IsLoading = true;
-        Message = "";
-        try
-        {
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user != null)
-            {
-                var deck = await Client.GetDeckAsync(user.Id);
-                if (deck != null)
-                {
-                    Commander = deck.Commander;
-                    MainDeck = deck.DeckCards
-                        .Where(dc => dc.Slot == DeckSlot.MainDeck)
-                        .Select(dc => dc.Card)
-                        .ToList();
-                    CloserDeck = deck.DeckCards
-                        .Where(dc => dc.Slot == DeckSlot.Closer)
-                        .Select(dc => dc.Card)
-                        .ToList();
-                }
-                else
-                {
-                    Commander = null;
-                    MainDeck = new List<Card>();
-                    CloserDeck = new List<Card>();
-                }
-            }
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    private async Task SaveDeck()
-    {
-        if (!IsValid)
-        {
-            Message = "Please fill all deck slots before saving.";
-            MessageClass = "bg-red-500/20 border border-red-500/50 text-red-400";
-            return;
-        }
-
-        var user = await AuthService.GetCurrentUserAsync();
-        if (user == null) return;
-
-        var request = new HengcordTCGClient.SaveDeckRequest(
-            user.Id,
-            null,
-            Commander!.Id,
-            MainDeck.Select(c => c.Id).ToList(),
-            CloserDeck.Select(c => c.Id).ToList()
-        );
-
-        var result = await Client.SaveDeckAsync(request);
-        
-        if (result.Success)
-        {
-            Message = result.Message;
-            MessageClass = "bg-green-500/20 border border-green-500/50 text-green-400";
-        }
-        else
-        {
-            Message = result.Message;
-            MessageClass = "bg-red-500/20 border border-red-500/50 text-red-400";
-        }
-    }
-
-    private void OpenCardPicker(DeckSection section, int slotIndex = 0)
-    {
-        CurrentPickerSection = section;
-        PickerSlotIndex = slotIndex;
-        CardSearchQuery = "";
-        ShowCardPicker = true;
-    }
-
-    private void CloseCardPicker()
-    {
-        ShowCardPicker = false;
-    }
-
-    private void SelectCard(Card card)
-    {
-        switch (CurrentPickerSection)
-        {
-            case DeckSection.Commander:
-                Commander = card;
-                break;
-            case DeckSection.MainDeck:
-                if (PickerSlotIndex < MainDeck.Count)
-                    MainDeck[PickerSlotIndex] = card;
-                else
-                    MainDeck.Add(card);
-                break;
-            case DeckSection.Closer:
-                if (PickerSlotIndex < CloserDeck.Count)
-                    CloserDeck[PickerSlotIndex] = card;
-                else
-                    CloserDeck.Add(card);
-                break;
-        }
-        CloseCardPicker();
-    }
-
-    private void RemoveCommander()
-    {
-        Commander = null;
-    }
-
-    private void RemoveFromMainDeck(int index)
-    {
-        if (index >= 0 && index < MainDeck.Count)
-        {
-            MainDeck.RemoveAt(index);
-        }
-    }
-
-    private void RemoveFromCloserDeck(int index)
-    {
-        if (index >= 0 && index < CloserDeck.Count)
-        {
-            CloserDeck.RemoveAt(index);
-        }
-    }
-}
