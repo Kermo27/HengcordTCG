@@ -20,6 +20,18 @@ jobs:
     - name: Install wasm-tools
       run: dotnet workload install wasm-tools
     
+    - name: Generate Blazor appsettings (before build)
+      run: |
+        cat > HengcordTCG.Blazor/HengcordTCG.Blazor.Client/wwwroot/appsettings.json << 'EOF'
+        {
+          "ApiBaseUrl": "https://api.leiheng.org",
+          "Urls": {
+            "Server": "https://api.leiheng.org",
+            "Blazor": "https://tcg.leiheng.org"
+          }
+        }
+        EOF
+    
     - name: Build Server
       run: dotnet publish HengcordTCG.Server -c Release -o server-publish --no-self-contained
     
@@ -38,18 +50,6 @@ jobs:
           },
           "ConnectionStrings": {
             "DefaultConnection": "Data Source=hengcordtcg.db"
-          }
-        }
-        EOF
-    
-    - name: Generate Blazor appsettings
-      run: |
-        cat > blazor-publish/wwwroot/appsettings.json << 'EOF'
-        {
-          "ApiBaseUrl": "https://api.leiheng.org",
-          "Urls": {
-            "Server": "https://api.leiheng.org",
-            "Blazor": "https://tcg.leiheng.org"
           }
         }
         EOF
