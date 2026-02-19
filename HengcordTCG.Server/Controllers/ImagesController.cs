@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -24,7 +23,6 @@ public class ImagesController : ControllerBase
         if (string.IsNullOrEmpty(path))
             return BadRequest();
 
-        // Prevent directory traversal
         var fullPath = Path.GetFullPath(Path.Combine(_imagesRoot, path));
         if (!fullPath.StartsWith(_imagesRoot))
             return BadRequest("Invalid path");
@@ -47,7 +45,7 @@ public class ImagesController : ControllerBase
 
     [HttpPost("upload")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
-    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> UploadImage(IFormFile file, [FromQuery] string? folder = "cards")
     {
         if (file.Length == 0)

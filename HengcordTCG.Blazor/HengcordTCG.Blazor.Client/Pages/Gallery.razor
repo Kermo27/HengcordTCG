@@ -1,5 +1,6 @@
 @page "/gallery"
 @inject HengcordTCGClient Client
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 <PageTitle>Gallery - HengcordTCG</PageTitle>
 
@@ -45,22 +46,22 @@
     <!-- Cards Grid -->
     @if (IsLoading)
     {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div class="flex flex-wrap gap-4">
             @for (int i = 0; i < 12; i++)
             {
-                <div class="aspect-[3/4] bg-slate-800 rounded-xl animate-pulse"></div>
+                <div class="card-container bg-slate-800 rounded-xl animate-pulse"></div>
             }
         </div>
     }
     else
     {
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div class="flex flex-wrap gap-4">
             @foreach (var card in FilteredCards)
             {
-                <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 @GetBorderClass(card.Rarity)">
+                <div class="card-container rounded-xl overflow-hidden border-2 @GetBorderClass(card.Rarity)">
                     @if (!string.IsNullOrEmpty(card.ImagePath))
                     {
-                        <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
+                        <img src="@GetImageUrl(card.ImagePath)" alt="@card.Name" class="card-image">
                     }
                     <div class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
                         <p class="text-white text-sm font-medium truncate">@card.Name</p>
@@ -75,8 +76,11 @@
     private List<Card> AllCards = new();
     private CardType? Filter;
     private bool IsLoading = true;
+    
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? Configuration["Urls:Server"] ?? "https://localhost:7156";
+    private string GetImageUrl(string path) => $"{ApiBaseUrl}/api/images/{path}";
 
-    private List<Card> FilteredCards => Filter.HasValue 
+    private List<Card> FilteredCards => Filter.HasValue
         ? AllCards.Where(c => c.CardType == Filter.Value).ToList() 
         : AllCards;
 

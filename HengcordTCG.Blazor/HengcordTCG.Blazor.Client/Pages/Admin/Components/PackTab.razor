@@ -1,0 +1,52 @@
+<div class="mb-6 flex justify-between items-center">
+    <h2 class="text-xl font-semibold text-white">Manage Packs</h2>
+    <button @onclick="OnAddPack" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+        <i class="fa fa-plus mr-2"></i> Add Pack
+    </button>
+</div>
+<div class="grid md:grid-cols-3 gap-6">
+    @foreach (var pack in Packs)
+    {
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-lg font-semibold text-white">@pack.Name</h3>
+                @if (!pack.IsAvailable)
+                {
+                    <span class="text-xs bg-red-600/50 text-white px-2 py-1 rounded">Unavailable</span>
+                }
+            </div>
+            <p class="text-amber-400 font-bold mb-2">@pack.Price Gold</p>
+            <div class="text-sm text-slate-400 mb-4">
+                <p>Common: @pack.ChanceCommon%</p>
+                <p>Rare: @pack.ChanceRare%</p>
+                <p>Legendary: @pack.ChanceLegendary%</p>
+            </div>
+            <div class="flex gap-2">
+                <button @onclick="() => OnEditPack.InvokeAsync(pack)" class="flex-1 bg-slate-700 px-4 py-2 rounded-lg text-white">
+                    <i class="fa fa-edit mr-2"></i> Edit
+                </button>
+                <button @onclick="() => OnTogglePack.InvokeAsync(pack)" class="px-4 py-2 rounded-lg @GetToggleClass(pack)">
+                    @(pack.IsAvailable ? "Disable" : "Enable")
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<PackType> Packs { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnAddPack { get; set; }
+
+    [Parameter]
+    public EventCallback<PackType> OnEditPack { get; set; }
+
+    [Parameter]
+    public EventCallback<PackType> OnTogglePack { get; set; }
+
+    private string GetToggleClass(PackType pack) => pack.IsAvailable
+        ? "bg-red-600 hover:bg-red-700 text-white"
+        : "bg-emerald-600 hover:bg-emerald-700 text-white";
+}

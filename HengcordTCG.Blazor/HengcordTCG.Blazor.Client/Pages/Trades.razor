@@ -99,6 +99,27 @@
     }
 </div>
 
+@if (ShowCreateTrade)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Create Trade</h3>
+                <button @onclick="() => ShowCreateTrade = false" class="text-slate-400 hover:text-white">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 text-center text-slate-400">
+                <i class="fa fa-tools text-4xl mb-4 block"></i>
+                <p>Trade creation coming soon!</p>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end">
+                <button @onclick="() => ShowCreateTrade = false" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string ActiveTab = "active";
     private bool IsLoading = true;

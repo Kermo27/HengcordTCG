@@ -1,0 +1,133 @@
+@using HengcordTCG.Shared.Models
+
+@if (Show)
+{
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg">
+            <div class="p-6 border-b border-slate-700">
+                <h3 class="text-xl font-bold text-white">@(_pack?.Id == 0 ? "Add Pack" : "Edit Pack")</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Name</label>
+                    <input @bind="Form!.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Price (Gold)</label>
+                    <input type="number" @bind="Form!.Price" min="0" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Common %</label>
+                        <input type="number" @bind="Form!.ChanceCommon" min="0" max="100" 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white @GetInputClass(Form!.ChanceCommon)" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Rare %</label>
+                        <input type="number" @bind="Form!.ChanceRare" min="0" max="100" 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white @GetInputClass(Form!.ChanceRare)" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm mb-1">Legendary %</label>
+                        <input type="number" @bind="Form!.ChanceLegendary" min="0" max="100" 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white @GetInputClass(Form!.ChanceLegendary)" />
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                    <span class="text-slate-400">Total:</span>
+                    <span class="@GetTotalClass() font-bold">@TotalChance%</span>
+                </div>
+                
+                @if (!IsValid)
+                {
+                    <div class="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-400 text-sm">
+                        @ErrorMessage
+                    </div>
+                }
+                
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Available</label>
+                    <input type="checkbox" @bind="Form!.IsAvailable" class="w-5 h-5" />
+                    <span class="text-white ml-2">Pack is available for purchase</span>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
+                <button @onclick="OnCancel" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
+                <button @onclick="HandleSave" disabled="@(!IsValid)" 
+                    class="@(IsValid ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-600 cursor-not-allowed") px-4 py-2 rounded-lg text-white">
+                    @(_pack?.Id == 0 ? "Add Pack" : "Save Changes")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Show { get; set; }
+
+    [Parameter]
+    public PackFormData? Form { get; set; }
+
+    [Parameter]
+    public PackType? Pack { get => _pack; set { _pack = value; } }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private PackType? _pack;
+
+    private int TotalChance => (Form?.ChanceCommon ?? 0) + (Form?.ChanceRare ?? 0) + (Form?.ChanceLegendary ?? 0);
+
+    private bool IsValid => ValidatePercentages();
+
+    private string ErrorMessage => GetValidationMessage();
+
+    private bool ValidatePercentages()
+    {
+        if (Form == null) return false;
+
+        if (Form.ChanceCommon < 0 || Form.ChanceCommon > 100) return false;
+        if (Form.ChanceRare < 0 || Form.ChanceRare > 100) return false;
+        if (Form.ChanceLegendary < 0 || Form.ChanceLegendary > 100) return false;
+
+        return TotalChance == 100;
+    }
+
+    private string GetValidationMessage()
+    {
+        if (Form == null) return "Invalid form data";
+
+        if (Form.ChanceCommon < 0 || Form.ChanceCommon > 100) return "Common percentage must be between 0 and 100";
+        if (Form.ChanceRare < 0 || Form.ChanceRare > 100) return "Rare percentage must be between 0 and 100";
+        if (Form.ChanceLegendary < 0 || Form.ChanceLegendary > 100) return "Legendary percentage must be between 0 and 100";
+
+        if (TotalChance != 100) return $"Total percentage must equal 100% (currently {TotalChance}%)";
+
+        return "";
+    }
+
+    private string GetTotalClass()
+    {
+        if (TotalChance == 100) return "text-emerald-400";
+        return "text-red-400";
+    }
+
+    private string GetInputClass(int value)
+    {
+        if (value < 0 || value > 100) return "border-red-500";
+        return "";
+    }
+
+    private async Task HandleSave()
+    {
+        if (IsValid)
+        {
+            await OnSave.InvokeAsync();
+        }
+    }
+}

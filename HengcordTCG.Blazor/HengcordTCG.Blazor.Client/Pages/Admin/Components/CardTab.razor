@@ -1,0 +1,50 @@
+<div class="mb-6 flex justify-between items-center">
+    <h2 class="text-xl font-semibold text-white">Manage Cards</h2>
+    <button @onclick="OnAddCard" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
+        <i class="fa fa-plus mr-2"></i> Add Card
+    </button>
+</div>
+<div class="flex flex-wrap gap-4">
+    @foreach (var card in Cards)
+    {
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="card-container bg-slate-800">
+                @if (!string.IsNullOrEmpty(card.ImagePath))
+                {
+                    <img src="@GetImageUrl(card.ImagePath)" alt="@card.Name" class="card-image">
+                }
+            </div>
+            <div class="p-3">
+                <p class="text-white font-medium truncate">@card.Name</p>
+                <p class="text-slate-400 text-sm">@card.CardType</p>
+                <div class="flex gap-2 mt-2">
+                    <button @onclick="() => OnEditCard.InvokeAsync(card)" class="flex-1 bg-slate-700 px-2 py-1 rounded text-xs text-white">
+                        <i class="fa fa-edit"></i>
+                    </button>
+                    <button @onclick="() => OnDeleteCard.InvokeAsync(card)" class="flex-1 bg-red-600/50 px-2 py-1 rounded text-xs text-white">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<Card> Cards { get; set; } = new();
+
+    [Parameter]
+    public string ApiBaseUrl { get; set; } = "";
+    
+    private string GetImageUrl(string path) => $"{ApiBaseUrl}/api/images/{path}";
+
+    [Parameter]
+    public EventCallback OnAddCard { get; set; }
+
+    [Parameter]
+    public EventCallback<Card> OnEditCard { get; set; }
+
+    [Parameter]
+    public EventCallback<Card> OnDeleteCard { get; set; }
+}

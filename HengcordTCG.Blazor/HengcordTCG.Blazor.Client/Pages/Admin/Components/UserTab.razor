@@ -1,0 +1,65 @@
+<h2 class="text-xl font-semibold text-white mb-6">User Management</h2>
+<div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-slate-800">
+            <tr>
+                <th class="px-4 py-3 text-left text-slate-400">User</th>
+                <th class="px-4 py-3 text-left text-slate-400">Gold</th>
+                <th class="px-4 py-3 text-left text-slate-400">Admin</th>
+                <th class="px-4 py-3 text-left text-slate-400">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800">
+            @foreach (var user in Users)
+            {
+                <tr class="hover:bg-slate-800">
+                    <td class="px-4 py-3 text-white">@user.Username</td>
+                    <td class="px-4 py-3 text-amber-400">@user.Gold.ToString("N0")</td>
+                    <td class="px-4 py-3">
+                        @if (user.IsBotAdmin)
+                        {
+                            <span class="text-amber-400">Yes</span>
+                        }
+                        else
+                        {
+                            <span class="text-slate-500">No</span>
+                        }
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex gap-2">
+                            <button @onclick="() => OnEditGold.InvokeAsync(user)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
+                                <i class="fa fa-coins"></i>
+                            </button>
+                            @if (user.IsBotAdmin)
+                            {
+                                <button @onclick="() => OnRemoveAdmin.InvokeAsync(user)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
+                                    <i class="fa fa-user-minus"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button @onclick="() => OnAddAdmin.InvokeAsync(user)" class="bg-emerald-600/50 px-3 py-1 rounded text-white text-sm">
+                                    <i class="fa fa-user-plus"></i>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter]
+    public List<User> Users { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<User> OnEditGold { get; set; }
+
+    [Parameter]
+    public EventCallback<User> OnAddAdmin { get; set; }
+
+    [Parameter]
+    public EventCallback<User> OnRemoveAdmin { get; set; }
+}

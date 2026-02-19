@@ -55,7 +55,7 @@
                     @((MarkupString)RenderMarkdown(Page.Content))
                 </div>
                 <div class="mt-8 pt-6 border-t border-slate-800 text-sm text-slate-500">
-                    Last updated: @Page.UpdatedAt.ToString("dd MMMM yyyy HH:mm")
+                    Last updated: @Page.UpdatedAt.ToLocalTime().ToString("dd MMMM yyyy HH:mm")
                 </div>
             </div>
         }

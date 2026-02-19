@@ -4,6 +4,7 @@ using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Shared.DTOs.Wiki;
 using HengcordTCG.Blazor.Client.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace HengcordTCG.Blazor.Client.Pages.Admin;
 
@@ -14,6 +15,13 @@ public partial class Index
 
     [Inject]
     private WikiService WikiService { get; set; } = default!;
+
+    [Inject]
+    private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? Configuration["Urls:Server"] ?? "https://localhost:7156";
+
+    private string GetImageUrl(string? path) => string.IsNullOrEmpty(path) ? "" : $"{ApiBaseUrl}/api/images/{path}";
 
     private string _tab = "cards";
     private List<Card> _cards = new();
@@ -27,7 +35,6 @@ public partial class Index
     private bool _showPackModal;
     private bool _showGoldModal;
     private bool _showProposalModal;
-    private bool _showRejectModal;
     private bool _showDeleteCardModal;
     private bool _showWikiPageModal;
     private bool _showDeleteWikiPageModal;
@@ -38,14 +45,12 @@ public partial class Index
     private PackType? _editingPack;
     private User? _editingUser;
     private WikiProposalListDto? _viewingProposal;
-    private WikiProposalListDto? _rejectingProposal;
     private Card? _deletingCard;
 
     private CardFormData _cardForm = new();
     private PackFormData _packForm = new();
     private WikiPageFormData _wikiPageForm = new();
     private int _goldAmount;
-    private string _rejectReason = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,15 +62,23 @@ public partial class Index
         _cards = await Client.GetCardsAsync();
         _packs = await Client.GetPacksAsync();
         _users = await Client.GetUsersAsync();
-        if (_tab == "wiki")
-        {
-            await LoadProposals();
-        }
     }
 
     private string TabClass(string tab) => _tab == tab
         ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium"
         : "px-4 py-2 text-slate-400 hover:text-white transition-colors";
+
+    private void SetTab(string tab) => _tab = tab;
+
+    private async Task SetTabAsync(string tab)
+    {
+        _tab = tab;
+        if (tab == "wiki")
+        {
+            await LoadProposals();
+            await LoadWikiPages();
+        }
+    }
 
     private void OpenAddCard()
     {
@@ -246,10 +259,6 @@ public partial class Index
         await LoadData();
     }
 
-    private string GetTogglePackClass(PackType pack) => pack.IsAvailable
-        ? "bg-red-600 hover:bg-red-700 text-white"
-        : "bg-emerald-600 hover:bg-emerald-700 text-white";
-
     private void OpenEditGold(User user)
     {
         _editingUser = user;
@@ -305,6 +314,12 @@ public partial class Index
         _wikiPages = await WikiService.GetPagesAsync();
     }
 
+    private async Task LoadProposalsAndSetTab()
+    {
+        _wikiTab = "proposals";
+        await LoadProposals();
+    }
+
     private void ViewProposal(WikiProposalListDto proposal)
     {
         _viewingProposal = proposal;
@@ -317,33 +332,36 @@ public partial class Index
         _viewingProposal = null;
     }
 
-    private async Task OpenApproveProposal(WikiProposalListDto proposal)
+    private async Task ApproveProposal(WikiProposalListDto proposal)
     {
         await Client.ApproveWikiProposalAsync(proposal.Id);
         await LoadProposals();
     }
 
+    private async Task ApproveProposalFromModal()
+    {
+        if (_viewingProposal != null)
+        {
+            await Client.ApproveWikiProposalAsync(_viewingProposal.Id);
+            CloseProposalModal();
+            await LoadProposals();
+        }
+    }
+
     private void OpenRejectProposal(WikiProposalListDto proposal)
     {
-        _rejectingProposal = proposal;
-        _rejectReason = "";
-        _showRejectModal = true;
+        _viewingProposal = proposal;
+        _showProposalModal = true;
     }
 
-    private void CloseRejectModal()
+    private async Task RejectProposalWithReason(string reason)
     {
-        _showRejectModal = false;
-        _rejectingProposal = null;
-    }
-
-    private async Task RejectProposal()
-    {
-        if (_rejectingProposal != null)
+        if (_viewingProposal != null)
         {
-            await Client.RejectWikiProposalAsync(_rejectingProposal.Id, _rejectReason);
+            await Client.RejectWikiProposalAsync(_viewingProposal.Id, reason);
+            CloseProposalModal();
+            await LoadProposals();
         }
-        CloseRejectModal();
-        await LoadProposals();
     }
 
     private void OpenCreateWikiPage()
@@ -378,13 +396,19 @@ public partial class Index
         _showDeleteWikiPageModal = true;
     }
 
+    private void CloseDeleteWikiPageModal()
+    {
+        _showDeleteWikiPageModal = false;
+        _deletingWikiPage = null;
+    }
+
     private void CloseWikiPageModal()
     {
         _showWikiPageModal = false;
         _editingWikiPageId = null;
     }
 
-    private async Task CreateWikiPage()
+    private async Task SaveWikiPage()
     {
         if (string.IsNullOrWhiteSpace(_wikiPageForm.Title) || string.IsNullOrWhiteSpace(_wikiPageForm.Slug))
             return;
@@ -417,69 +441,44 @@ public partial class Index
         if (_deletingWikiPage != null)
         {
             await WikiService.DeletePageAsync(_deletingWikiPage.Id);
-            _showDeleteWikiPageModal = false;
-            _deletingWikiPage = null;
+            CloseDeleteWikiPageModal();
             await LoadWikiPages();
         }
     }
+}
 
-    private string GetProposalTypeClass(string type) => type switch
-    {
-        "NewPage" => "bg-emerald-600/50 text-emerald-300",
-        "Edit" => "bg-amber-600/50 text-amber-300",
-        "Delete" => "bg-red-600/50 text-red-300",
-        _ => "bg-slate-600 text-slate-300"
-    };
+public class CardFormData
+{
+    public string Name { get; set; } = "";
+    public string CardType { get; set; } = "Unit";
+    public string Rarity { get; set; } = "Common";
+    public int Attack { get; set; }
+    public int Defense { get; set; }
+    public int Health { get; set; }
+    public int LightCost { get; set; }
+    public int Speed { get; set; }
+    public string ImagePath { get; set; } = "";
+    public int MinDamage { get; set; }
+    public int MaxDamage { get; set; }
+    public int CounterStrike { get; set; }
+    public string AbilityText { get; set; } = "";
+    public string AbilityId { get; set; } = "";
+    public string ExclusivePackName { get; set; } = "";
+}
 
-    private string GetDiffLineClass(string type) => type switch
-    {
-        "deleted" => "diff-deleted",
-        "inserted" => "diff-added",
-        "imaginary" => "diff-imaginary",
-        "modified" => "diff-modified",
-        _ => "diff-unchanged"
-    };
+public class PackFormData
+{
+    public string Name { get; set; } = "";
+    public int Price { get; set; } = 100;
+    public int ChanceCommon { get; set; } = 60;
+    public int ChanceRare { get; set; } = 35;
+    public int ChanceLegendary { get; set; } = 5;
+    public bool IsAvailable { get; set; } = true;
+}
 
-    private string GetDiffPrefix(string type) => type switch
-    {
-        "deleted" => "-",
-        "inserted" => "+",
-        _ => " "
-    };
-
-    private class CardFormData
-    {
-        public string Name { get; set; } = "";
-        public string CardType { get; set; } = "Unit";
-        public string Rarity { get; set; } = "Common";
-        public int Attack { get; set; }
-        public int Defense { get; set; }
-        public int Health { get; set; }
-        public int LightCost { get; set; }
-        public int Speed { get; set; }
-        public string ImagePath { get; set; } = "";
-        public int MinDamage { get; set; }
-        public int MaxDamage { get; set; }
-        public int CounterStrike { get; set; }
-        public string AbilityText { get; set; } = "";
-        public string AbilityId { get; set; } = "";
-        public string ExclusivePackName { get; set; } = "";
-    }
-
-    private class PackFormData
-    {
-        public string Name { get; set; } = "";
-        public int Price { get; set; } = 100;
-        public int ChanceCommon { get; set; } = 60;
-        public int ChanceRare { get; set; } = 35;
-        public int ChanceLegendary { get; set; } = 5;
-        public bool IsAvailable { get; set; } = true;
-    }
-
-    private class WikiPageFormData
-    {
-        public string Title { get; set; } = "";
-        public string Slug { get; set; } = "";
-        public string Content { get; set; } = "";
-    }
+public class WikiPageFormData
+{
+    public string Title { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string Content { get; set; } = "";
 }

@@ -55,7 +55,21 @@
 </div>
 
 @code {
-    [Parameter] public string Value { get; set; } = "";
+    private string _value = "";
+    
+    [Parameter] 
+    public string Value 
+    { 
+        get => _value;
+        set
+        {
+            if (_value != value)
+            {
+                _value = value;
+                ValueChanged.InvokeAsync(value);
+            }
+        }
+    }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public string Placeholder { get; set; } = "Write your markdown here...";
     [Parameter] public bool ShowPreview { get; set; } = true;
@@ -89,7 +103,6 @@
     {
         var result = await JS.InvokeAsync<InsertResult>("insertAtCursor", _textareaRef, text, afterText);
         Value = result.Value;
-        await ValueChanged.InvokeAsync(Value);
     }
 
     private class InsertResult

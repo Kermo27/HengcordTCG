@@ -1,721 +1,113 @@
 @page "/admin"
-@using HengcordTCG.Shared.DTOs.Wiki
-@using HengcordTCG.Blazor.Client.Services
-@using Markdig
+@using HengcordTCG.Blazor.Client.Pages.Admin.Components
+@using HengcordTCG.Blazor.Client.Pages.Admin.Modals
 
 <PageTitle>Admin - HengcordTCG</PageTitle>
 
 <div class="container py-8">
     <h1 class="text-3xl font-bold text-white mb-8">Admin Panel</h1>
 
-    <!-- Tabs -->
     <div class="border-b border-slate-700 mb-6">
         <div class="flex space-x-1">
-            <button @onclick='() => _tab = "cards"' class="@TabClass("cards")">
+            <button @onclick='() => SetTab("cards")' class="@TabClass("cards")">
                 <i class="fa fa-images mr-2"></i> Cards
             </button>
-            <button @onclick='() => _tab = "packs"' class="@TabClass("packs")">
+            <button @onclick='() => SetTab("packs")' class="@TabClass("packs")">
                 <i class="fa fa-box mr-2"></i> Packs
             </button>
-            <button @onclick='() => _tab = "users"' class="@TabClass("users")">
+            <button @onclick='() => SetTab("users")' class="@TabClass("users")">
                 <i class="fa fa-users mr-2"></i> Users
             </button>
-            <button @onclick='async () => { _tab = "wiki"; await LoadProposals(); await LoadWikiPages(); }' class="@TabClass("wiki")">
+            <button @onclick='async () => await SetTabAsync("wiki")' class="@TabClass("wiki")">
                 <i class="fa fa-book mr-2"></i> Wiki
             </button>
         </div>
     </div>
 
-    <!-- Cards Tab -->
     @if (_tab == "cards")
     {
-        <div class="mb-6 flex justify-between items-center">
-            <h2 class="text-xl font-semibold text-white">Manage Cards</h2>
-            <button @onclick="OpenAddCard" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                <i class="fa fa-plus mr-2"></i> Add Card
-            </button>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            @foreach (var card in _cards)
-            {
-                <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
-                    <div class="aspect-3/4 bg-slate-800">
-                        @if (!string.IsNullOrEmpty(card.ImagePath))
-                        {
-                            <img src="/api/images/@card.ImagePath" alt="@card.Name" class="w-full h-full object-cover">
-                        }
-                    </div>
-                    <div class="p-3">
-                        <p class="text-white font-medium truncate">@card.Name</p>
-                        <p class="text-slate-400 text-sm">@card.CardType</p>
-                        <div class="flex gap-2 mt-2">
-                            <button @onclick="() => OpenEditCard(card)" class="flex-1 bg-slate-700 px-2 py-1 rounded text-xs text-white">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button @onclick="() => ConfirmDeleteCard(card)" class="flex-1 bg-red-600/50 px-2 py-1 rounded text-xs text-white">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
+        <CardTab Cards="_cards" ApiBaseUrl="@ApiBaseUrl" OnAddCard="OpenAddCard" OnEditCard="OpenEditCard" OnDeleteCard="ConfirmDeleteCard" />
     }
 
-    <!-- Packs Tab -->
     @if (_tab == "packs")
     {
-        <div class="mb-6 flex justify-between items-center">
-            <h2 class="text-xl font-semibold text-white">Manage Packs</h2>
-            <button @onclick="OpenAddPack" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                <i class="fa fa-plus mr-2"></i> Add Pack
-            </button>
-        </div>
-        <div class="grid md:grid-cols-3 gap-6">
-            @foreach (var pack in _packs)
-            {
-                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-semibold text-white">@pack.Name</h3>
-                        @if (!pack.IsAvailable)
-                        {
-                            <span class="text-xs bg-red-600/50 text-white px-2 py-1 rounded">Unavailable</span>
-                        }
-                    </div>
-                    <p class="text-amber-400 font-bold mb-2">@pack.Price Gold</p>
-                    <div class="text-sm text-slate-400 mb-4">
-                        <p>Common: @pack.ChanceCommon%</p>
-                        <p>Rare: @pack.ChanceRare%</p>
-                        <p>Legendary: @pack.ChanceLegendary%</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button @onclick="() => OpenEditPack(pack)" class="flex-1 bg-slate-700 px-4 py-2 rounded-lg text-white">
-                            <i class="fa fa-edit mr-2"></i> Edit
-                        </button>
-                        <button @onclick="() => TogglePack(pack)" class="px-4 py-2 rounded-lg @GetTogglePackClass(pack)">
-                            @(pack.IsAvailable ? "Disable" : "Enable")
-                        </button>
-                    </div>
-                </div>
-            }
-        </div>
+        <PackTab Packs="_packs" OnAddPack="OpenAddPack" OnEditPack="OpenEditPack" OnTogglePack="TogglePack" />
     }
 
-    <!-- Users Tab -->
     @if (_tab == "users")
     {
-        <h2 class="text-xl font-semibold text-white mb-6">User Management</h2>
-        <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
-            <table class="w-full">
-                <thead class="bg-slate-800">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-slate-400">User</th>
-                        <th class="px-4 py-3 text-left text-slate-400">Gold</th>
-                        <th class="px-4 py-3 text-left text-slate-400">Admin</th>
-                        <th class="px-4 py-3 text-left text-slate-400">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800">
-                    @foreach (var user in _users)
-                    {
-                        <tr class="hover:bg-slate-800">
-                            <td class="px-4 py-3 text-white">@user.Username</td>
-                            <td class="px-4 py-3 text-amber-400">@user.Gold.ToString("N0")</td>
-                            <td class="px-4 py-3">
-                                @if (user.IsBotAdmin)
-                                {
-                                    <span class="text-amber-400">Yes</span>
-                                }
-                                else
-                                {
-                                    <span class="text-slate-500">No</span>
-                                }
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex gap-2">
-                                    <button @onclick="() => OpenEditGold(user)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
-                                        <i class="fa fa-coins"></i>
-                                    </button>
-                                    @if (user.IsBotAdmin)
-                                    {
-                                        <button @onclick="() => RemoveAdmin(user)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
-                                            <i class="fa fa-user-minus"></i>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button @onclick="() => AddAdmin(user)" class="bg-emerald-600/50 px-3 py-1 rounded text-white text-sm">
-                                            <i class="fa fa-user-plus"></i>
-                                        </button>
-                                    }
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        <UserTab Users="_users" OnEditGold="OpenEditGold" OnAddAdmin="AddAdmin" OnRemoveAdmin="RemoveAdmin" />
     }
 
-    <!-- Wiki Tab -->
     @if (_tab == "wiki")
     {
-        <div class="mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-white">Wiki Management</h2>
-                <button @onclick="OpenCreateWikiPage" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                    <i class="fa fa-plus mr-2"></i> New Page
-                </button>
-            </div>
-            
-            <!-- Wiki Tabs -->
-            <div class="border-b border-slate-700 mb-4">
-                <div class="flex space-x-1">
-                    <button @onclick='() => _wikiTab = "pages"' class="@(_wikiTab == "pages" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
-                        <i class="fa fa-file mr-2"></i> Pages
-                    </button>
-                    <button @onclick='async () => { _wikiTab = "proposals"; await LoadProposals(); }' class="@(_wikiTab == "proposals" ? "px-4 py-2 border-b-2 border-amber-500 text-amber-400 font-medium" : "px-4 py-2 text-slate-400 hover:text-white transition-colors")">
-                        <i class="fa fa-tasks mr-2"></i> Proposals
-                        @if (_proposals.Any())
-                        {
-                            <span class="ml-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">@_proposals.Count</span>
-                        }
-                    </button>
-                </div>
-            </div>
-
-            <!-- Pages List -->
-            @if (_wikiTab == "pages")
-            {
-                @if (_wikiPages.Any())
-                {
-                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
-                        <table class="w-full">
-                            <thead class="bg-slate-800">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-slate-400">Title</th>
-                                    <th class="px-4 py-3 text-left text-slate-400">Slug</th>
-                                    <th class="px-4 py-3 text-left text-slate-400">Updated</th>
-                                    <th class="px-4 py-3 text-right text-slate-400">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800">
-                                @foreach (var wikiPage in _wikiPages)
-                                {
-                                    <tr class="hover:bg-slate-800">
-                                        <td class="px-4 py-3 text-white">@wikiPage.Title</td>
-                                        <td class="px-4 py-3 text-slate-400">@wikiPage.Slug</td>
-                                        <td class="px-4 py-3 text-slate-400 text-sm">@wikiPage.UpdatedAt.ToString("yyyy-MM-dd")</td>
-                                        <td class="px-4 py-3 text-right">
-                                            <div class="flex gap-2 justify-end">
-                                                <a href="@("/wiki/" + wikiPage.Slug)" target="_blank" class="bg-slate-700 px-3 py-1 rounded text-white text-sm">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                                <button @onclick="() => OpenEditWikiPage(wikiPage)" class="bg-amber-600/50 px-3 py-1 rounded text-white text-sm">
-                                                    <i class="fa fa-edit"></i>
-                                                </button>
-                                                <button @onclick="() => ConfirmDeleteWikiPage(wikiPage)" class="bg-red-600/50 px-3 py-1 rounded text-white text-sm">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
-                        <i class="fa fa-file text-4xl text-slate-500 mb-4"></i>
-                        <p class="text-slate-400">No wiki pages yet. Create your first page!</p>
-                    </div>
-                }
-            }
-
-            <!-- Proposals List -->
-            @if (_wikiTab == "proposals")
-            {
-                @if (_proposals.Any())
-                {
-                    <div class="space-y-4">
-                        @foreach (var proposal in _proposals)
-                        {
-                            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div>
-                                        <span class="text-xs font-medium px-2 py-1 rounded mr-2 @GetProposalTypeClass(proposal.Type.ToString())">
-                                            @proposal.Type.ToString()
-                                        </span>
-                                        <span class="text-xs text-slate-400">
-                                            by @proposal.SubmittedByUsername
-                                        </span>
-                                    </div>
-                                    <span class="text-xs text-slate-500">
-                                        @proposal.CreatedAt.ToString("yyyy-MM-dd HH:mm")
-                                    </span>
-                                </div>
-                                
-                                <h3 class="text-lg font-semibold text-white mb-2">@proposal.Title</h3>
-                                
-                                @if (!string.IsNullOrEmpty(proposal.ChangeDescription))
-                                {
-                                    <p class="text-slate-400 text-sm mb-4">@proposal.ChangeDescription</p>
-                                }
-                                
-                                @if (proposal.Type.ToString() == "Edit" || proposal.Type.ToString() == "Delete")
-                                {
-                                    <div class="bg-slate-800 rounded p-3 mb-4 text-sm text-slate-300 max-h-40 overflow-y-auto">
-                                        @((MarkupString)proposal.Content.Replace("\n", "<br>"))
-                                    </div>
-                                }
-                                
-                                <div class="flex gap-2">
-                                    <button @onclick="() => ViewProposal(proposal)" class="bg-slate-700 px-4 py-2 rounded-lg text-white">
-                                        <i class="fa fa-eye mr-2"></i> View Details
-                                    </button>
-                                    <button @onclick="() => OpenApproveProposal(proposal)" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                                        <i class="fa fa-check mr-2"></i> Approve
-                                    </button>
-                                    <button @onclick="() => OpenRejectProposal(proposal)" class="bg-red-600 px-4 py-2 rounded-lg text-white">
-                                        <i class="fa fa-times mr-2"></i> Reject
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
-                        <i class="fa fa-check text-4xl text-emerald-500 mb-4"></i>
-                        <p class="text-slate-400">No pending proposals</p>
-                    </div>
-                }
-            }
-        </div>
+        <WikiTab 
+            @bind-SubTab="_wikiTab" 
+            WikiPages="_wikiPages" 
+            Proposals="_proposals"
+            OnCreatePage="OpenCreateWikiPage"
+            OnLoadProposals="LoadProposalsAndSetTab"
+            OnEditPage="OpenEditWikiPage"
+            OnDeletePage="ConfirmDeleteWikiPage"
+            OnViewProposal="ViewProposal"
+            OnApproveProposal="ApproveProposal"
+            OnRejectProposal="OpenRejectProposal" />
     }
 </div>
 
-<!-- Add/Edit Card Modal -->
-@if (_showCardModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">@(_editingCard?.Id == 0 ? "Add Card" : "Edit Card")</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Name</label>
-                    <input @bind="_cardForm.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Card Type</label>
-                        <select @bind="_cardForm.CardType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                            <option value="Unit">Unit</option>
-                            <option value="Commander">Commander</option>
-                            <option value="Closer">Closer</option>
-                            <option value="Spell">Spell</option>
-                            <option value="Structure">Structure</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Rarity</label>
-                        <select @bind="_cardForm.Rarity" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                            <option value="Common">Common</option>
-                            <option value="Uncommon">Uncommon</option>
-                            <option value="Rare">Rare</option>
-                            <option value="Legendary">Legendary</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Attack</label>
-                        <input type="number" @bind="_cardForm.Attack" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Defense</label>
-                        <input type="number" @bind="_cardForm.Defense" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Health</label>
-                        <input type="number" @bind="_cardForm.Health" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Light Cost</label>
-                        <input type="number" @bind="_cardForm.LightCost" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Speed</label>
-                        <input type="number" @bind="_cardForm.Speed" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Card Image</label>
-                    <InputFile OnChange="HandleCardImageUpload" accept="image/*" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
-                    @if (!string.IsNullOrEmpty(_cardForm.ImagePath))
-                    {
-                        <div class="mt-2 flex items-center gap-3">
-                            <img src="@($"/api/images/{_cardForm.ImagePath}")" alt="Preview" class="w-16 h-16 object-cover rounded-lg border border-slate-700" />
-                            <span class="text-slate-500 text-sm">@_cardForm.ImagePath</span>
-                            <button type="button" @onclick='() => _cardForm.ImagePath = ""' class="text-red-400 hover:text-red-300 text-sm">Remove</button>
-                        </div>
-                    }
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Min Damage</label>
-                        <input type="number" @bind="_cardForm.MinDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Max Damage</label>
-                        <input type="number" @bind="_cardForm.MaxDamage" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Counter Strike</label>
-                    <input type="number" @bind="_cardForm.CounterStrike" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Ability Text</label>
-                    <textarea @bind="_cardForm.AbilityText" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white h-20"></textarea>
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Ability ID</label>
-                    <input @bind="_cardForm.AbilityId" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="heal_on_enter" />
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Exclusive Pack</label>
-                    <select @bind="_cardForm.ExclusivePackName" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white">
-                        <option value="">None</option>
-                        @foreach (var pack in _packs)
-                        {
-                            <option value="@pack.Name">@pack.Name</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="CloseCardModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="SaveCard" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                    @(_editingCard?.Id == 0 ? "Add Card" : "Save Changes")
-                </button>
-            </div>
-        </div>
-    </div>
-}
+<CardModal 
+    Show="_showCardModal" 
+    Form="_cardForm" 
+    Card="_editingCard" 
+    Packs="_packs"
+    ApiBaseUrl="@ApiBaseUrl"
+    OnSave="SaveCard" 
+    OnCancel="CloseCardModal" 
+    OnImageUpload="HandleCardImageUpload" />
 
-<!-- Add/Edit Pack Modal -->
-@if (_showPackModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">@(_editingPack?.Id == 0 ? "Add Pack" : "Edit Pack")</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Name</label>
-                    <input @bind="_packForm.Name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Price (Gold)</label>
-                    <input type="number" @bind="_packForm.Price" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Common %</label>
-                        <input type="number" @bind="_packForm.ChanceCommon" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Rare %</label>
-                        <input type="number" @bind="_packForm.ChanceRare" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Legendary %</label>
-                        <input type="number" @bind="_packForm.ChanceLegendary" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Available</label>
-                    <input type="checkbox" @bind="_packForm.IsAvailable" class="w-5 h-5" />
-                    <span class="text-white ml-2">Pack is available for purchase</span>
-                </div>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="ClosePackModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="SavePack" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                    @(_editingPack?.Id == 0 ? "Add Pack" : "Save Changes")
-                </button>
-            </div>
-        </div>
-    </div>
-}
+<PackModal 
+    Show="_showPackModal" 
+    Form="_packForm" 
+    Pack="_editingPack"
+    OnSave="SavePack" 
+    OnCancel="ClosePackModal" />
 
-<!-- Edit Gold Modal -->
-@if (_showGoldModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">Edit Gold - @_editingUser?.Username</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Current Gold</label>
-                    <p class="text-amber-400 text-2xl font-bold">@_editingUser?.Gold.ToString("N0")</p>
-                </div>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">New Gold Amount</label>
-                    <input type="number" @bind="_goldAmount" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                </div>
-                <div class="flex gap-2">
-                    <button @onclick="() => SetGold(_goldAmount)" class="flex-1 bg-amber-600 px-4 py-2 rounded-lg text-white">
-                        Set Gold
-                    </button>
-                    <button @onclick="() => AddGold(_goldAmount)" class="flex-1 bg-emerald-600 px-4 py-2 rounded-lg text-white">
-                        Add Gold
-                    </button>
-                </div>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end">
-                <button @onclick="CloseGoldModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Close</button>
-            </div>
-        </div>
-    </div>
-}
+<GoldModal 
+    Show="_showGoldModal" 
+    User="_editingUser" 
+    @bind-Amount="_goldAmount"
+    OnClose="CloseGoldModal" 
+    OnSetGold="SetGold" 
+    OnAddGold="AddGold" />
 
-<!-- Proposal Detail Modal -->
-@if (_showProposalModal && _viewingProposal != null)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <span class="text-xs font-medium px-2 py-1 rounded @GetProposalTypeClass(_viewingProposal.Type.ToString())">
-                        @_viewingProposal.Type.ToString()
-                    </span>
-                    <h3 class="text-xl font-bold text-white">Proposal Details</h3>
-                </div>
-                <button @onclick="CloseProposalModal" class="text-slate-400 hover:text-white">
-                    <i class="fa fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-4 border-b border-slate-700 bg-slate-800/50">
-                <div class="flex items-center gap-4 text-sm">
-                    <span class="text-slate-400">by <span class="text-white">@_viewingProposal.SubmittedByUsername</span></span>
-                    <span class="text-slate-500">@_viewingProposal.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
-                    @if (!string.IsNullOrEmpty(_viewingProposal.WikiPageTitle))
-                    {
-                        <span class="text-slate-400">Page: <span class="text-amber-400">@_viewingProposal.WikiPageTitle</span></span>
-                    }
-                </div>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-6">
-                @if (_viewingProposal.Type.ToString() == "Edit" && _viewingProposal.Diff != null)
-                {
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-sm font-medium text-red-400">
-                                    <i class="fa fa-minus-circle mr-1"></i> Original
-                                </h4>
-                                <span class="text-xs text-slate-500">@_viewingProposal.Diff.Left.Lines.Count lines</span>
-                            </div>
-                            <div class="diff-panel">
-                                @foreach (var line in _viewingProposal.Diff.Left.Lines)
-                                {
-                                    <div class="diff-line @GetDiffLineClass(line.Type)">
-                                        @if (line.LineNumber > 0)
-                                        {
-                                            <span class="diff-line-number">@line.LineNumber</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="diff-line-number"></span>
-                                        }
-                                        <span class="diff-line-prefix">@GetDiffPrefix(line.Type)</span>
-                                        <span class="diff-line-content">@line.Content</span>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-sm font-medium text-emerald-400">
-                                    <i class="fa fa-plus-circle mr-1"></i> Proposed
-                                </h4>
-                                <span class="text-xs text-slate-500">@_viewingProposal.Diff.Right.Lines.Count lines</span>
-                            </div>
-                            <div class="diff-panel">
-                                @foreach (var line in _viewingProposal.Diff.Right.Lines)
-                                {
-                                    <div class="diff-line @GetDiffLineClass(line.Type)">
-                                        @if (line.LineNumber > 0)
-                                        {
-                                            <span class="diff-line-number">@line.LineNumber</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="diff-line-number"></span>
-                                        }
-                                        <span class="diff-line-prefix">@GetDiffPrefix(line.Type)</span>
-                                        <span class="diff-line-content">@line.Content</span>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-                else if (_viewingProposal.Type.ToString() == "Delete")
-                {
-                    <div>
-                        <h4 class="text-sm font-medium text-red-400 mb-2">
-                            <i class="fa fa-trash mr-1"></i> Content to be deleted
-                        </h4>
-                        <div class="bg-slate-800 rounded p-4 text-slate-300 max-h-96 overflow-y-auto whitespace-pre-wrap font-mono text-sm">
-                            @_viewingProposal.Content
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div>
-                        <h4 class="text-sm font-medium text-emerald-400 mb-2">
-                            <i class="fa fa-file-text mr-1"></i> New Page Content
-                        </h4>
-                        <div class="bg-slate-800 rounded p-4 text-slate-300 max-h-96 overflow-y-auto whitespace-pre-wrap font-mono text-sm">
-                            @_viewingProposal.Content
-                        </div>
-                    </div>
-                }
-            </div>
-            
-            <div class="p-6 border-t border-slate-700 flex justify-between items-center">
-                <div class="text-sm text-slate-400">
-                    <span class="text-emerald-400">+@(_viewingProposal.Diff?.Right.Lines.Count(l => l.Type == "inserted") ?? 0)</span>
-                    <span class="mx-2">|</span>
-                    <span class="text-red-400">-@(_viewingProposal.Diff?.Left.Lines.Count(l => l.Type == "deleted") ?? 0)</span>
-                </div>
-                <div class="flex gap-3">
-                    <button @onclick="CloseProposalModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white hover:bg-slate-600">Close</button>
-                    <button @onclick="() => { CloseProposalModal(); OpenRejectProposal(_viewingProposal); }" class="bg-red-600 px-4 py-2 rounded-lg text-white hover:bg-red-500">
-                        <i class="fa fa-times mr-2"></i> Reject
-                    </button>
-                    <button @onclick="() => { var p = _viewingProposal; CloseProposalModal(); OpenApproveProposal(p); }" class="bg-emerald-600 px-4 py-2 rounded-lg text-white hover:bg-emerald-500">
-                        <i class="fa fa-check mr-2"></i> Approve
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+<ProposalModal 
+    Show="_showProposalModal" 
+    Proposal="_viewingProposal"
+    OnClose="CloseProposalModal" 
+    OnApprove="ApproveProposalFromModal" 
+    OnRejectWithReason="RejectProposalWithReason" />
 
-<!-- Reject Proposal Modal -->
-@if (_showRejectModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">Reject Proposal</h3>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-slate-400">Rejecting: <span class="text-white">@_rejectingProposal?.Title</span></p>
-                <div>
-                    <label class="block text-slate-400 text-sm mb-1">Reason (optional)</label>
-                    <textarea @bind="_rejectReason" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white h-24"></textarea>
-                </div>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="CloseRejectModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="RejectProposal" class="bg-red-600 px-4 py-2 rounded-lg text-white">Reject</button>
-            </div>
-        </div>
-    </div>
-}
+<WikiPageModal 
+    Show="_showWikiPageModal" 
+    Form="_wikiPageForm" 
+    EditingPageId="_editingWikiPageId"
+    OnClose="CloseWikiPageModal" 
+    OnSave="SaveWikiPage" />
 
-<!-- Confirm Delete Card Modal -->
-@if (_showDeleteCardModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">Delete Card</h3>
-            </div>
-            <div class="p-6">
-                <p class="text-slate-400">Are you sure you want to delete card:</p>
-                <p class="text-white font-semibold text-lg mt-2">@_deletingCard?.Name</p>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="CloseDeleteCardModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="DeleteCard" class="bg-red-600 px-4 py-2 rounded-lg text-white">Delete</button>
-            </div>
-        </div>
-    </div>
-}
+<ConfirmDialog 
+    Show="_showDeleteCardModal" 
+    Title="Delete Card" 
+    Message="Are you sure you want to delete card:"
+    ItemName="_deletingCard?.Name" 
+    ConfirmText="Delete"
+    OnConfirm="DeleteCard" 
+    OnCancel="CloseDeleteCardModal" />
 
-<!-- Wiki Page Editor Modal -->
-@if (_showWikiPageModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-white">@(_editingWikiPageId != null ? "Edit Wiki Page" : "Create Wiki Page")</h3>
-                <button @onclick="CloseWikiPageModal" class="text-slate-400 hover:text-white">
-                    <i class="fa fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-6 border-b border-slate-700">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Title</label>
-                        <input @bind="_wikiPageForm.Title" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 text-sm mb-1">Slug (URL)</label>
-                        <input @bind="_wikiPageForm.Slug" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white" placeholder="my-page-slug" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Editor -->
-            <div class="flex-1 overflow-hidden min-h-[300px]" style="max-height: calc(95vh - 280px);">
-                <MarkdownEditor @bind-Value="_wikiPageForm.Content" />
-            </div>
-            
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="CloseWikiPageModal" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="CreateWikiPage" class="bg-emerald-600 px-4 py-2 rounded-lg text-white">@(_editingWikiPageId != null ? "Save Changes" : "Create Page")</button>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Delete Wiki Page Modal -->
-@if (_showDeleteWikiPageModal)
-{
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md">
-            <div class="p-6 border-b border-slate-700">
-                <h3 class="text-xl font-bold text-white">Delete Wiki Page</h3>
-            </div>
-            <div class="p-6">
-                <p class="text-slate-400">Are you sure you want to delete page:</p>
-                <p class="text-white font-semibold text-lg mt-2">@_deletingWikiPage?.Title</p>
-            </div>
-            <div class="p-6 border-t border-slate-700 flex justify-end gap-3">
-                <button @onclick="() => _showDeleteWikiPageModal = false" class="bg-slate-700 px-4 py-2 rounded-lg text-white">Cancel</button>
-                <button @onclick="DeleteWikiPage" class="bg-red-600 px-4 py-2 rounded-lg text-white">Delete</button>
-            </div>
-        </div>
-    </div>
-}
+<ConfirmDialog 
+    Show="_showDeleteWikiPageModal" 
+    Title="Delete Wiki Page" 
+    Message="Are you sure you want to delete page:"
+    ItemName="_deletingWikiPage?.Title" 
+    ConfirmText="Delete"
+    OnConfirm="DeleteWikiPage" 
+    OnCancel="CloseDeleteWikiPageModal" />

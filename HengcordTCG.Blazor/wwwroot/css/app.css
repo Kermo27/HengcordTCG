@@ -2947,3 +2947,15 @@
     }
   }
 }
+
+/* Card dimensions - 225x350px */
+.card-image {
+  width: 225px;
+  height: 350px;
+  object-fit: cover;
+}
+
+.card-container {
+  width: 225px;
+  height: 350px;
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using HengcordTCG.Shared.Clients;
 using HengcordTCG.Shared.Models;
 using HengcordTCG.Blazor.Client.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace HengcordTCG.Blazor.Client.Pages;
 
@@ -14,6 +15,12 @@ public partial class Deck
 
     [Inject]
     private AuthService AuthService { get; set; } = default!;
+
+    [Inject]
+    private IConfiguration Configuration { get; set; } = default!;
+
+    private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? Configuration["Urls:Server"] ?? "https://localhost:7156";
+    private string GetImageUrl(string? path) => string.IsNullOrEmpty(path) ? "" : $"{ApiBaseUrl}/api/images/{path}";
 
     private Card? Commander { get; set; }
     private List<Card> MainDeck { get; set; } = new();
