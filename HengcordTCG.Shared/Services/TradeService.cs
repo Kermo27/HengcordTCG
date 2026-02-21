@@ -25,18 +25,18 @@ public class TradeService
         ulong targetId, string targetName,
         string offerString, string requestString)
     {
-        if (initiatorId == targetId) return (false, "Nie możesz wymieniać się sam ze sobą!", null, null, null);
+        if (initiatorId == targetId) return (false, "You cannot trade with yourself!", null, null, null);
 
         var initiator = await _userService.GetOrCreateUserAsync(initiatorId, initiatorName);
         var target = await _userService.GetOrCreateUserAsync(targetId, targetName);
 
         // Parse Offer
         var offerParsed = await ParseTradeStringAsync(offerString);
-        if (!offerParsed.success) return (false, $"Błąd w ofercie: {offerParsed.message}", null, null, null);
+        if (!offerParsed.success) return (false, $"Offer error: {offerParsed.message}", null, null, null);
 
         // Parse Request
         var requestParsed = await ParseTradeStringAsync(requestString);
-        if (!requestParsed.success) return (false, $"Błąd w żądaniu: {requestParsed.message}", null, null, null);
+        if (!requestParsed.success) return (false, $"Request error: {requestParsed.message}", null, null, null);
 
         // Create Trade logic object
         var trade = new Trade
@@ -55,7 +55,7 @@ public class TradeService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Trade {TradeId} created: {InitiatorId} → {TargetId}", trade.Id, initiatorId, targetId);
-        return (true, "Oferta utworzona", trade, offerParsed.content, requestParsed.content);
+        return (true, "Trade offer created", trade, offerParsed.content, requestParsed.content);
     }
 
     public async Task<(bool success, string message)> AcceptTradeAsync(int tradeId, ulong userId)
@@ -72,19 +72,19 @@ public class TradeService
                 if (trade == null)
                 {
                     await transaction.RollbackAsync();
-                    return (false, "Nie znaleziono oferty.");
+                    return (false, "Trade offer not found.");
                 }
 
                 if (trade.Status != TradeStatus.Pending)
                 {
                     await transaction.RollbackAsync();
-                    return (false, "Oferta nie jest już aktywna.");
+                    return (false, "This offer is no longer active.");
                 }
 
                 if (trade.Target.DiscordId != userId)
                 {
                     await transaction.RollbackAsync();
-                    return (false, "To nie jest oferta dla Ciebie!");
+                    return (false, "This offer is not for you!");
                 }
 
                 var offerCards = JsonSerializer.Deserialize<Dictionary<int, int>>(trade.OfferCardsJson) ?? new();
@@ -94,7 +94,7 @@ public class TradeService
                 if (trade.Initiator.Gold < trade.OfferGold)
                 {
                     await transaction.RollbackAsync();
-                    return (false, $"Inicjator nie ma wystarczająco złota ({trade.OfferGold}).");
+                    return (false, $"Initiator does not have enough gold ({trade.OfferGold}).");
                 }
 
                 foreach (var kvp in offerCards)
@@ -103,7 +103,7 @@ public class TradeService
                     if (userCard == null || userCard.Count < kvp.Value)
                     {
                         await transaction.RollbackAsync();
-                        return (false, $"Inicjator nie ma karty ID:{kvp.Key} w ilości {kvp.Value}.");
+                        return (false, $"Initiator does not have card ID:{kvp.Key} in quantity {kvp.Value}.");
                     }
                 }
 
@@ -111,7 +111,7 @@ public class TradeService
                 if (trade.Target.Gold < trade.RequestGold)
                 {
                     await transaction.RollbackAsync();
-                    return (false, $"Nie masz wystarczająco złota ({trade.RequestGold}).");
+                    return (false, $"You don't have enough gold ({trade.RequestGold}).");
                 }
 
                 foreach (var kvp in requestCards)
@@ -120,7 +120,7 @@ public class TradeService
                     if (userCard == null || userCard.Count < kvp.Value)
                     {
                         await transaction.RollbackAsync();
-                        return (false, $"Nie masz karty ID:{kvp.Key} w ilości {kvp.Value}.");
+                        return (false, $"You don't have card ID:{kvp.Key} in quantity {kvp.Value}.");
                     }
                 }
 
@@ -144,7 +144,7 @@ public class TradeService
 
                 await transaction.CommitAsync();
                 _logger.LogInformation("Trade {TradeId} accepted by {UserId}", tradeId, userId);
-                return (true, "Wymiana zakończona sukcesem!");
+                return (true, "Trade completed successfully!");
             }
             catch
             {
@@ -157,8 +157,8 @@ public class TradeService
     public async Task<(bool success, string message)> RejectTradeAsync(int tradeId, ulong userId)
     {
         var trade = await _db.Trades.Include(t => t.Target).Include(t => t.Initiator).FirstOrDefaultAsync(t => t.Id == tradeId);
-        if (trade == null) return (false, "Nie znaleziono oferty.");
-        if (trade.Status != TradeStatus.Pending) return (false, "Oferta nie jest już aktywna.");
+        if (trade == null) return (false, "Trade offer not found.");
+        if (trade.Status != TradeStatus.Pending) return (false, "This offer is no longer active.");
         
         // Check if user is either initiator or target
         if (trade.Initiator.DiscordId == userId)
@@ -166,17 +166,17 @@ public class TradeService
             trade.Status = TradeStatus.Cancelled;
             await _db.SaveChangesAsync();
             _logger.LogInformation("Trade {TradeId} cancelled by initiator {UserId}", tradeId, userId);
-            return (true, "Anulowano ofertę.");
+            return (true, "Trade cancelled.");
         }
         else if (trade.Target.DiscordId == userId)
         {
             trade.Status = TradeStatus.Rejected;
             await _db.SaveChangesAsync();
             _logger.LogInformation("Trade {TradeId} rejected by target {UserId}", tradeId, userId);
-            return (true, "Odrzucono ofertę.");
+            return (true, "Trade rejected.");
         }
 
-        return (false, "Nie masz uprawnień do tej oferty.");
+        return (false, "You don't have permission for this trade.");
     }
 
     private async Task TransferCardsAsync(User fromUser, User toUser, Dictionary<int, int> cardsToTransfer)

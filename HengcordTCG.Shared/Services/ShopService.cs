@@ -39,19 +39,19 @@ public class ShopService
             else if (pack == null)
             {
                 _logger.LogWarning("Pack not found: {PackName}", packName);
-                return (false, new List<Card>(), $"Nie znaleziono paczki o nazwie '{packName}'.");
+                return (false, new List<Card>(), $"Pack '{packName}' not found.");
             }
 
             if (!pack.IsAvailable)
             {
                 _logger.LogWarning("Pack unavailable: {PackName}", packName);
-                return (false, new List<Card>(), $"Paczka '{packName}' jest obecnie niedostępna w sklepie.");
+                return (false, new List<Card>(), $"Pack '{packName}' is currently unavailable.");
             }
 
             if (user.Gold < pack.Price)
             {
                 _logger.LogWarning("Insufficient gold for Discord ID {DiscordId}. Required: {Price}, Has: {Gold}", discordId, pack.Price, user.Gold);
-                return (false, new List<Card>(), $"Brakuje Ci złota! Koszt paczki '{pack.Name}': {pack.Price}, masz: {user.Gold}");
+                return (false, new List<Card>(), $"Not enough gold! Pack '{pack.Name}' costs {pack.Price}, you have {user.Gold}");
             }
 
             var availableCards = await _db.Cards
@@ -60,7 +60,7 @@ public class ShopService
 
             if (availableCards.Count == 0)
             {
-                return (false, new List<Card>(), "Ta paczka jest pusta!");
+                return (false, new List<Card>(), "This pack is empty!");
             }
 
             var drawnCards = new List<Card>();
@@ -131,7 +131,7 @@ public class ShopService
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error buying pack for Discord ID {DiscordId}. Pack: {PackName}", discordId, packName);
-            return (false, new List<Card>(), "Błąd podczas kupna paczki. Spróbuj ponownie.");
+            return (false, new List<Card>(), "Error purchasing pack. Please try again.");
         }
     }
 

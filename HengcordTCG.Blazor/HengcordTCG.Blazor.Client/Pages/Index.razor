@@ -34,38 +34,52 @@
                     <Authorized>
                         <!-- Daily Reward Section -->
                         <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-6 max-w-md mx-auto">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-slate-300 font-medium">Daily Reward</span>
-                                <span class="text-amber-400 font-bold"><i class="fa fa-coins mr-1"></i>@Gold.ToString("N0")</span>
-                            </div>
-                            
-                            @if (CanClaimDaily)
+                            @if (IsLoading)
                             {
-                                <button @onclick="ClaimDaily" 
-                                    disabled="@IsClaimingDaily"
-                                    class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium py-3 rounded-lg disabled:opacity-50 transition-all">
-                                    @if (IsClaimingDaily)
-                                    {
-                                        <i class="fa fa-spinner fa-spin mr-2"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="fa fa-gift mr-2"></i>
-                                    }
-                                    Claim Reward
-                                </button>
+                                <!-- Skeleton -->
+                                <div class="animate-pulse">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="h-5 w-28 bg-slate-700 rounded"></div>
+                                        <div class="h-5 w-20 bg-slate-700 rounded"></div>
+                                    </div>
+                                    <div class="h-12 bg-slate-700 rounded-lg"></div>
+                                </div>
                             }
                             else
                             {
-                                <div class="text-center py-3 bg-slate-800/50 rounded-lg">
-                                    <span class="text-slate-400">Next reward in: </span>
-                                    <span class="text-amber-400 font-mono">@TimeUntilDaily</span>
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-slate-300 font-medium">Daily Reward</span>
+                                    <span class="text-amber-400 font-bold"><i class="fa fa-coins mr-1"></i>@Gold.ToString("N0")</span>
                                 </div>
-                            }
-                            
-                            @if (!string.IsNullOrEmpty(DailyMessage))
-                            {
-                                <p class="mt-3 text-sm @(DailySuccess ? "text-emerald-400" : "text-red-400")">@DailyMessage</p>
+                                
+                                @if (CanClaimDaily)
+                                {
+                                    <button @onclick="ClaimDaily" 
+                                        disabled="@IsClaimingDaily"
+                                        class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium py-3 rounded-lg disabled:opacity-50 transition-all">
+                                        @if (IsClaimingDaily)
+                                        {
+                                            <i class="fa fa-spinner fa-spin mr-2"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa fa-gift mr-2"></i>
+                                        }
+                                        Claim Reward
+                                    </button>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-3 bg-slate-800/50 rounded-lg">
+                                        <span class="text-slate-400">Next reward in: </span>
+                                        <span class="text-amber-400 font-mono">@TimeUntilDaily</span>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(DailyMessage))
+                                {
+                                    <p class="mt-3 text-sm @(DailySuccess ? "text-emerald-400" : "text-red-400")">@DailyMessage</p>
+                                }
                             }
                         </div>
                     </Authorized>
@@ -87,30 +101,43 @@
     <!-- Global Stats -->
     <div class="container py-12">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
-                <div class="text-3xl md:text-4xl font-bold text-amber-400 mb-1">
-                    <AnimatedCounter TargetValue="@Stats.TotalCards" />
+            @if (IsStatsLoading)
+            {
+                @for (var i = 0; i < 4; i++)
+                {
+                    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center animate-pulse">
+                        <div class="h-10 w-16 bg-slate-700 rounded mx-auto mb-2"></div>
+                        <div class="h-4 w-20 bg-slate-700 rounded mx-auto"></div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
+                    <div class="text-3xl md:text-4xl font-bold text-amber-400 mb-1">
+                        <AnimatedCounter TargetValue="@Stats.TotalCards" />
+                    </div>
+                    <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-layer-group mr-1"></i> Cards</div>
                 </div>
-                <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-layer-group mr-1"></i> Cards</div>
-            </div>
-            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
-                <div class="text-3xl md:text-4xl font-bold text-purple-400 mb-1">
-                    <AnimatedCounter TargetValue="@Stats.TotalPacks" />
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
+                    <div class="text-3xl md:text-4xl font-bold text-purple-400 mb-1">
+                        <AnimatedCounter TargetValue="@Stats.TotalPacks" />
+                    </div>
+                    <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-box mr-1"></i> Packs</div>
                 </div>
-                <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-box mr-1"></i> Packs</div>
-            </div>
-            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
-                <div class="text-3xl md:text-4xl font-bold text-emerald-400 mb-1">
-                    <AnimatedCounter TargetValue="@Stats.TotalTrades" />
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-400 mb-1">
+                        <AnimatedCounter TargetValue="@Stats.TotalTrades" />
+                    </div>
+                    <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-arrow-right-arrow-left mr-1"></i> Trades</div>
                 </div>
-                <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-arrow-right-arrow-left mr-1"></i> Trades</div>
-            </div>
-            <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
-                <div class="text-3xl md:text-4xl font-bold text-blue-400 mb-1">
-                    <AnimatedCounter TargetValue="@Stats.TotalPlayers" />
+                <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 text-center">
+                    <div class="text-3xl md:text-4xl font-bold text-blue-400 mb-1">
+                        <AnimatedCounter TargetValue="@Stats.TotalPlayers" />
+                    </div>
+                    <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-users mr-1"></i> Players</div>
                 </div>
-                <div class="text-slate-400 text-sm md:text-base"><i class="fa fa-users mr-1"></i> Players</div>
-            </div>
+            }
         </div>
     </div>
 
@@ -252,10 +279,12 @@
     private int CollectionCount;
 
     private bool IsClaimingDaily;
-    private bool CanClaimDaily = true;
+    private bool CanClaimDaily;
     private string TimeUntilDaily = "";
     private string? DailyMessage;
     private bool DailySuccess;
+    private bool IsLoading = true;
+    private bool IsStatsLoading = true;
 
     private System.Timers.Timer? _dailyTimer;
 
@@ -266,6 +295,7 @@
         await Task.WhenAll(statsTask, leaderboardTask);
         Stats = await statsTask;
         Leaderboard = await leaderboardTask;
+        IsStatsLoading = false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -289,6 +319,12 @@
 
                 UpdateDailyStatus();
                 StartDailyTimer();
+                IsLoading = false;
+                StateHasChanged();
+            }
+            else
+            {
+                IsLoading = false;
                 StateHasChanged();
             }
         }

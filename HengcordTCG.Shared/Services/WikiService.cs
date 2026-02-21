@@ -127,7 +127,7 @@ public class WikiService
 
         var existing = await _context.WikiPages.FirstOrDefaultAsync(p => p.Slug == slug);
         if (existing != null)
-            return (null, "Strona z takim adresem już istnieje");
+            return (null, "A page with this slug already exists");
 
         var page = new WikiPage
         {
@@ -153,7 +153,7 @@ public class WikiService
             Order = page.Order,
             EditedBy = editorId,
             EditedAt = DateTime.UtcNow,
-            ChangeDescription = "Utworzono stronę"
+            ChangeDescription = "Created page"
         };
         _context.WikiHistories.Add(history);
 
@@ -174,7 +174,7 @@ public class WikiService
     {
         var page = await _context.WikiPages.FindAsync(id);
         if (page == null)
-            return (null, "Strona nie została znaleziona");
+            return (null, "Page not found");
 
         var history = new WikiHistory
         {

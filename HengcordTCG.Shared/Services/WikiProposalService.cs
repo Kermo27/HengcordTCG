@@ -169,7 +169,7 @@ public class WikiProposalService
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (proposal == null)
-            return (false, "Propozycja nie została znaleziona");
+            return (false, "Proposal not found");
 
         WikiPage? page = null;
 
@@ -199,7 +199,7 @@ public class WikiProposalService
                     Order = page.Order,
                     EditedBy = proposal.SubmittedBy,
                     EditedAt = DateTime.UtcNow,
-                    ChangeDescription = $"Utworzono stronę z propozycji #{proposal.Id}"
+                    ChangeDescription = $"Created page from proposal #{proposal.Id}"
                 };
                 _context.WikiHistories.Add(history);
                 await _context.SaveChangesAsync();
@@ -221,7 +221,7 @@ public class WikiProposalService
                             Order = page.Order,
                             EditedBy = proposal.SubmittedBy,
                             EditedAt = DateTime.UtcNow,
-                            ChangeDescription = $"Zatwierdzono propozycję #{proposal.Id}"
+                            ChangeDescription = $"Approved proposal #{proposal.Id}"
                         };
                         _context.WikiHistories.Add(editHistory);
 
@@ -275,7 +275,7 @@ public class WikiProposalService
     {
         var proposal = await _context.WikiProposals.FindAsync(id);
         if (proposal == null)
-            return (false, "Propozycja nie została znaleziona");
+            return (false, "Proposal not found");
 
         proposal.Status = ProposalStatus.Rejected;
         proposal.RejectionReason = reason;

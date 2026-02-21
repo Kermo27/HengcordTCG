@@ -43,7 +43,7 @@ public class WikiController : ControllerBase
     {
         var page = await _wikiService.GetPageBySlugAsync(slug);
         if (page == null)
-            return NotFound(new { message = "Strona nie została znaleziona" });
+            return NotFound(new { message = "Page not found" });
         return Ok(page);
     }
 

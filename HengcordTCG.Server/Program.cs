@@ -18,29 +18,49 @@ using FluentValidation;
 using Serilog;
 using Microsoft.AspNetCore.HttpOverrides;
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(new ConfigurationBuilder()
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-        .Build())
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .CreateBootstrapLogger();
+var isTesting = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing";
+
+if (!isTesting)
+{
+    try
+    {
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                .Build())
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
+    }
+    catch
+    {
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
+    }
+
+    Log.Information("Starting HengcordTCG Server");
+}
 
 try
 {
-    Log.Information("Starting HengcordTCG Server");
-
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
+    // Re-check using builder environment (WebApplicationFactory sets this via UseEnvironment)
+    isTesting = isTesting || builder.Environment.EnvironmentName == "Testing";
+
+    if (!isTesting)
+    {
+        builder.Host.UseSerilog((context, services, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
+    }
 
     builder.Configuration
-        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
         .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
         .AddEnvironmentVariables(prefix: "HENGCORD_")
         .Build();
@@ -72,7 +92,8 @@ try
     builder.Services.AddAutoMapper(typeof(MappingProfile));
     builder.Services.AddOpenApi();
 
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? "Data Source=app.db";
     string dbPath;
     if (Path.IsPathRooted(connectionString.Replace("Data Source=", "")))
     {
@@ -105,7 +126,7 @@ try
     builder.Services.AddScoped<IDeckService, DeckService>();
     builder.Services.AddScoped<IMatchService, MatchService>();
 
-    var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
+    var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "DEFAULT_DEV_SECRET_CHANGE_ME_123456789";
 
     builder.Services.AddAuthentication(options =>
     {
@@ -159,8 +180,8 @@ try
     })
     .AddDiscord(options =>
     {
-        options.ClientId = builder.Configuration["Discord:ClientId"]!;
-        options.ClientSecret = builder.Configuration["Discord:ClientSecret"]!;
+        options.ClientId = builder.Configuration["Discord:ClientId"] ?? "placeholder";
+        options.ClientSecret = builder.Configuration["Discord:ClientSecret"] ?? "placeholder";
         options.CallbackPath = "/signin-discord";
         options.Scope.Add("identify");
         options.SaveTokens = true;
@@ -227,14 +248,34 @@ try
         try
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Log.Information("Applying database migrations...");
-            Log.Information("Database path: {DbPath}", dbPath);
-            await db.Database.MigrateAsync();
-            Log.Information("Database migrations applied successfully");
+            if (!isTesting)
+            {
+                Log.Information("Applying database migrations...");
+                Log.Information("Database path: {DbPath}", dbPath);
+            }
+            if (db.Database.IsRelational())
+            {
+                await db.Database.MigrateAsync();
+                if (!isTesting)
+                {
+                    Log.Information("Database migrations applied successfully");
+                }
+            }
+            else
+            {
+                await db.Database.EnsureCreatedAsync();
+                if (!isTesting)
+                {
+                    Log.Information("In-memory database created successfully");
+                }
+            }
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Error applying database migrations");
+            if (!isTesting)
+            {
+                Log.Fatal(ex, "Error applying database migrations");
+            }
             throw;
         }
     }
@@ -245,14 +286,17 @@ try
         app.MapScalarApiReference();
     }
 
-    app.UseSerilogRequestLogging(options =>
+    if (!isTesting)
     {
-        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        app.UseSerilogRequestLogging(options =>
         {
-            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-        };
-    });
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            {
+                diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+                diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+            };
+        });
+    }
 
     app.UseForwardedHeaders();
 
@@ -267,14 +311,27 @@ try
     
     app.MapControllers();
 
-    Log.Information("HengcordTCG Server started successfully");
+    if (!isTesting)
+    {
+        Log.Information("HengcordTCG Server started successfully");
+    }
+
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    if (!isTesting)
+    {
+        Log.Fatal(ex, "Application terminated unexpectedly");
+    }
+    throw;
 }
 finally
 {
-    Log.CloseAndFlush();
+    if (!isTesting)
+    {
+        Log.CloseAndFlush();
+    }
 }
+
+public partial class Program { }
