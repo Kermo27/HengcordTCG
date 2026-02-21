@@ -8,6 +8,7 @@ public class RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddlewa
     private readonly RequestDelegate _next = next;
     private readonly ILogger<RateLimitMiddleware> _logger = logger;
     private static readonly ConcurrentDictionary<string, RateLimitEntry> RequestCounts = new();
+    private static int _requestCounter;
     private const int RequestsPerMinute = 120;
     private const int RequestsPerHour = 5000;
 
@@ -15,6 +16,17 @@ public class RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddlewa
     {
         var identifier = GetClientIdentifier(context);
         var now = DateTime.UtcNow;
+
+        // Periodic cleanup of stale entries to prevent memory leak
+        if (Interlocked.Increment(ref _requestCounter) % 1000 == 0)
+        {
+            var cutoff = now.AddHours(-2);
+            var staleKeys = RequestCounts
+                .Where(kvp => kvp.Value.LastResetHour < cutoff)
+                .Select(kvp => kvp.Key).ToList();
+            foreach (var key in staleKeys)
+                RequestCounts.TryRemove(key, out _);
+        }
 
         var entry = RequestCounts.GetOrAdd(identifier, _ => new RateLimitEntry());
 

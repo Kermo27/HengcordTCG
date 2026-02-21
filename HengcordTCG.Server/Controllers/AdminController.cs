@@ -89,13 +89,24 @@ public class AdminController : ControllerBase
     [HttpPost("set-gold")]
     public async Task<ActionResult> SetGold([FromQuery] ulong discordId, [FromQuery] int amount)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
-        if (user == null) return NotFound();
+        try
+        {
+            ValidationExtensions.ValidateDiscordId(discordId);
+            if (amount < 0)
+                throw new ArgumentException("Amount cannot be negative", nameof(amount));
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
+            if (user == null) return NotFound(new { message = "User not found" });
         
-        user.Gold = amount;
-        await _context.SaveChangesAsync();
-        _logger.LogInformation("Set gold to {Amount} for user {DiscordId}", amount, discordId);
-        return Ok(user.Gold);
+            user.Gold = amount;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Set gold to {Amount} for user {DiscordId}", amount, discordId);
+            return Ok(user.Gold);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("create-pack")]

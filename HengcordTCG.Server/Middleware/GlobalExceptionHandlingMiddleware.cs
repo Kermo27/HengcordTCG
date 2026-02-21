@@ -38,7 +38,7 @@ public class GlobalExceptionHandlingMiddleware
 
         var response = new ErrorResponse
         {
-            Message = exception.Message,
+            Message = "An error occurred",
             Timestamp = DateTime.UtcNow
         };
 
@@ -47,7 +47,7 @@ public class GlobalExceptionHandlingMiddleware
             case ArgumentException argEx:
                 logger.LogWarning(argEx, "Argument validation error: {Message}", argEx.Message);
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.Message = $"Validation Error: {argEx.Message}";
+                response.Message = "Invalid request parameters.";
                 break;
 
             case DbUpdateException dbEx:

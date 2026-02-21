@@ -130,7 +130,7 @@ try
             ValidAudience = builder.Configuration["Jwt:Audience"] ?? "HengcordTCG.Web",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             RoleClaimType = ClaimTypes.Role,
-            NameClaimType = ClaimTypes.NameIdentifier
+            NameClaimType = ClaimTypes.Name
         };
         
         options.Events = new JwtBearerEvents
@@ -261,7 +261,7 @@ try
     app.UseCors("AllowWeb");
     app.UseAuthentication();
     app.UseAuthorization();
-    app.UseMiddleware<ApiKeyAuthMiddleware>();
+    // ApiKeyAuthenticationHandler handles API key auth via ASP.NET auth pipeline
     
     app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
     

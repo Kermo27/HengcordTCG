@@ -157,6 +157,7 @@
     private long Gold { get; set; }
     private bool ShowUserMenu { get; set; }
     private string CurrentPath => new Uri(Navigation.Uri).AbsolutePath;
+    private System.Threading.Timer? _refreshTimer;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -170,7 +171,52 @@
                 AvatarUrl = user.AvatarUrl;
                 StateHasChanged();
             }
+
+            if (AuthenticationStateProvider is AuthStateProvider authProvider)
+            {
+                authProvider.AuthenticationStateChanged += OnAuthStateChanged;
+            }
+
+            // Periodically refresh auth status (picks up admin role changes, gold, etc.)
+            _refreshTimer = new System.Threading.Timer(async _ =>
+            {
+                try
+                {
+                    if (await AuthService.CheckAuthStatusAsync())
+                    {
+                        var current = AuthService.GetCurrentUser();
+                        if (current != null)
+                        {
+                            await InvokeAsync(() =>
+                            {
+                                Username = current.Username;
+                                Gold = current.Gold;
+                                AvatarUrl = current.AvatarUrl;
+                                StateHasChanged();
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
         }
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        var state = await task;
+        var isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+        
+        await InvokeAsync(() =>
+        {
+            if (!isAuthenticated)
+            {
+                Username = null;
+                AvatarUrl = null;
+                Gold = 0;
+            }
+            StateHasChanged();
+        });
     }
 
     private void ToggleUserMenu() => ShowUserMenu = !ShowUserMenu;
@@ -186,6 +232,9 @@
     {
         ShowUserMenu = false;
         await AuthService.LogoutAsync();
+        Username = null;
+        AvatarUrl = null;
+        Gold = 0;
         Navigation.NavigateTo("/");
     }
 
@@ -213,5 +262,10 @@
 
     public void Dispose()
     {
+        _refreshTimer?.Dispose();
+        if (AuthenticationStateProvider is AuthStateProvider authProvider)
+        {
+            authProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+        }
     }
 }

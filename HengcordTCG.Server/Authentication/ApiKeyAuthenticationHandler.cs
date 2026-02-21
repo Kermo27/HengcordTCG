@@ -40,8 +40,16 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         }
 
         var providedKey = apiKeyHeader.ToString();
+        var keyBytes = System.Text.Encoding.UTF8.GetBytes(providedKey);
         
-        if (!validApiKeys.Contains(providedKey))
+        bool isValid = validApiKeys.Any(valid =>
+        {
+            var validBytes = System.Text.Encoding.UTF8.GetBytes(valid);
+            return keyBytes.Length == validBytes.Length
+                && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(keyBytes, validBytes);
+        });
+        
+        if (!isValid)
         {
             return Task.FromResult(AuthenticateResult.Fail("Invalid API Key"));
         }

@@ -24,7 +24,7 @@ public class ImagesController : ControllerBase
             return BadRequest();
 
         var fullPath = Path.GetFullPath(Path.Combine(_imagesRoot, path));
-        if (!fullPath.StartsWith(_imagesRoot))
+        if (!fullPath.StartsWith(_imagesRoot, StringComparison.OrdinalIgnoreCase))
             return BadRequest("Invalid path");
 
         if (!System.IO.File.Exists(fullPath))

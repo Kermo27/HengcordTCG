@@ -28,11 +28,13 @@ public class UserService
             
             if (user == null)
             {
-                _logger.LogInformation("Creating new user for Discord ID {DiscordId} with username {Username}", discordId, username);
+                // Guard: never save a Discord ID as username
+                var safeUsername = LooksLikeDiscordId(username) ? $"User_{discordId}" : username;
+                _logger.LogInformation("Creating new user for Discord ID {DiscordId} with username {Username}", discordId, safeUsername);
                 user = new Models.User
                 {
                     DiscordId = discordId,
-                    Username = username,
+                    Username = safeUsername,
                     CreatedAt = DateTime.UtcNow,
                     LastSeen = DateTime.UtcNow
                 };
@@ -43,9 +45,23 @@ public class UserService
             else
             {
                 user.LastSeen = DateTime.UtcNow;
-                user.Username = username;
+                
+                if (!LooksLikeDiscordId(username))
+                {
+                    // Valid username provided — always update (also self-heals corrupted records)
+                    if (LooksLikeDiscordId(user.Username))
+                    {
+                        _logger.LogWarning("Self-healing corrupted username for Discord ID {DiscordId}: '{OldUsername}' → '{NewUsername}'", 
+                            discordId, user.Username, username);
+                    }
+                    user.Username = username;
+                }
+                else
+                {
+                    _logger.LogDebug("Skipping username update for Discord ID {DiscordId} — provided value looks like a Discord ID", discordId);
+                }
+                
                 await _db.SaveChangesAsync();
-                _logger.LogDebug("User updated for Discord ID {DiscordId}", discordId);
             }
 
             return user;
@@ -77,9 +93,9 @@ public class UserService
             if (user.LastDaily.HasValue)
             {
                 var diff = now - user.LastDaily.Value;
-                if (diff.TotalHours < 20)
+                if (diff.TotalHours < GameConstants.DailyCooldownHours)
                 {
-                    var timeRemaining = TimeSpan.FromHours(20) - diff;
+                    var timeRemaining = TimeSpan.FromHours(GameConstants.DailyCooldownHours) - diff;
                     _logger.LogInformation("Daily cooldown active for Discord ID {DiscordId}. Time remaining: {TimeRemaining}", discordId, timeRemaining);
                     return (false, 0, timeRemaining);
                 }
@@ -99,5 +115,17 @@ public class UserService
             _logger.LogError(ex, "Error claiming daily for Discord ID {DiscordId}", discordId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Checks if a string looks like a Discord snowflake ID (17-20 digit number).
+    /// Used to prevent accidentally saving a Discord ID as a username.
+    /// </summary>
+    private static bool LooksLikeDiscordId(string value)
+    {
+        return !string.IsNullOrEmpty(value) 
+            && value.Length >= 17 
+            && value.Length <= 20 
+            && value.All(char.IsDigit);
     }
 }

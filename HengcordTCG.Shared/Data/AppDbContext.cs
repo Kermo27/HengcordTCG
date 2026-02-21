@@ -103,5 +103,18 @@ public class AppDbContext : DbContext
                 .HasForeignKey(e => e.WikiPageId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<Trade>(entity =>
+        {
+            entity.HasOne(e => e.Initiator)
+                .WithMany()
+                .HasForeignKey(e => e.InitiatorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Target)
+                .WithMany()
+                .HasForeignKey(e => e.TargetId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

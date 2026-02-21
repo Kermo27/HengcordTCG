@@ -19,6 +19,9 @@ public partial class Index
     [Inject]
     private IConfiguration Configuration { get; set; } = default!;
 
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
     private string ApiBaseUrl => Configuration["ApiBaseUrl"] ?? Configuration["Urls:Server"] ?? "https://localhost:7156";
 
     private string GetImageUrl(string? path) => string.IsNullOrEmpty(path) ? "" : $"{ApiBaseUrl}/api/images/{path}";
@@ -36,9 +39,7 @@ public partial class Index
     private bool _showGoldModal;
     private bool _showProposalModal;
     private bool _showDeleteCardModal;
-    private bool _showWikiPageModal;
     private bool _showDeleteWikiPageModal;
-    private int? _editingWikiPageId;
     private WikiPageDto? _deletingWikiPage;
 
     private Card? _editingCard;
@@ -49,7 +50,6 @@ public partial class Index
 
     private CardFormData _cardForm = new();
     private PackFormData _packForm = new();
-    private WikiPageFormData _wikiPageForm = new();
     private int _goldAmount;
 
     protected override async Task OnInitializedAsync()
@@ -366,28 +366,12 @@ public partial class Index
 
     private void OpenCreateWikiPage()
     {
-        _editingWikiPageId = null;
-        _wikiPageForm = new WikiPageFormData();
-        _showWikiPageModal = true;
+        Navigation.NavigateTo("/wiki/new");
     }
 
-    private async Task OpenEditWikiPage(WikiPageDto page)
+    private void OpenEditWikiPage(WikiPageDto page)
     {
-        _editingWikiPageId = page.Id;
-        _wikiPageForm = new WikiPageFormData
-        {
-            Title = page.Title,
-            Slug = page.Slug,
-            Content = ""
-        };
-
-        var detail = await WikiService.GetPageAsync(page.Slug);
-        if (detail != null)
-        {
-            _wikiPageForm.Content = detail.Content;
-        }
-
-        _showWikiPageModal = true;
+        Navigation.NavigateTo($"/wiki/edit/{page.Slug}");
     }
 
     private void ConfirmDeleteWikiPage(WikiPageDto page)
@@ -402,39 +386,6 @@ public partial class Index
         _deletingWikiPage = null;
     }
 
-    private void CloseWikiPageModal()
-    {
-        _showWikiPageModal = false;
-        _editingWikiPageId = null;
-    }
-
-    private async Task SaveWikiPage()
-    {
-        if (string.IsNullOrWhiteSpace(_wikiPageForm.Title) || string.IsNullOrWhiteSpace(_wikiPageForm.Slug))
-            return;
-
-        if (_editingWikiPageId != null)
-        {
-            await WikiService.UpdatePageAsync(_editingWikiPageId.Value, new UpdateWikiPageRequest
-            {
-                Title = _wikiPageForm.Title,
-                Slug = _wikiPageForm.Slug,
-                Content = _wikiPageForm.Content
-            });
-        }
-        else
-        {
-            await WikiService.CreatePageAsync(new CreateWikiPageRequest
-            {
-                Title = _wikiPageForm.Title,
-                Slug = _wikiPageForm.Slug,
-                Content = _wikiPageForm.Content
-            });
-        }
-
-        CloseWikiPageModal();
-        await LoadWikiPages();
-    }
 
     private async Task DeleteWikiPage()
     {
@@ -474,11 +425,4 @@ public class PackFormData
     public int ChanceRare { get; set; } = 35;
     public int ChanceLegendary { get; set; } = 5;
     public bool IsAvailable { get; set; } = true;
-}
-
-public class WikiPageFormData
-{
-    public string Title { get; set; } = "";
-    public string Slug { get; set; } = "";
-    public string Content { get; set; } = "";
 }

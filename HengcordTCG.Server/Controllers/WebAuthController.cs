@@ -42,11 +42,21 @@ public class WebAuthController : ControllerBase
     }
 
     [HttpGet("api/auth/logout")]
+    [HttpPost("api/auth/logout")]
     [AllowAnonymous]
     public async Task<IActionResult> Logout([FromQuery] string? returnUrl = null)
     {
         var fallback = _config["ClientUrl"] ?? "/";
         var redirect = string.IsNullOrWhiteSpace(returnUrl) ? fallback : returnUrl;
+
+        // Delete the JWT cookie
+        Response.Cookies.Delete("auth_token", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Path = "/"
+        });
 
         await HttpContext.SignOutAsync();
         return Redirect(redirect);
@@ -142,16 +152,18 @@ public class WebAuthController : ControllerBase
             name = User.Identity?.Name;
         }
         var avatarHash = User.FindFirst("urn:discord:avatar")?.Value;
-        var isAdmin = User.HasClaim("is_admin", "true");
+        var isAdmin = false;
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
-        // If name is null/empty, get username from database
-        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(userId) && ulong.TryParse(userId, out var discordId))
+        // Always check admin status from DB for live updates
+        if (!string.IsNullOrEmpty(userId) && ulong.TryParse(userId, out var discordId))
         {
             var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.DiscordId == discordId);
             if (dbUser != null)
             {
-                name = dbUser.Username;
+                isAdmin = dbUser.IsBotAdmin;
+                if (string.IsNullOrEmpty(name))
+                    name = dbUser.Username;
             }
         }
         
@@ -223,7 +235,9 @@ public class WebAuthController : ControllerBase
         return Ok(new
         {
             Token = tokenString,
-            Username = User.Identity?.Name,
+            Username = User.FindFirst("urn:discord:username")?.Value 
+                    ?? User.FindFirst("urn:discord:global_name")?.Value 
+                    ?? User.Identity?.Name,
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
             IsAdmin = User.HasClaim("is_admin", "true")
         });

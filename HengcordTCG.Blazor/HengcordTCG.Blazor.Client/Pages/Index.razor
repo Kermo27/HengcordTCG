@@ -303,7 +303,7 @@
             return;
         }
 
-        var nextDaily = LastDaily.Value.AddHours(24);
+        var nextDaily = LastDaily.Value.AddHours(HengcordTCG.Shared.GameConstants.DailyCooldownHours);
         var remaining = nextDaily - DateTime.UtcNow;
 
         if (remaining <= TimeSpan.Zero)

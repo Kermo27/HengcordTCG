@@ -40,7 +40,9 @@ public class WebShopController : ControllerBase
             return Unauthorized();
         }
 
-        var username = User.Identity?.Name ?? $"User_{discordId}";
+        var username = User.FindFirst("urn:discord:username")?.Value 
+                    ?? User.Identity?.Name 
+                    ?? $"User_{discordId}";
         var result = await _shopService.BuyPackAsync(discordId, username, packName);
 
         return Ok(new

@@ -518,13 +518,13 @@ namespace HengcordTCG.Shared.Migrations
                     b.HasOne("HengcordTCG.Shared.Models.User", "Initiator")
                         .WithMany()
                         .HasForeignKey("InitiatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("HengcordTCG.Shared.Models.User", "Target")
                         .WithMany()
                         .HasForeignKey("TargetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Initiator");

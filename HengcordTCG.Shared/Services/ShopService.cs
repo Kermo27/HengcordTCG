@@ -20,6 +20,7 @@ public class ShopService
 
     public async Task<(bool success, List<Card> cards, string message)> BuyPackAsync(ulong discordId, string username, string packName = "Base Set")
     {
+        using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
             _logger.LogInformation("Buy pack request from Discord ID {DiscordId}. Pack: {PackName}", discordId, packName);
@@ -121,12 +122,14 @@ public class ShopService
 
             user.Gold -= pack.Price;
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             _logger.LogInformation("Pack purchased successfully for Discord ID {DiscordId}. Pack: {PackName}, Amount: {Amount} gold", discordId, pack.Name, pack.Price);
             return (true, drawnCards, $"Paczka '{pack.Name}' otwarta!");
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error buying pack for Discord ID {DiscordId}. Pack: {PackName}", discordId, packName);
             return (false, new List<Card>(), "Błąd podczas kupna paczki. Spróbuj ponownie.");
         }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using HengcordTCG.Shared.Data;
 using HengcordTCG.Shared.Models;
 
@@ -9,11 +10,13 @@ public class TradeService
 {
     private readonly AppDbContext _db;
     private readonly UserService _userService;
+    private readonly ILogger<TradeService> _logger;
 
-    public TradeService(AppDbContext db, UserService userService)
+    public TradeService(AppDbContext db, UserService userService, ILogger<TradeService> logger)
     {
         _db = db;
         _userService = userService;
+        _logger = logger;
     }
 
 
@@ -51,6 +54,7 @@ public class TradeService
         _db.Trades.Add(trade);
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("Trade {TradeId} created: {InitiatorId} → {TargetId}", trade.Id, initiatorId, targetId);
         return (true, "Oferta utworzona", trade, offerParsed.content, requestParsed.content);
     }
 
@@ -139,6 +143,7 @@ public class TradeService
                 await _db.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                _logger.LogInformation("Trade {TradeId} accepted by {UserId}", tradeId, userId);
                 return (true, "Wymiana zakończona sukcesem!");
             }
             catch
@@ -160,12 +165,14 @@ public class TradeService
         {
             trade.Status = TradeStatus.Cancelled;
             await _db.SaveChangesAsync();
+            _logger.LogInformation("Trade {TradeId} cancelled by initiator {UserId}", tradeId, userId);
             return (true, "Anulowano ofertę.");
         }
         else if (trade.Target.DiscordId == userId)
         {
             trade.Status = TradeStatus.Rejected;
             await _db.SaveChangesAsync();
+            _logger.LogInformation("Trade {TradeId} rejected by target {UserId}", tradeId, userId);
             return (true, "Odrzucono ofertę.");
         }
 

@@ -72,42 +72,11 @@ public class AuthService
     {
         try
         {
-            var response = await _http.GetAsync("api/auth/me");
-            if (response.IsSuccessStatusCode)
+            var user = await GetCurrentUserAsync();
+            if (user != null)
             {
-                var authInfo = await response.Content.ReadFromJsonAsync<AuthInfo>();
-                if (authInfo?.IsAuthenticated == true)
-                {
-                    var userId = !string.IsNullOrEmpty(authInfo.UserId) && ulong.TryParse(authInfo.UserId, out var parsedId) 
-                        ? parsedId 
-                        : 0;
-                    
-                    long gold = 0;
-                    try
-                    {
-                        var userResponse = await _http.GetAsync($"api/users/{userId}");
-                        if (userResponse.IsSuccessStatusCode)
-                        {
-                            var userData = await userResponse.Content.ReadFromJsonAsync<UserDetails>();
-                            if (userData != null)
-                            {
-                                gold = userData.Gold;
-                            }
-                        }
-                    }
-                    catch { }
-                    
-                    var user = new UserInfo
-                    {
-                        Id = userId,
-                        Username = authInfo.Name ?? "Unknown",
-                        AvatarUrl = authInfo.AvatarUrl,
-                        IsBotAdmin = authInfo.IsAdmin,
-                        Gold = gold
-                    };
-                    _authStateProvider.SetAuthenticated(user);
-                    return true;
-                }
+                _authStateProvider.SetAuthenticated(user);
+                return true;
             }
 
             _authStateProvider.SetAnonymous();
